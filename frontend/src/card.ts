@@ -23,6 +23,10 @@ import { type CameraObject, type StillImage, type Device, type Level, type Track
   roomThermometers,
   normalizeSensors,
   isPowered,
+  HEAT_SCALES,
+  heatColour,
+  roomHeat,
+  type HeatKind,
   withoutGarden,
 } from "./model";
 import {
@@ -79,13 +83,16 @@ interface RobotMessage {
   change?: { id: string; level: string; place: RobotPlace | null; added: Point[]; reset: boolean };
 }
 const GARDEN_KEY = "floorcast-card-garden";
+const HEAT_KEY = "floorcast-card-heat";
+const HEAT_NAMES: Record<HeatKind, string> = { temperature: "Temperature", humidity: "Humidity", co2: "CO₂" };
 
-/** A switch of the card remembered in this browser; off without storage. */
-function stored(key: string): boolean {
+/** A switch of the card remembered in this browser; the fallback when it was never set or without storage. */
+function stored(key: string, fallback = false): boolean {
   try {
-    return localStorage.getItem(key) === "1";
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : value === "1";
   } catch {
-    return false;
+    return fallback;
   }
 }
 
@@ -113,6 +120,7 @@ class FloorCastCard extends LitElement {
     _width: { state: true },
     _active: { state: true },
     _garden: { state: true },
+    _heat: { state: true },
     _people: { state: true },
     _objects: { state: true },
     _pad: { state: true },
@@ -127,6 +135,7 @@ class FloorCastCard extends LitElement {
   private _width = 0;
   private _active?: string;
   private _garden = stored(GARDEN_KEY);
+  private _heat = stored(HEAT_KEY, true);
   private _unsubscribe?: Promise<() => void>;
   private _unsubscribePeople?: Promise<() => void>;
   // People the integration tracks, per level; without them the card shows the raw radar targets.
@@ -439,6 +448,42 @@ class FloorCastCard extends LitElement {
     return wanted?.length ? all.filter((level) => wanted.includes(level.id)) : all;
   }
 
+  private toggleHeat(): void {
+    this._heat = !this._heat;
+    store(HEAT_KEY, this._heat);
+  }
+
+  /** Rooms coloured by their reading, by room id; none while the heat map is off or not configured. */
+  private heatFills(level: Level): Record<string, string> {
+    const kind = this._config.heatmap;
+    if (!kind || kind === "none" || !this._heat) return {};
+    const fills: Record<string, string> = {};
+    for (const room of level.rooms) {
+      if (room.outdoor || room.stairs) continue;
+      const value = roomHeat(level, room, this.hass.states, kind);
+      if (value !== undefined) fills[room.id] = heatColour(kind, value);
+    }
+    return fills;
+  }
+
+  /** The heat map switch with its scale: the lowest and highest value and the colours between. */
+  private renderHeatSwitch(kind: HeatKind) {
+    const scale = HEAT_SCALES[kind];
+    const stops = scale.stops;
+    const gradient = stops.map(([, c]) => `rgb(${c.join(",")})`).join(",");
+    return html`<label class="switch" title="Rooms coloured by their ${HEAT_NAMES[kind].toLowerCase()}">
+      <input type="checkbox" .checked=${this._heat} @change=${() => this.toggleHeat()} />
+      <span class="track"><span class="knob"></span></span>
+      ${HEAT_NAMES[kind]}
+      ${this._heat
+        ? html`<span class="scale"
+            >${stops[0][0]}${scale.unit}<span class="bar" style="background:linear-gradient(90deg,${gradient})"></span
+            >${stops[stops.length - 1][0]}${scale.unit}</span
+          >`
+        : nothing}
+    </label>`;
+  }
+
   private toggleGarden(): void {
     this._garden = !this._garden;
     store(GARDEN_KEY, this._garden);
@@ -455,6 +500,7 @@ class FloorCastCard extends LitElement {
     const gardenToggle = gardenMode === "toggle" && all.some(hasGarden);
     const showGarden = gardenMode === "show" || (gardenMode === "toggle" && this._garden);
     const levels = showGarden ? all : all.map(withoutGarden);
+    const heatConfigured = this._config.heatmap && this._config.heatmap !== "none" ? this._config.heatmap : undefined;
     const width = Math.max(this._width - 8, 100);
     const metres = levels.map((level) => this.viewBounds(level).w);
     const sideScale = width / metres.reduce((sum, w) => sum + w, 0);
@@ -466,7 +512,7 @@ class FloorCastCard extends LitElement {
     this._shownGround = new Set();
     return html`
       <ha-card .header=${this._config.title} @pointerdown=${this.notePointer}>
-        ${(side || levels.length < 2) && !gardenToggle && !this._config.history
+        ${(side || levels.length < 2) && !gardenToggle && !this._config.history && !heatConfigured
           ? nothing
           : html`<div class="tabs">
               ${side || levels.length < 2
@@ -491,6 +537,7 @@ class FloorCastCard extends LitElement {
                     Paths
                   </label>`
                 : nothing}
+              ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
 
             </div>`}
         <div class="levels ${side ? "side" : ""}">
@@ -510,7 +557,7 @@ class FloorCastCard extends LitElement {
       <div class="level" style=${style}>
         ${scale ? html`<div class="name">${level.name}</div>` : nothing}
         <svg class=${this._config.crop?.[level.id] ? "cropped" : ""} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">
-          ${PLAN_DEFS} ${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)])} ${this.renderGlows(level)}
+          ${PLAN_DEFS} ${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}
           ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
           ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)}
           ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)}
@@ -1238,6 +1285,18 @@ class FloorCastCard extends LitElement {
         margin-left: 0;
         padding-left: 0;
         border-left: 0;
+      }
+      .scale {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--secondary-text-color);
+        font-size: 11px;
+      }
+      .scale .bar {
+        width: 36px;
+        height: 6px;
+        border-radius: 3px;
       }
       .switch input {
         display: none;

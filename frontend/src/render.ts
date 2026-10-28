@@ -776,6 +776,7 @@ export function renderLevel(
   states?: States,
   radius = 0,
   under: unknown = nothing,
+  fills: Record<string, string> = {},
 ): SVGTemplateResult {
   const items = [...level.items].sort((p, q) => ITEM_ORDER.indexOf(p.type) - ITEM_ORDER.indexOf(q.type));
   const walls = new Map(level.walls.map((wall) => [wall.id, wall]));
@@ -785,8 +786,10 @@ export function renderLevel(
     ${ground.map((item) => renderItem(item, "", radius))}
     ${level.rooms.map((room) => {
       const radii = roomRadii(room, level.walls, room.outdoor ? 0 : radius);
+      const fill = fills[room.id];
       return svg`<path data-room=${room.id} class=${room.outdoor ? "fc-zone" : "fc-floor"} d=${polygonPath(room.points, radii)}></path>
-        ${room.outdoor ? nothing : renderFillets(room.points, radii)}`;
+        ${room.outdoor ? nothing : renderFillets(room.points, radii)}
+        ${fill ? svg`<path class="fc-heat" style="fill:${fill}" d=${polygonPath(room.points, radii)}></path>` : nothing}`;
     })}
     ${level.rooms.filter((room) => room.stairs).map(renderStairs)}
     ${obstacles.map((item) => renderItem(item, "-edge", radius))} ${obstacles.map((item) => renderItem(item, "", radius))}
@@ -822,6 +825,10 @@ export const planStyles = css`
     --fc-camera-glow: #c9d1da;
     --fc-alert: #ff9f43;
     --fc-presence: #4fc3f7;
+  }
+  .fc-heat {
+    opacity: 0.3;
+    pointer-events: none;
   }
   .fc-floor {
     fill: var(--fc-floor);

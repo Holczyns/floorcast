@@ -447,6 +447,14 @@ actions:
           <td>A Paths switch showing where people walked over the last day</td>
         </tr>
         <tr>
+          <td><code>heatmap</code></td>
+          <td><code>none</code></td>
+          <td>
+            <code>temperature</code>, <code>humidity</code> or <code>co2</code>: rooms coloured by the sensors standing in them,
+            with a switch and the scale on the card
+          </td>
+        </tr>
+        <tr>
           <td><code>crop</code></td>
           <td>none</td>
           <td>Part of a level shown, by level id: <code>[x, y, width, height]</code> in metres</td>

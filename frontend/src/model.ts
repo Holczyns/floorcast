@@ -818,6 +818,70 @@ export function roomLights(level: Level, room: Room): string[] {
   return [...new Set([...placed, ...(room.lights ?? [])])];
 }
 
+/** What the heat map of the card colours the rooms by. */
+export type HeatKind = "temperature" | "humidity" | "co2";
+
+type Rgb = [number, number, number];
+const BLUE: Rgb = [33, 150, 243];
+const GREEN: Rgb = [76, 175, 80];
+const RED: Rgb = [244, 67, 54];
+const ORANGE: Rgb = [255, 152, 0];
+const YELLOW: Rgb = [255, 193, 7];
+
+/** Colour stops of the heat map, low to high; a value outside them takes the nearest end. */
+export const HEAT_SCALES: Record<HeatKind, { stops: [number, Rgb][]; unit: string }> = {
+  temperature: { stops: [[16, BLUE], [21, GREEN], [26, RED]], unit: "°" },
+  humidity: { stops: [[30, ORANGE], [50, GREEN], [70, BLUE]], unit: "%" },
+  co2: { stops: [[400, GREEN], [1000, YELLOW], [1600, RED]], unit: " ppm" },
+};
+
+export function heatColour(kind: HeatKind, value: number): string {
+  const stops = HEAT_SCALES[kind].stops;
+  const rgb = (c: Rgb) => `rgb(${c.map((v) => Math.round(v)).join(",")})`;
+  if (value <= stops[0][0]) return rgb(stops[0][1]);
+  for (let i = 1; i < stops.length; i++) {
+    const [high, to] = stops[i];
+    if (value > high) continue;
+    const [low, from] = stops[i - 1];
+    const t = (value - low) / (high - low);
+    return rgb([0, 1, 2].map((c) => from[c] + (to[c] - from[c]) * t) as Rgb);
+  }
+  return rgb(stops[stops.length - 1][1]);
+}
+
+/** A reading as the heat map wants it, temperatures in °C; undefined when it measures something else. */
+function heatReading(kind: HeatKind, stateObj: Reading, sensorType?: SensorType): number | undefined {
+  if (!stateObj) return undefined;
+  const value = Number.parseFloat(stateObj.state);
+  if (!Number.isFinite(value)) return undefined;
+  const deviceClass = stateObj.attributes.device_class;
+  const unit = stateObj.attributes.unit_of_measurement;
+  if (kind === "temperature" && (deviceClass === "temperature" || unit === "°C" || unit === "°F" || sensorType === "temperature"))
+    return unit === "°F" ? ((value - 32) * 5) / 9 : value;
+  if (kind === "humidity" && (deviceClass === "humidity" || sensorType === "humidity")) return value;
+  if (kind === "co2" && (deviceClass === "carbon_dioxide" || unit === "ppm")) return value;
+  return undefined;
+}
+
+/** The value of a room on the heat map: the first value of the sensors standing in it that measures the kind. */
+export function roomHeat(
+  level: Level,
+  room: Room,
+  states: Record<string, { state: string; attributes: Record<string, any> }>,
+  kind: HeatKind,
+): number | undefined {
+  for (const device of level.devices ?? []) {
+    if (device.kind !== "sensor" || !device.entity || !pointInPolygon(device.at, room.points)) continue;
+    const main = heatReading(kind, states[device.entity], device.sensorType);
+    if (main !== undefined) return main;
+    for (const value of device.secondary ?? []) {
+      const reading = value.entity ? heatReading(kind, states[value.entity]) : undefined;
+      if (reading !== undefined) return reading;
+    }
+  }
+  return undefined;
+}
+
 export function polygonPath(points: Point[], radius: number | number[] = 0): string {
   const f = (v: number) => v.toFixed(3);
   const radii = Array.isArray(radius) ? radius : points.map(() => radius);

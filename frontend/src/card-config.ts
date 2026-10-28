@@ -21,6 +21,8 @@ export interface CardConfig {
   trails?: boolean;
   /** A Paths switch on the card shows where people walked over the last day; off by default. */
   history?: boolean;
+  /** Rooms coloured by the temperature, humidity or CO2 of the sensors in them, with a switch on the card; none by default. */
+  heatmap?: "none" | "temperature" | "humidity" | "co2";
   /** Part of a level shown, by level id: x, y, width and height in metres; the whole level without it. */
   crop?: Record<string, [number, number, number, number]>;
 }

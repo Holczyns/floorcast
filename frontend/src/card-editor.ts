@@ -217,6 +217,17 @@ export class FloorCastCardEditor extends LitElement {
         "toggle",
       )}
       ${this.select(
+        "Heat map",
+        "heatmap",
+        [
+          ["none", "None"],
+          ["temperature", "Temperature"],
+          ["humidity", "Humidity"],
+          ["co2", "CO₂"],
+        ],
+        "none",
+      )}
+      ${this.select(
         "Layout",
         "layout",
         [
