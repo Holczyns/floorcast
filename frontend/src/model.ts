@@ -63,6 +63,8 @@ export interface Room {
   sensors?: string[];
   /** Name left off the card; temperature and other readings stay. */
   hideName?: boolean;
+  /** Home Assistant area of the room: the editor offers its devices for placing. */
+  area?: string | null;
   /** Motion, occupancy or presence sensors keeping the room occupied while on; they count nobody. */
   occupancy?: string[];
   /** Seconds its occupancy stays on after the last person left. */
@@ -773,6 +775,85 @@ export function onWallFace(p: Point, q: Point, walls: Wall[]): boolean {
 export function roomAt(level: Level, p: Point): Room | undefined {
   const inside = level.rooms.filter((room) => pointInPolygon(p, room.points));
   return inside.find((room) => !room.outdoor) ?? inside[0];
+}
+
+/** What an entity of an area becomes on the plan; undefined for entities the plan does not show. */
+export type AreaKind = "light" | "sensor" | "alarm" | "presence" | "contact" | "blind" | "camera";
+
+export const AREA_KIND_NAMES: Record<AreaKind, string> = {
+  light: "Light",
+  sensor: "Sensor",
+  alarm: "Alarm",
+  presence: "Presence",
+  contact: "Door or window",
+  blind: "Blind",
+  camera: "Camera",
+};
+
+export function areaKind(entityId: string, stateObj: Reading): AreaKind | undefined {
+  const domain = entityId.split(".")[0];
+  const deviceClass = stateObj?.attributes.device_class;
+  if (domain === "light") return "light";
+  if (domain === "sensor" && ["temperature", "humidity", "carbon_dioxide"].includes(deviceClass)) return "sensor";
+  if (domain === "alarm_control_panel" || (domain === "binary_sensor" && deviceClass in ALARM_CLASSES)) return "alarm";
+  if (domain === "binary_sensor" && ["motion", "occupancy", "presence"].includes(deviceClass)) return "presence";
+  if (domain === "binary_sensor" && ["door", "window", "opening", "garage_door"].includes(deviceClass)) return "contact";
+  if (domain === "cover" && !["garage", "gate", "door"].includes(deviceClass)) return "blind";
+  if (domain === "camera") return "camera";
+  return undefined;
+}
+
+/** Every entity the plan already shows somewhere. */
+export function planEntities(plan: Plan): Set<string> {
+  const used = new Set<string>();
+  const add = (id?: string | null) => {
+    if (id) used.add(id);
+  };
+  for (const level of plan.levels) {
+    for (const device of level.devices ?? []) {
+      [device.entity, device.remote, device.map, device.camera, device.battery, device.roomSensor].forEach(add);
+      device.secondary?.forEach((value) => add(value.entity));
+    }
+    for (const opening of level.openings) [opening.contact, opening.cover].forEach(add);
+    for (const room of level.rooms) [...(room.occupancy ?? []), ...(room.lights ?? []), room.temperature, room.humidity].forEach(add);
+  }
+  return used;
+}
+
+/** Doors and windows in the walls of a room. */
+export function roomOpenings(level: Level, room: Room): Opening[] {
+  const walls = new Map(level.walls.map((wall) => [wall.id, wall]));
+  return level.openings.filter((opening) => {
+    const wall = walls.get(opening.wall);
+    if (!wall) return false;
+    const c = pointOnWall(wall, opening.at);
+    const d = wallDirection(wall);
+    const off = wall.t / 2 + 0.15;
+    return [1, -1].some((side) => pointInPolygon([c[0] - d[1] * off * side, c[1] + d[0] * off * side], room.points));
+  });
+}
+
+/** A door or window named by the side of the room it is on, such as "Window, north". */
+export function openingName(level: Level, room: Room, opening: Opening): string {
+  const wall = level.walls.find((w) => w.id === opening.wall);
+  const c = wall ? pointOnWall(wall, opening.at) : centroid(room.points);
+  const m = centroid(room.points);
+  const dx = c[0] - m[0];
+  const dy = c[1] - m[1];
+  const side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "east" : "west") : dy > 0 ? "south" : "north";
+  return `${opening.type === "door" ? "Door" : "Window"}, ${side}`;
+}
+
+/** Spots for new devices in a room: n in a row across it, at a share of its height (0 top, 1 bottom). */
+export function spotsInRoom(room: Room, n: number, down: number): Point[] {
+  const xs = room.points.map((p) => p[0]);
+  const ys = room.points.map((p) => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  return [...Array(n).keys()].map((i) => {
+    const round = (v: number) => Math.round(v * 100) / 100;
+    const p: Point = [round(x0 + ((x1 - x0) * (i + 1)) / (n + 1)), round(y0 + (y1 - y0) * down)];
+    return pointInPolygon(p, room.points) ? p : centroid(room.points);
+  });
 }
 
 /** Shared length of two straight edges lying on one line, or 0. */

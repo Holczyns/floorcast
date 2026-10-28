@@ -107,6 +107,29 @@
           for (const id of [d.extra, ...(d.secondary ?? []).map((s) => s.entity)])
             if (id && !states[id]) set(id, String(48 + reading * 3), { device_class: "humidity", unit_of_measurement: "%" });
         }
+      // Areas of Home Assistant: one per room, every entity of the plan in the room it stands in, and a few
+      // entities not on the plan yet in the kitchen and the bedroom, for Place all in the editor.
+      const UNPLACED = [
+        ["kitchen", "light.kitchen_pendant", "off", {}],
+        ["kitchen", "sensor.kitchen_temperature", "22.1", { device_class: "temperature", unit_of_measurement: "°C" }, "kitchen_climate"],
+        ["kitchen", "sensor.kitchen_humidity", "48", { device_class: "humidity", unit_of_measurement: "%" }, "kitchen_climate"],
+        ["kitchen", "binary_sensor.kitchen_motion", "off", { device_class: "motion" }],
+        ["bedroom", "binary_sensor.bedroom_window", "off", { device_class: "window" }],
+      ];
+      for (const [, id, state, attributes] of UNPLACED) set(id, state, attributes);
+      const areaOf = (p) => (ground.rooms ?? []).find((r) => !r.outdoor && inside(p, r.points))?.id;
+      const registry = () => {
+        const entities = [];
+        for (const d of ground.devices ?? []) {
+          const area = d.at ? areaOf(d.at) : undefined;
+          for (const id of [d.entity, ...(d.secondary ?? []).map((s) => s.entity)])
+            if (id && area) entities.push({ entity_id: id, area_id: area, device_id: null, entity_category: null, hidden_by: null, disabled_by: null });
+        }
+        for (const [area, id, , , device] of UNPLACED)
+          entities.push({ entity_id: id, area_id: device ? null : area, device_id: device ?? null, entity_category: null, hidden_by: null, disabled_by: null });
+        return entities;
+      };
+
       // Lights: every other one on, the first line light in colour.
       let lightIndex = 0;
       for (const level of plan.levels)
@@ -318,6 +341,11 @@
             return { walks: msg.level !== ground.id ? [] : centres.slice(1).map((c, i) => [centres[i], c]) };
           }
           if (msg.type === "floorcast/history/clear") return null;
+          if (msg.type === "config/floor_registry/list") return [{ floor_id: "ground", name: ground.name }];
+          if (msg.type === "config/area_registry/list")
+            return (ground.rooms ?? []).filter((r) => !r.outdoor).map((r) => ({ area_id: r.id, name: r.name, floor_id: "ground" }));
+          if (msg.type === "config/device_registry/list") return [{ id: "kitchen_climate", area_id: "kitchen" }];
+          if (msg.type === "config/entity_registry/list") return registry();
           if (msg.type === "floorcast/frigate/cameras")
             return { cameras: cameras.filter((c) => c.frigate).map((c) => ({ name: c.frigate, size: [1280, 720] })) };
           // Frigate: two recent paths of people walking across the image.

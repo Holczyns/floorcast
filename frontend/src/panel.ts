@@ -39,6 +39,13 @@ import {
   type TrackedPerson,
   type TrackingSettings,
   centroid,
+  AREA_KIND_NAMES,
+  areaKind,
+  openingName,
+  planEntities,
+  roomOpenings,
+  spotsInRoom,
+  type AreaKind,
   dist,
   emptyLevel,
   levelBounds,
@@ -152,6 +159,16 @@ const DEVICE_LABELS: Record<Device["kind"], string> = {
   screen: "Screen",
 };
 
+/** Areas of Home Assistant with their floor, and the area and device of each entity. */
+interface Registry {
+  areas: { id: string; name: string; floor?: string }[];
+  entityArea: Record<string, string>;
+  entityDevice: Record<string, string>;
+}
+
+/** Order of the kinds in the area list of a room. */
+const AREA_KINDS: AreaKind[] = ["light", "sensor", "alarm", "presence", "blind", "contact", "camera"];
+
 interface View {
   x: number;
   y: number;
@@ -214,6 +231,7 @@ class FloorCastPanel extends LitElement {
     _plan: { state: true },
     _saved: { state: true },
     _levelId: { state: true },
+    _registry: { state: true },
     _tool: { state: true },
     _itemType: { state: true },
     _wallType: { state: true },
@@ -3308,6 +3326,196 @@ class FloorCastPanel extends LitElement {
       >`;
   }
 
+  /** Areas of Home Assistant and the area of every entity, read once when a room form needs them. */
+  private _registry?: Registry | "loading" | "failed";
+
+  private async loadRegistry(): Promise<void> {
+    this._registry = "loading";
+    type Entry = { entity_id: string; area_id: string | null; device_id: string | null; entity_category: string | null; hidden_by: string | null; disabled_by: string | null };
+    try {
+      const [areas, devices, entities, floors] = await Promise.all([
+        this.hass.callWS<{ area_id: string; name: string; floor_id?: string | null }[]>({ type: "config/area_registry/list" }),
+        this.hass.callWS<{ id: string; area_id: string | null }[]>({ type: "config/device_registry/list" }),
+        this.hass.callWS<Entry[]>({ type: "config/entity_registry/list" }),
+        this.hass.callWS<{ floor_id: string; name: string }[]>({ type: "config/floor_registry/list" }).catch(() => []),
+      ]);
+      const deviceArea = new Map(devices.map((device) => [device.id, device.area_id]));
+      const floorNames = new Map(floors.map((floor) => [floor.floor_id, floor.name]));
+      const entityArea: Record<string, string> = {};
+      const entityDevice: Record<string, string> = {};
+      for (const entry of entities) {
+        if (entry.disabled_by || entry.hidden_by || entry.entity_category) continue;
+        const area = entry.area_id ?? (entry.device_id ? deviceArea.get(entry.device_id) : null);
+        if (area) entityArea[entry.entity_id] = area;
+        if (entry.device_id) entityDevice[entry.entity_id] = entry.device_id;
+      }
+      this._registry = {
+        areas: areas
+          .map((area) => ({ id: area.area_id, name: area.name, floor: area.floor_id ? floorNames.get(area.floor_id) : undefined }))
+          .sort((a, b) => (a.floor ?? "~").localeCompare(b.floor ?? "~") || a.name.localeCompare(b.name)),
+        entityArea,
+        entityDevice,
+      };
+    } catch {
+      this._registry = "failed";
+    }
+  }
+
+  /** Entities of the room's area the plan can show, unplaced ones first. */
+  private areaEntities(room: Room, registry: Registry) {
+    const used = planEntities(this._plan!);
+    return Object.entries(registry.entityArea)
+      .filter(([, area]) => area === room.area)
+      .map(([entity]) => ({ entity, kind: areaKind(entity, this.hass.states[entity]), used: used.has(entity) }))
+      .filter((row): row is { entity: string; kind: AreaKind; used: boolean } => !!row.kind)
+      .sort((a, b) => Number(a.used) - Number(b.used) || AREA_KINDS.indexOf(a.kind) - AREA_KINDS.indexOf(b.kind) || a.entity.localeCompare(b.entity));
+  }
+
+  /** Doors or windows of the room an entity of the kind may go to: a blind to a window without one, a contact by its class. */
+  private freeOpenings(room: Room, entity: string, kind: AreaKind): Opening[] {
+    const openings = roomOpenings(this.level, room);
+    if (kind === "blind") return openings.filter((o) => o.type === "window" && !o.cover);
+    const deviceClass = this.hass.states[entity]?.attributes.device_class;
+    const type = deviceClass === "window" ? "window" : deviceClass === "opening" ? undefined : "door";
+    return openings.filter((o) => !o.contact && (!type || o.type === type));
+  }
+
+  /**
+   * Puts one entity of the area on the plan: a light or sensor in the room, a presence sensor in its list, a blind or
+   * contact on a door or window. A temperature sensor takes the humidity and CO2 of its device as secondary values.
+   */
+  private placeEntity(room: Room, entity: string, kind: AreaKind, registry: Registry, at?: Point, opening?: Opening): void {
+    const devices = (this.level.devices ??= []);
+    const spot = at ?? spotsInRoom(room, 1, 0.5)[0];
+    if (kind === "light") devices.push({ id: uid("light"), kind: "light", entity, at: spot, radius: DEFAULT_GLOW });
+    if (kind === "camera")
+      devices.push({ id: uid("camera"), kind: "camera", entity, at: spot, heading: 180, arc: DEFAULT_FIELD_OF_VIEW, radius: DEFAULT_CAMERA_RANGE });
+    if (kind === "alarm") devices.push({ id: uid("sensor"), kind: "sensor", sensorType: "alarm", entity, at: spot });
+    if (kind === "presence") room.occupancy = [...(room.occupancy ?? []), entity];
+    if (kind === "blind" && opening) opening.cover = entity;
+    if (kind === "contact" && opening) opening.contact = entity;
+    if (kind === "sensor") {
+      const used = planEntities(this._plan!);
+      const device = registry.entityDevice[entity];
+      const siblings = Object.keys(registry.entityArea).filter(
+        (other) => other !== entity && device && registry.entityDevice[other] === device && areaKind(other, this.hass.states[other]) === "sensor" && !used.has(other),
+      );
+      const deviceClass = this.hass.states[entity]?.attributes.device_class;
+      devices.push({
+        id: uid("sensor"),
+        kind: "sensor",
+        sensorType: deviceClass === "temperature" ? "temperature" : deviceClass === "humidity" ? "humidity" : "generic",
+        entity,
+        at: spot,
+        ...(siblings.length ? { secondary: siblings.slice(0, MAX_SECONDARY).map((id) => ({ entity: id })) } : {}),
+      });
+    }
+  }
+
+  /**
+   * Place all: lights in a row across the middle of the room, sensors above them, alarms and cameras below, presence
+   * sensors in the room's list, and a blind or contact where only one door or window fits. One step of undo.
+   */
+  private placeAll(room: Room, registry: Registry): void {
+    this.change(() => {
+      const rows = this.areaEntities(room, registry).filter((row) => !row.used);
+      const lights = rows.filter((row) => row.kind === "light");
+      spotsInRoom(room, lights.length, 0.5).forEach((at, i) => this.placeEntity(room, lights[i].entity, "light", registry, at));
+      // A temperature sensor first, so the humidity of its device becomes its secondary value.
+      const sensors = rows
+        .filter((row) => row.kind === "sensor")
+        .sort((a, b) => Number(this.hass.states[b.entity]?.attributes.device_class === "temperature") - Number(this.hass.states[a.entity]?.attributes.device_class === "temperature"));
+      const placed = () => planEntities(this._plan!);
+      const mains = sensors.filter((row) => !placed().has(row.entity));
+      for (const row of mains) {
+        if (placed().has(row.entity)) continue;
+        this.placeEntity(room, row.entity, "sensor", registry, spotsInRoom(room, 1, 0.25)[0]);
+      }
+      const below = rows.filter((row) => row.kind === "alarm" || row.kind === "camera");
+      spotsInRoom(room, below.length, 0.75).forEach((at, i) => this.placeEntity(room, below[i].entity, below[i].kind, registry, at));
+      for (const row of rows.filter((row) => row.kind === "presence")) this.placeEntity(room, row.entity, "presence", registry);
+      for (const row of rows.filter((row) => row.kind === "blind" || row.kind === "contact")) {
+        const free = this.freeOpenings(room, row.entity, row.kind);
+        if (free.length === 1) this.placeEntity(room, row.entity, row.kind, registry, undefined, free[0]);
+      }
+    });
+  }
+
+  /** The room's Home Assistant area and the entities of it, to place one by one or all at once. */
+  private areaSection(room: Room) {
+    const registry = this._registry;
+    if (registry === undefined) {
+      queueMicrotask(() => this.loadRegistry());
+      return nothing;
+    }
+    if (registry === "loading") return html`<p class="muted">Reading the areas of Home Assistant…</p>`;
+    if (registry === "failed") return html`<p class="muted">The areas of Home Assistant could not be read.</p>`;
+    const normal = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const match = room.area === undefined ? registry.areas.find((area) => normal(area.name) === normal(room.name)) : undefined;
+    const floors = [...new Set(registry.areas.map((area) => area.floor))];
+    const rows = room.area ? this.areaEntities(room, registry) : [];
+    // Place all leaves a blind or contact that fits more than one door or window for the list.
+    const free = rows.filter(
+      (row) => !row.used && ((row.kind !== "blind" && row.kind !== "contact") || this.freeOpenings(room, row.entity, row.kind).length === 1),
+    );
+    return html`
+      <label class="field wide">
+        <span>Area</span>
+        <select @change=${(e: Event) => this.change(() => (room.area = (e.target as HTMLSelectElement).value || null))}>
+          <option value="" ?selected=${!room.area}>None</option>
+          ${floors.map((floor) => {
+            const options = registry.areas
+              .filter((area) => area.floor === floor)
+              .map((area) => html`<option value=${area.id} ?selected=${room.area === area.id}>${area.name}</option>`);
+            return floor ? html`<optgroup label=${floor}>${options}</optgroup>` : options;
+          })}
+        </select>
+      </label>
+      ${match
+        ? html`<div class="row">
+            <button @click=${() => this.change(() => (room.area = match.id))}>Use the area ${match.name}</button>
+          </div>`
+        : nothing}
+      ${room.area
+        ? html`${rows.length
+              ? html`<div class="area-list">
+                  ${rows.map((row) => {
+                    const name = this.hass.states[row.entity]?.attributes.friendly_name ?? row.entity;
+                    const openings = row.kind === "blind" || row.kind === "contact" ? this.freeOpenings(room, row.entity, row.kind) : [];
+                    const action = row.used
+                      ? html`<span class="muted">placed</span>`
+                      : row.kind === "blind" || row.kind === "contact"
+                        ? openings.length
+                          ? html`<select
+                              @change=${(e: Event) => {
+                                const opening = openings[Number((e.target as HTMLSelectElement).value)];
+                                if (opening) this.change(() => this.placeEntity(room, row.entity, row.kind, registry, undefined, opening));
+                              }}
+                            >
+                              <option value="">Put on…</option>
+                              ${openings.map((o, i) => html`<option value=${i}>${openingName(this.level, room, o)}</option>`)}
+                            </select>`
+                          : html`<span class="muted">no free ${row.kind === "blind" ? "window" : "door or window"}</span>`
+                        : html`<button @click=${() => this.change(() => this.placeEntity(room, row.entity, row.kind, registry))}>Place</button>`;
+                    return html`<div class="area-row">
+                      <span class="area-name" title=${row.entity}>${name}</span>
+                      <span class="muted">${AREA_KIND_NAMES[row.kind]}</span>
+                      ${action}
+                    </div>`;
+                  })}
+                </div>`
+              : html`<p class="muted">The area has no lights, sensors, blinds or cameras the plan can show.</p>`}
+            ${free.length
+              ? html`<div class="row"><button @click=${() => this.placeAll(room, registry)}>Place all (${free.length})</button></div>
+                  <p class="muted">
+                    Place all puts lights across the middle of the room, sensors above them and alarms and cameras below; drag them
+                    where they are. A blind or contact goes on its own only where one door or window fits.
+                  </p>`
+              : nothing}`
+        : nothing}
+    `;
+  }
+
   private roomProperties(room?: Room) {
     if (!room) return nothing;
     const lights = roomLights(this.level, room);
@@ -3316,6 +3524,7 @@ class FloorCastPanel extends LitElement {
     return html`
       <h3>Room</h3>
       ${this.text("Name", room.name, (v) => (room.name = v))}
+      ${this.areaSection(room)}
       <label class="check"
         ><input type="checkbox" .checked=${!!room.hideName} @change=${(e: Event) => this.change(() => (room.hideName = (e.target as HTMLInputElement).checked))} />
         Hide the name on the card</label
@@ -3992,6 +4201,28 @@ class FloorCastPanel extends LitElement {
       .light floorcast-entity-picker {
         flex: 1;
         min-width: 0;
+      }
+      .area-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 6px 0;
+      }
+      .area-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+      .area-row .area-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .area-row select,
+      .area-row button {
+        font-size: 12px;
       }
       .muted {
         color: var(--secondary-text-color);

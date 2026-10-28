@@ -39,10 +39,16 @@ someone to the kitchen counter.
 - **Sprinklers** with their throw and arc, showing the water while the valve is open.
 - **People** from HLK-LD2450 radars and Frigate cameras, joined by one tracker, with entrance, ignore and resting place
   zones and the paths they walked during the last day.
-- **Counting**: a count and an occupancy entity for every room and counting zone, ready for automations.
+- **Counting**: a count and an occupancy entity for every room and counting zone, ready for automations; motion and
+  presence sensors keep a room occupied too.
 - **Mower and vacuum** placed on the plan from their maps, with their tracks and battery.
 - **Camera stills** beside the camera, refreshed while shown, opening by themselves when someone is seen.
 - **Ground view** (experimental): the camera image laid on the plan, also ahead of the moving mower.
+- **Rooms linked to areas**: a room offers the lights, sensors, blinds and contacts of its Home Assistant area, and
+  **Place all** puts them in at once.
+- **Alarms**: smoke, gas, carbon monoxide and water sensors pulse their room red and name it at the top of the card.
+- **Heat map**: rooms coloured by temperature, humidity or CO₂, with a switch on the card.
+- **Ask before switching** for a pump, a server or a gate.
 - **Built-in guide** in the editor, explaining every part with examples.
 - **Service `floorcast.press`** doing what a tap does, for automations and buttons.
 - **Local**: everything is computed inside Home Assistant, the card only draws. No extra Python packages, no
@@ -89,7 +95,8 @@ Home Assistant and add the integration as in step 3.
 ## Getting started
 
 1. Open **FloorCast** in the sidebar and draw the walls, doors, windows and rooms.
-2. Place the devices and choose their entities; add radars, cameras and zones to count people.
+2. Choose the Home Assistant area of each room and press **Place all**: its lights, sensors, blinds and contacts appear
+   in the room. Drag them where they are, place the rest by hand, and add radars, cameras and zones to count people.
 3. Press **Save**.
 4. Add the card to a dashboard: **Edit dashboard → Add card → FloorCast**.
 

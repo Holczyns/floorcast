@@ -42,8 +42,13 @@ const SECTIONS: Section[] = [
           In <b>Building</b>, draw the outer walls with <b>Wall</b>, then the inner walls. Place doors and windows on them and
           draw the rooms.
         </li>
+        <li>
+          Select a room and choose its Home Assistant <b>Area</b>: the form lists the lights, sensors, blinds, contacts and
+          cameras of the area. <b>Place all</b> puts them in the room at once; drag them where they are. A blind or contact goes
+          on a door or window you choose.
+        </li>
         <li>In <b>Objects</b>, draw the lawn, paving, terrace and furniture you want to see.</li>
-        <li>In <b>Devices</b>, place lights, sensors, sprinklers, the mower and the vacuum, and choose their entities.</li>
+        <li>In <b>Devices</b>, place the rest: sprinklers, screens, the mower and the vacuum, and lights without an area.</li>
         <li>Optional: radars, cameras and zones to count people.</li>
         <li>Press <b>Save</b>. The plan is stored in Home Assistant.</li>
         <li>
