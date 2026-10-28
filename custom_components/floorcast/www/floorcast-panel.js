@@ -665,15 +665,15 @@ data:
         <circle class="fc-trampoline-mat" cx=${p($)} cy=${p(y)} r=${p(v*.8)}></circle>
       </g>`:g`<circle data-item=${a.id} class=${i} cx=${p($)} cy=${p(y)} r=${p(v)}></circle>`}let s=a.corners==="square"?0:a.corners==="round"?e||$e:void 0;if(a.points){let $=s??(e||(a.type==="hedge"?.2:.05));return g`<path data-item=${a.id} class=${i} fill=${n??m} d=${N(a.points,$)}></path>`}let[l,o,c,d]=a.rect??[0,0,1,1],h=a.rotation??0,f=h?`rotate(${h} ${p(l+c/2)} ${p(o+d/2)})`:"",b=s!==void 0?Math.min(s,c/2,d/2):e?Math.min(e,c/2,d/2):a.type==="hedge"?Math.min(.2,Math.min(c,d)*.15):.05;return g`<g data-item=${a.id} transform=${f}>
     <rect class=${i} fill=${n??m} x=${p(l)} y=${p(o)} width=${p(c)} height=${p(d)} rx=${p(b)}></rect>
-  </g>`}function Vn(a){let r=a.points.map(d=>d[0]),e=a.points.map(d=>d[1]),[t,i,n,s]=[Math.min(...r),Math.max(...r),Math.min(...e),Math.max(...e)],l=s-n>=i-t,o=Math.max(3,Math.round((l?s-n:i-t)/.25)),c=Array.from({length:o-1},(d,h)=>{let f=(h+1)/o;return l?g`<path class="fc-stairs" d="M${p(t)} ${p(n+f*(s-n))}H${p(i)}"></path>`:g`<path class="fc-stairs" d="M${p(t+f*(i-t))} ${p(n)}V${p(s)}"></path>`});return g`${c}`}function an(a,r){let e=a.contact?r?.[a.contact]?.state:void 0,t=e==="on"?!0:e==="off"?!1:void 0,i=a.cover?r?.[a.cover]:void 0,n=Number.parseFloat(i?.attributes.current_position),s=Number.isFinite(n)?1-Math.min(100,Math.max(0,n))/100:i?.state==="closed"?1:i?.state==="open"?0:void 0;return{open:t??a.drawn!=="closed",sensed:t,position:Number.isFinite(n)?Math.round(n):void 0,closure:s,moving:i?.state==="opening"||i?.state==="closing"}}function on(a,r,e){let t=D(e),i=[t[1],-t[0]],n=R(e,r.at),s=e.t/2+.3,l=c=>{let d=O(a,[n[0]+i[0]*s*c,n[1]+i[1]*s*c]);return!!d&&!d.outdoor},o=l(1)&&!l(-1)?-1:1;return r.blindFlip&&(o=-o),[i[0]*o,i[1]*o]}function Bn(a,r,e,t){let i=D(r),n=a.width/2,s=R(r,a.at-n),l=R(r,a.at+n),o=`M${p(s[0])} ${p(s[1])}L${p(l[0])} ${p(l[1])}`,c=an(a,t);if(a.type==="window"){let j=m;if(a.cover&&c.closure!==void 0&&c.closure>.01){let we=on(e,a,r),ye=Math.min(.08,r.t*.35),re=r.t/2-ye/2-.005,F=[s[0]+we[0]*re,s[1]+we[1]*re],ae=[F[0]+i[0]*a.width*c.closure,F[1]+i[1]*a.width*c.closure];j=g`<path class="fc-blind ${c.moving?"moving":""}" stroke-width=${p(ye)} d="M${p(F[0])} ${p(F[1])}L${p(ae[0])} ${p(ae[1])}"></path>`}return g`<g data-opening=${a.id} class=${c.sensed?"fc-open":""}>
+  </g>`}function Vn(a){let r=a.points.map(d=>d[0]),e=a.points.map(d=>d[1]),[t,i,n,s]=[Math.min(...r),Math.max(...r),Math.min(...e),Math.max(...e)],l=s-n>=i-t,o=Math.max(3,Math.round((l?s-n:i-t)/.25)),c=Array.from({length:o-1},(d,h)=>{let f=(h+1)/o;return l?g`<path class="fc-stairs" d="M${p(t)} ${p(n+f*(s-n))}H${p(i)}"></path>`:g`<path class="fc-stairs" d="M${p(t+f*(i-t))} ${p(n)}V${p(s)}"></path>`});return g`${c}`}function an(a,r){let e=a.contact?r?.[a.contact]?.state:void 0,t=e==="on"?!0:e==="off"?!1:void 0,i=a.cover?r?.[a.cover]:void 0,n=Number.parseFloat(i?.attributes.current_position),s=Number.isFinite(n)?1-Math.min(100,Math.max(0,n))/100:i?.state==="closed"?1:i?.state==="open"?0:void 0;return{open:t??a.drawn!=="closed",sensed:t,position:Number.isFinite(n)?Math.round(n):void 0,closure:s,moving:i?.state==="opening"||i?.state==="closing",lost:!!a.contact&&!!r&&t===void 0}}function on(a,r,e){let t=D(e),i=[t[1],-t[0]],n=R(e,r.at),s=e.t/2+.3,l=c=>{let d=O(a,[n[0]+i[0]*s*c,n[1]+i[1]*s*c]);return!!d&&!d.outdoor},o=l(1)&&!l(-1)?-1:1;return r.blindFlip&&(o=-o),[i[0]*o,i[1]*o]}function Bn(a,r,e,t){let i=D(r),n=a.width/2,s=R(r,a.at-n),l=R(r,a.at+n),o=`M${p(s[0])} ${p(s[1])}L${p(l[0])} ${p(l[1])}`,c=an(a,t);if(a.type==="window"){let j=m;if(a.cover&&c.closure!==void 0&&c.closure>.01){let we=on(e,a,r),ye=Math.min(.08,r.t*.35),re=r.t/2-ye/2-.005,F=[s[0]+we[0]*re,s[1]+we[1]*re],ae=[F[0]+i[0]*a.width*c.closure,F[1]+i[1]*a.width*c.closure];j=g`<path class="fc-blind ${c.moving?"moving":""}" stroke-width=${p(ye)} d="M${p(F[0])} ${p(F[1])}L${p(ae[0])} ${p(ae[1])}"></path>`}return g`<g data-opening=${a.id} class="${c.sensed?"fc-open":""} ${c.lost?"fc-lost":""}">
       <path class="fc-gap" d=${o} stroke-width=${p(r.t+.02)}></path>
       <path class="fc-window" d=${o}></path>
       ${j}
-    </g>`}let d=a.swingRight?-1:1,h=[-d*i[1],d*i[0]],f=j=>[j[0]+h[0]*r.t/2,j[1]+h[1]*r.t/2],b=f(a.hingeEnd?l:s),$=f(a.hingeEnd?s:l),y=[b[0]+h[0]*a.width,b[1]+h[1]*a.width],v=[y[0]-b[0],y[1]-b[1]],x=[$[0]-b[0],$[1]-b[1]],P=v[0]*x[1]-v[1]*x[0]>0?1:0;return c.open?g`<g data-opening=${a.id}>
+    </g>`}let d=a.swingRight?-1:1,h=[-d*i[1],d*i[0]],f=j=>[j[0]+h[0]*r.t/2,j[1]+h[1]*r.t/2],b=f(a.hingeEnd?l:s),$=f(a.hingeEnd?s:l),y=[b[0]+h[0]*a.width,b[1]+h[1]*a.width],v=[y[0]-b[0],y[1]-b[1]],x=[$[0]-b[0],$[1]-b[1]],P=v[0]*x[1]-v[1]*x[0]>0?1:0;return c.open?g`<g data-opening=${a.id} class=${c.lost?"fc-lost":""}>
     <path class="fc-gap" d=${o} stroke-width=${p(r.t+.02)}></path>
     <path class="fc-door" d="M${p(b[0])} ${p(b[1])}L${p(y[0])} ${p(y[1])}"></path>
     <path class="fc-door-arc" d="M${p(y[0])} ${p(y[1])}A${p(a.width)} ${p(a.width)} 0 0 ${P} ${p($[0])} ${p($[1])}"></path>
-  </g>`:g`<g data-opening=${a.id}>
+  </g>`:g`<g data-opening=${a.id} class=${c.lost?"fc-lost":""}>
       <path class="fc-gap" d=${o} stroke-width=${p(r.t+.02)}></path>
       <path class="fc-door shut" d="M${p(b[0])} ${p(b[1])}L${p($[0])} ${p($[1])}"></path>
     </g>`}function ln(a,r,e){let t=new Map(a.walls.map(i=>[i.id,i]));return g`${a.openings.filter(i=>i.type==="window"&&(i.cover||i.contact)&&t.has(i.wall)).map(i=>{let n=t.get(i.wall),s=an(i,r),l=[i.cover&&s.position!==void 0?`${s.position}%`:void 0,i.cover&&s.position===void 0&&s.closure!==void 0?s.closure?"closed":"open":void 0,s.sensed===void 0?void 0:s.sensed?"open":"closed"].filter(Boolean);if(!l.length)return m;let o=on(a,i,n),c=R(n,i.at),d=n.t/2+.12+e*.7;return g`<text class="fc-opening-label ${s.sensed?"alert":""}" x=${p(c[0]+o[0]*d)} y=${p(c[1]+o[1]*d)}
@@ -856,6 +856,12 @@ data:
     fill: none;
     stroke: var(--fc-window);
     stroke-width: 0.07;
+  }
+  .fc-lost .fc-door,
+  .fc-lost .fc-door-arc,
+  .fc-lost .fc-window {
+    stroke-dasharray: 0.06 0.05;
+    opacity: 0.45;
   }
   .fc-open .fc-window {
     stroke: var(--fc-alert);

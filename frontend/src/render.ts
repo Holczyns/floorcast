@@ -125,6 +125,8 @@ export function openingState(opening: Opening, states?: States) {
     position: Number.isFinite(position) ? Math.round(position) : undefined,
     closure,
     moving: cover?.state === "opening" || cover?.state === "closing",
+    // A contact whose state is not known (unavailable, unknown): the opening is drawn as unsure.
+    lost: !!opening.contact && !!states && sensed === undefined,
   };
 }
 
@@ -162,7 +164,7 @@ export function renderOpening(opening: Opening, wall: Wall, level: Level, states
       const q = [p[0] + d[0] * opening.width * state.closure, p[1] + d[1] * opening.width * state.closure];
       blind = svg`<path class="fc-blind ${state.moving ? "moving" : ""}" stroke-width=${n(width)} d="M${n(p[0])} ${n(p[1])}L${n(q[0])} ${n(q[1])}"></path>`;
     }
-    return svg`<g data-opening=${opening.id} class=${state.sensed ? "fc-open" : ""}>
+    return svg`<g data-opening=${opening.id} class="${state.sensed ? "fc-open" : ""} ${state.lost ? "fc-lost" : ""}">
       <path class="fc-gap" d=${line} stroke-width=${n(wall.t + 0.02)}></path>
       <path class="fc-window" d=${line}></path>
       ${blind}
@@ -181,12 +183,12 @@ export function renderOpening(opening: Opening, wall: Wall, level: Level, states
   const sweep = u[0] * v[1] - u[1] * v[0] > 0 ? 1 : 0;
   // A shut door lies in the opening along the face of the wall; an open one stands at a right angle.
   if (!state.open) {
-    return svg`<g data-opening=${opening.id}>
+    return svg`<g data-opening=${opening.id} class=${state.lost ? "fc-lost" : ""}>
       <path class="fc-gap" d=${line} stroke-width=${n(wall.t + 0.02)}></path>
       <path class="fc-door shut" d="M${n(hinge[0])} ${n(hinge[1])}L${n(free[0])} ${n(free[1])}"></path>
     </g>`;
   }
-  return svg`<g data-opening=${opening.id}>
+  return svg`<g data-opening=${opening.id} class=${state.lost ? "fc-lost" : ""}>
     <path class="fc-gap" d=${line} stroke-width=${n(wall.t + 0.02)}></path>
     <path class="fc-door" d="M${n(hinge[0])} ${n(hinge[1])}L${n(leaf[0])} ${n(leaf[1])}"></path>
     <path class="fc-door-arc" d="M${n(leaf[0])} ${n(leaf[1])}A${n(opening.width)} ${n(opening.width)} 0 0 ${sweep} ${n(free[0])} ${n(free[1])}"></path>
@@ -911,6 +913,12 @@ export const planStyles = css`
     fill: none;
     stroke: var(--fc-window);
     stroke-width: 0.07;
+  }
+  .fc-lost .fc-door,
+  .fc-lost .fc-door-arc,
+  .fc-lost .fc-window {
+    stroke-dasharray: 0.06 0.05;
+    opacity: 0.45;
   }
   .fc-open .fc-window {
     stroke: var(--fc-alert);
