@@ -134,7 +134,7 @@
           if (o.cover) set(o.cover, "open", { current_position: 40 });
           if (o.contact) set(o.contact, o.type === "window" ? "on" : "off", { device_class: o.type });
         }
-      for (const d of cameras) if (d.entity) set(d.entity, "recording", { entity_picture: "/tools/mock_camera.svg?token=mock" });
+      for (const d of cameras) if (d.entity) set(d.entity, "recording", { entity_picture: new URL("mock_camera.svg", location.href).pathname + "?token=mock" });
       // Every other entity of the plan exists, switched off.
       for (const level of plan.levels) {
         const ids = [...(level.devices ?? []).flatMap((d) => [d.entity, d.remote, d.battery]), ...(level.rooms ?? []).flatMap((r) => r.lights ?? [])];
@@ -297,7 +297,7 @@
         callApi: async (method, path) => {
           if (path.startsWith("dreame_lawn_mower/mowing-map"))
             return {
-              width: 1115, height: 2048, background_path: "/tools/mock_mower_map.svg",
+              width: 1115, height: 2048, background_path: new URL("mock_mower_map.svg", location.href).pathname,
               projection: { max_x: 810, min_y: -11220, scale: 0.12623476587556126, padding: 40, native_width: 1115, native_height: 2048 },
             };
           throw new Error(`no mock for ${path}`);

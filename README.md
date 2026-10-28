@@ -22,6 +22,8 @@ The plan is not only to look at. A tap on a room switches its lights, a tap on a
 camera opens what it sees. People counted on the plan become entities for your automations, so a light can follow
 someone to the kitchen counter.
 
+**[Try the demo](https://holczyns.github.io/floorcast/)**: the card and the editor with an example house, in your browser.
+
 ![The card on a dashboard](docs/images/card.png)
 
 ## Features
@@ -68,15 +70,21 @@ Tested with an HLK-LD2450 on an ESP32-C3 (ESPHome 2026.10), Frigate 0.17 (integr
 
 ### HACS
 
-1. In HACS, open the menu in the top right corner and choose **Custom repositories**.
-2. Add `https://github.com/Holczyns/floorcast` with the type **Integration**.
-3. Search for **FloorCast**, download it and restart Home Assistant.
-4. Go to **Settings → Devices & services → Add integration** and choose **FloorCast**.
+[![Open the FloorCast repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Holczyns&repository=floorcast&category=integration)
+
+1. Click the button above, or in HACS open the menu in the top right corner, choose **Custom repositories** and add
+   `https://github.com/Holczyns/floorcast` with the type **Integration**.
+2. Download **FloorCast** and restart Home Assistant.
+3. Add the integration:
+
+   [![Start setting up FloorCast.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=floorcast)
+
+   or **Settings → Devices & services → Add integration → FloorCast**.
 
 ### Manual
 
 Copy `custom_components/floorcast` into the `custom_components` folder of your Home Assistant configuration, restart
-Home Assistant and add the integration as in step 4.
+Home Assistant and add the integration as in step 3.
 
 ## Getting started
 

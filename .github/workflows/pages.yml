@@ -1,0 +1,43 @@
+name: Demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "custom_components/floorcast/www/**"
+      - "custom_components/floorcast/brand/**"
+      - "tools/harness.html"
+      - "tools/example_plan.json"
+      - "tools/mock_*.svg"
+      - "docs/demo/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect the demo
+        run: |
+          mkdir -p site/tools site/custom_components/floorcast
+          cp docs/demo/index.html site/
+          cp tools/harness.html tools/example_plan.json tools/mock_mower_map.svg tools/mock_camera.svg site/tools/
+          cp -r custom_components/floorcast/www custom_components/floorcast/brand site/custom_components/floorcast/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

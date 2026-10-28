@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FloorCast demo</title>
+    <link rel="icon" href="custom_components/floorcast/brand/icon.png" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #111418;
+        --bar: #1c2026;
+        --text: #e1e5ea;
+        --muted: #9aa3ad;
+        --accent: #03a9f4;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Roboto, "Segoe UI", sans-serif;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 8px 16px;
+        background: var(--bar);
+      }
+      header img {
+        height: 32px;
+      }
+      header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        flex: 1;
+        min-width: 200px;
+      }
+      nav {
+        display: flex;
+        gap: 8px;
+      }
+      nav a {
+        color: var(--text);
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 16px;
+        border: 1px solid #2c3239;
+      }
+      nav a[aria-current] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      iframe {
+        flex: 1;
+        border: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="custom_components/floorcast/brand/dark_logo.png" alt="FloorCast" />
+      <p>An example house with invented states, running in your browser. Changes in the editor stay in this browser.</p>
+      <nav>
+        <a href="?card" id="card">Card</a>
+        <a href="?editor" id="editor">Editor</a>
+        <a href="https://github.com/Holczyns/floorcast">GitHub</a>
+      </nav>
+    </header>
+    <iframe title="FloorCast"></iframe>
+    <script>
+      const editor = location.search.includes("editor");
+      document.getElementById(editor ? "editor" : "card").setAttribute("aria-current", "page");
+      document.querySelector("iframe").src = "tools/harness.html?example&people" + (editor ? "&mode=panel" : "");
+    </script>
+  </body>
+</html>
