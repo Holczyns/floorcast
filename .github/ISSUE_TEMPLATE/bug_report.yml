@@ -1,0 +1,47 @@
+name: Bug report
+description: Something does not work as described.
+labels: [bug]
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Home Assistant and FloorCast versions.
+      placeholder: Home Assistant 2026.10.2, FloorCast 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Part
+      options:
+        - Editor
+        - Card
+        - Lights, doors, windows or sensors
+        - People, radars or zones
+        - Cameras
+        - Mower or vacuum
+        - Ground view (experimental)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics and logs
+      description: >-
+        Settings > Devices & services > FloorCast > the menu > Download diagnostics, and the log lines with
+        "floorcast" from Settings > System > Logs. The diagnostics hold no names or entity ids.
+      render: text
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: A screenshot of the editor or the card, if the problem is in the drawing.

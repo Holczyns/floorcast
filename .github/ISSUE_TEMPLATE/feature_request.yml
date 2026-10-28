@@ -1,0 +1,16 @@
+name: Idea
+description: A feature or an improvement.
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you would like FloorCast to do, and how you would use it.
+    validations:
+      required: true
+  - type: textarea
+    id: devices
+    attributes:
+      label: Devices and integrations
+      description: The devices and integrations it should work with, if any.
