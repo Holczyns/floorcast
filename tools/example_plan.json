@@ -80,6 +80,8 @@
      "id": "sensor_septic", "kind": "sensor", "sensorType": "generic", "label": "Septic tank", "entity": "sensor.septic_tank_level", "at": [14, 2.5],
      "main": { "unit": "entity", "decimals": 1 }
     },
+    { "id": "alarm_bathroom", "kind": "sensor", "sensorType": "alarm", "entity": "binary_sensor.bathroom_leak", "at": [11.3, 3.4] },
+    { "id": "alarm_hall", "kind": "sensor", "sensorType": "alarm", "entity": "binary_sensor.hall_smoke", "at": [0.7, 0.7] },
     { "id": "screen_tv", "kind": "screen", "entity": "media_player.living_room_tv", "remote": "remote.living_room_tv", "at": [7.7, 6.2], "to": [7.7, 7.8], "radius": 3, "arc": 50, "flip": true },
     { "id": "sprinkler_1", "kind": "sprinkler", "entity": "valve.garden_zone_1", "at": [-3.7, 20.7], "radius": 7, "heading": 0, "arc": 90, "nozzle": "rotor" },
     { "id": "sprinkler_2", "kind": "sprinkler", "entity": "valve.garden_zone_2", "at": [15, 20.7], "radius": 7, "heading": 270, "arc": 90, "nozzle": "rotor" },

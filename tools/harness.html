@@ -90,6 +90,12 @@
       for (const level of plan.levels)
         for (const d of level.devices ?? []) {
           if (d.kind !== "sensor" && d.kind !== "thermometer") continue;
+          // Alarm sensors: quiet, the water sensor alarming with ?alarm.
+          if (d.sensorType === "alarm") {
+            const kind = /leak|water/.test(d.entity ?? "") ? "moisture" : "smoke";
+            if (d.entity) set(d.entity, params.has("alarm") && kind === "moisture" ? "on" : "off", { device_class: kind });
+            continue;
+          }
           const temperature = d.kind === "thermometer" || d.sensorType === "temperature";
           const humidity = d.sensorType === "humidity";
           if (d.entity && !states[d.entity])

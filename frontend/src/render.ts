@@ -582,6 +582,22 @@ export function renderSensor(
   </g>`;
 }
 
+/**
+ * An Alarm sensor: a small grey symbol while all is well, red while it alarms, struck through while unavailable.
+ * A water sensor is a drop, any other a detector seen from below.
+ */
+export function renderAlarm(at: Point, kind: string, active: boolean, unknown: boolean, size: number): SVGTemplateResult {
+  const r = size / 2;
+  const symbol =
+    kind === "moisture"
+      ? svg`<path d="M0 ${n(-r)}C${n(r * 0.7)} ${n(-r * 0.1)} ${n(r * 0.75)} ${n(r * 0.25)} ${n(r * 0.75)} ${n(r * 0.35)}A${n(r * 0.75)} ${n(r * 0.75)} 0 0 1 ${n(-r * 0.75)} ${n(r * 0.35)}C${n(-r * 0.75)} ${n(r * 0.25)} ${n(-r * 0.7)} ${n(-r * 0.1)} 0 ${n(-r)}Z"></path>`
+      : svg`<circle r=${n(r)}></circle><circle class="inner" r=${n(r * 0.45)}></circle>`;
+  return svg`<g class="fc-alarm ${active ? "on" : ""} ${unknown ? "unknown" : ""}" transform="translate(${n(at[0])} ${n(at[1])})">
+    ${symbol}
+    ${unknown ? svg`<line x1=${n(-r)} y1=${n(r)} x2=${n(r)} y2=${n(-r)}></line>` : nothing}
+  </g>`;
+}
+
 /** Text sizes in metres of a reading: its value and the line under it, as large on screen as the card shows them. */
 export const VALUE_PX = 15;
 export const NAME_PX = 10;
@@ -825,6 +841,45 @@ export const planStyles = css`
     --fc-camera-glow: #c9d1da;
     --fc-alert: #ff9f43;
     --fc-presence: #4fc3f7;
+  }
+  .fc-alarm {
+    fill: none;
+    stroke: var(--fc-sensor-idle, #8a939c);
+    stroke-width: 0.03;
+  }
+  .fc-alarm .inner {
+    fill: var(--fc-sensor-idle, #8a939c);
+    stroke: none;
+  }
+  .fc-alarm.on {
+    stroke: #f44336;
+  }
+  .fc-alarm.on .inner,
+  .fc-alarm.on path {
+    fill: #f44336;
+  }
+  .fc-alarm line {
+    stroke-width: 0.04;
+  }
+  .fc-alarm-room {
+    fill: #f44336;
+    pointer-events: none;
+    animation: fc-alarm-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes fc-alarm-pulse {
+    0%,
+    100% {
+      opacity: 0.15;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fc-alarm-room {
+      animation: none;
+      opacity: 0.35;
+    }
   }
   .fc-heat {
     opacity: 0.3;

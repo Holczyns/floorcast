@@ -63,6 +63,8 @@ import {
   type PreviewMode,
   imageToPlan,
   readingText,
+  ALARM_CLASSES,
+  alarmState,
   wallDirection,
   wallLength,
   withoutGarden,
@@ -83,6 +85,7 @@ import {
   renderOpeningLabels,
   readingSizes,
   renderSensor,
+  renderAlarm,
   renderScreen,
   renderScreenGlows,
   screenLight,
@@ -1718,6 +1721,14 @@ class FloorCastPanel extends LitElement {
                 <path class="hit-line" stroke-width=${px * 14}
                   d="M${device.at[0]} ${device.at[1]}L${(device.to ?? device.at)[0]} ${(device.to ?? device.at)[1]}"></path>
               </g>`
+            : device.kind === "sensor" && device.sensorType === "alarm"
+            ? svg`<g data-device=${device.id} class="sensor-device">
+                <circle class="hit" cx=${device.at[0]} cy=${device.at[1]} r=${px * 12}></circle>
+                ${(() => {
+                  const alarm = alarmState(device.entity, device.entity ? this.hass.states[device.entity] : undefined);
+                  return renderAlarm(device.at, alarm.kind, this._live && alarm.active, !device.entity || alarm.unknown, px * 14);
+                })()}
+              </g>`
             : device.kind === "sensor"
             ? svg`<g data-device=${device.id} class="sensor-device">
                 <circle class="hit" cx=${device.at[0]} cy=${device.at[1]} r=${px * 12}></circle>
@@ -2992,6 +3003,7 @@ class FloorCastPanel extends LitElement {
    */
   private sensorProperties(device: Device) {
     const type = device.sensorType ?? "generic";
+    if (type === "alarm") return this.alarmProperties(device);
     const deviceClass = type === "generic" ? undefined : type;
     const domains = ["sensor", "input_number", "number", "counter", "binary_sensor", "input_text", "input_select"];
     const picker = (label: string, value: string | null | undefined, apply: (id: string | null) => void, only?: string) => html`<div class="pick">
@@ -3010,18 +3022,7 @@ class FloorCastPanel extends LitElement {
     const room = roomAt(this.level, device.at);
     return html`
       <h3>Sensor</h3>
-      <label class="field wide">
-        <span>Type</span>
-        <select @change=${(e: Event) => this.change(() => (device.sensorType = (e.target as HTMLSelectElement).value as SensorType))}>
-          ${(
-            [
-              ["temperature", "Temperature"],
-              ["humidity", "Humidity"],
-              ["generic", "Other"],
-            ] as [SensorType, string][]
-          ).map(([value, label]) => html`<option value=${value} ?selected=${type === value}>${label}</option>`)}
-        </select>
-      </label>
+      ${this.sensorTypeSelect(device)}
       ${this.text("Header", device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
       <h4>Main value</h4>
       ${picker("Entity", device.entity, (id) => (device.entity = id), deviceClass)}
@@ -3052,6 +3053,50 @@ class FloorCastPanel extends LitElement {
       </p>
       ${this.deleteButton()}
     `;
+  }
+
+  /** An Alarm sensor: a smoke, gas, carbon monoxide or water sensor, or an alarm panel; it warns on the card. */
+  private alarmProperties(device: Device) {
+    const room = roomAt(this.level, device.at);
+    return html`
+      <h3>Sensor</h3>
+      ${this.sensorTypeSelect(device)}
+      <div class="pick">
+        <span>Entity</span>
+        <floorcast-entity-picker
+          .hass=${this.hass}
+          .domains=${["binary_sensor", "alarm_control_panel"]}
+          .deviceClass=${Object.keys(ALARM_CLASSES)}
+          .value=${device.entity ?? null}
+          optional
+          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
+        ></floorcast-entity-picker>
+      </div>
+      ${this.stateLine(device.entity)}
+      <p class="muted">
+        A smoke, gas, carbon monoxide or water sensor, or an alarm panel. While it alarms,
+        ${room ? html`${room.name} pulses red` : "the card"} and a bar at the top of the card names it; otherwise a small grey
+        symbol shows where it is.
+      </p>
+      ${this.deleteButton()}
+    `;
+  }
+
+  private sensorTypeSelect(device: Device) {
+    const type = device.sensorType ?? "generic";
+    return html`<label class="field wide">
+      <span>Type</span>
+      <select @change=${(e: Event) => this.change(() => (device.sensorType = (e.target as HTMLSelectElement).value as SensorType))}>
+        ${(
+          [
+            ["temperature", "Temperature"],
+            ["humidity", "Humidity"],
+            ["generic", "Other"],
+            ["alarm", "Alarm"],
+          ] as [SensorType, string][]
+        ).map(([value, label]) => html`<option value=${value} ?selected=${type === value}>${label}</option>`)}
+      </select>
+    </label>`;
   }
 
   /** Battery sensor written beside a mower or vacuum on the card. */

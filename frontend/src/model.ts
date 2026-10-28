@@ -165,7 +165,29 @@ export interface GroundSettings {
   reach?: number;
 }
 
-export type SensorType = "temperature" | "humidity" | "generic";
+export type SensorType = "temperature" | "humidity" | "generic" | "alarm";
+
+/** Binary sensors an Alarm sensor takes, with the name its warning shows; an alarm panel is an Alarm too. */
+export const ALARM_CLASSES: Record<string, string> = {
+  smoke: "Smoke",
+  gas: "Gas",
+  carbon_monoxide: "Carbon monoxide",
+  moisture: "Water leak",
+  safety: "Alarm",
+};
+
+/** What an Alarm sensor reports: its kind for the icon and warning, and whether it alarms now. */
+export function alarmState(entityId: string | null | undefined, stateObj: Reading): { kind: string; name: string; active: boolean; unknown: boolean } {
+  const panel = !!entityId?.startsWith("alarm_control_panel.");
+  const kind = panel ? "alarm" : String(stateObj?.attributes.device_class ?? "safety");
+  const state = stateObj?.state;
+  return {
+    kind,
+    name: panel ? "Alarm" : (ALARM_CLASSES[kind] ?? "Alarm"),
+    active: panel ? state === "triggered" : state === "on",
+    unknown: !stateObj || state === "unavailable" || state === "unknown",
+  };
+}
 
 /**
  * How one value of a sensor is written. The unit is the short one (°, %, else the entity's unit) by

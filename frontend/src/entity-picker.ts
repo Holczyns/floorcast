@@ -21,7 +21,7 @@ export class FloorCastEntityPicker extends LitElement {
 
   hass!: HomeAssistant;
   domains: string[] = [];
-  deviceClass?: string;
+  deviceClass?: string | string[];
   value?: string | null;
   optional = false;
   private _query = "";
@@ -30,7 +30,8 @@ export class FloorCastEntityPicker extends LitElement {
   private options(): { id: string; name: string }[] {
     const matches = Object.values(this.hass.states).filter((state) => {
       const domainMatches = this.domains.includes(state.entity_id.split(".")[0]);
-      const classMatches = !this.deviceClass || state.attributes.device_class === this.deviceClass;
+      const classes = typeof this.deviceClass === "string" ? [this.deviceClass] : this.deviceClass;
+      const classMatches = !classes || classes.includes(state.attributes.device_class) || (!!classes.length && state.entity_id.startsWith("alarm_control_panel."));
       return domainMatches && (classMatches || state.entity_id === this.value);
     });
     return matches

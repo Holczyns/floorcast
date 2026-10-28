@@ -24,6 +24,7 @@ import { type CameraObject, type StillImage, type Device, type Level, type Track
   normalizeSensors,
   isPowered,
   HEAT_SCALES,
+  alarmState,
   heatColour,
   roomHeat,
   type HeatKind,
@@ -42,6 +43,7 @@ import {
   readingSizes,
   NAME_PX,
   renderSensor,
+  renderAlarm,
   trackHeading,
   renderScreen,
   renderScreenGlows,
@@ -540,6 +542,7 @@ class FloorCastCard extends LitElement {
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
 
             </div>`}
+        ${this.renderAlarmBar(levels)}
         <div class="levels ${side ? "side" : ""}">
           ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
         </div>
@@ -560,7 +563,7 @@ class FloorCastCard extends LitElement {
           ${PLAN_DEFS} ${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}
           ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
           ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)}
-          ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)}
+          ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)}
           ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}
         </svg>
       </div>
@@ -784,7 +787,7 @@ class FloorCastCard extends LitElement {
     const details = mode === "show" || (mode === "auto" && pxPerMetre >= DETAILS_PX_PER_M);
     const { value: valueSize, sub: subSize } = readingSizes(pxPerMetre);
     return (level.devices ?? [])
-      .filter((device) => device.kind === "sensor" && device.entity)
+      .filter((device) => device.kind === "sensor" && device.entity && device.sensorType !== "alarm")
       .map((device) => {
         const main = readingText(this.hass.states[device.entity!], device.main);
         const lines = details
@@ -1017,6 +1020,52 @@ class FloorCastCard extends LitElement {
           <circle cx=${device.at[0]} cy=${device.at[1]} r=${r}></circle>
         </g>`,
       );
+  }
+
+  /** Alarm sensors of the given levels that alarm now, with the room they stand in. */
+  private activeAlarms(levels: Level[]) {
+    return levels.flatMap((level) =>
+      (level.devices ?? [])
+        .filter((device) => device.kind === "sensor" && device.sensorType === "alarm" && device.entity)
+        .map((device) => ({ level, device, room: roomAt(level, device.at), ...alarmState(device.entity, this.hass.states[device.entity!]) }))
+        .filter((alarm) => alarm.active),
+    );
+  }
+
+  /** Alarm sensors: a grey symbol, red with its room pulsing while it alarms; a tap or hold opens it. */
+  private renderAlarms(level: Level, pxPerMetre: number) {
+    const size = Math.max(0.2, 14 / pxPerMetre);
+    const alarming = new Set(this.activeAlarms([level]).flatMap((alarm) => (alarm.room ? [alarm.room.id] : [])));
+    return svg`${level.rooms
+      .filter((room) => alarming.has(room.id))
+      .map((room) => svg`<path class="fc-alarm-room" d=${polygonPath(room.points)}></path>`)}
+      ${(level.devices ?? [])
+        .filter((device) => device.kind === "sensor" && device.sensorType === "alarm" && device.entity)
+        .map((device) => {
+          const alarm = alarmState(device.entity, this.hass.states[device.entity!]);
+          return svg`<g class="mower-hit" @click=${() => this.openMoreInfo(device.entity!)}>
+            <circle class="lamp-hit" cx=${device.at[0]} cy=${device.at[1]} r=${size}></circle>
+            ${renderAlarm(device.at, alarm.kind, alarm.active, alarm.unknown, size)}
+          </g>`;
+        })}`;
+  }
+
+  /** The bar of alarms at the top of the card: room and kind; a tap shows its level and opens the sensor. */
+  private renderAlarmBar(levels: Level[]) {
+    const alarms = this.activeAlarms(levels);
+    if (!alarms.length) return nothing;
+    return html`<div class="alarm-bar" role="alert">
+      ${alarms.map(
+        (alarm) => html`<button
+          @click=${() => {
+            this._active = alarm.level.id;
+            this.openMoreInfo(alarm.device.entity!);
+          }}
+        >
+          ${alarm.room ? `${alarm.room.name} · ` : ""}${alarm.name}
+        </button>`,
+      )}
+    </div>`;
   }
 
   /** Light points on top of everything: a tap switches that one light, holding opens it. */
@@ -1262,6 +1311,24 @@ class FloorCastCard extends LitElement {
       .empty {
         padding: 16px;
         color: var(--secondary-text-color);
+      }
+      .alarm-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 6px 8px;
+        background: rgba(244, 67, 54, 0.18);
+      }
+      .alarm-bar button {
+        border: 1px solid #f44336;
+        border-radius: 16px;
+        padding: 4px 12px;
+        background: #f44336;
+        color: #fff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
       }
       .tabs {
         display: flex;

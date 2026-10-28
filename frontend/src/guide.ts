@@ -194,6 +194,11 @@ const SECTIONS: Section[] = [
         On the card the secondary values show when the card is large enough to read them (option <code>details</code>). A
         tap does nothing; holding opens the main value.
       </p>
+      <p>
+        Type <i>Alarm</i> takes a smoke, gas, carbon monoxide or water sensor, or an alarm panel. It is a small grey symbol
+        while all is well. While it alarms its room pulses red and a bar at the top of the card names the room and the alarm;
+        a tap on the bar opens the sensor.
+      </p>
     `,
   },
   {
