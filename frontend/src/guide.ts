@@ -143,6 +143,10 @@ const SECTIONS: Section[] = [
         <li>Colour lights glow in their colour, dimmed ones dimmer.</li>
       </ul>
       <p>On the card: a tap on a light switches it, a tap on a room switches all lights in the room, holding opens details.</p>
+      <p>
+        <i>Ask before switching</i> (lights, screens and windows with a blind) makes the card ask <b>Yes</b> or <b>No</b> before
+        a tap switches it, for a pump, a server or a gate. A tap on its room leaves such a light out.
+      </p>
     `,
   },
   {

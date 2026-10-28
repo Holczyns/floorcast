@@ -1,7 +1,8 @@
 """Service floorcast.press: what a tap on the plan does, the same from a card, an automation or a button.
 
 1. A room: all its lights together, off when any is on, otherwise on. Its lights are the light
-   points standing in it and the lights it still lists itself.
+   points standing in it and the lights it still lists itself; a light that asks before switching
+   is left out.
 2. A window or door: a blind stops while it moves, closes when open (even partly), opens when closed.
 3. A device: a screen switches its power entity on or off; any other device toggles its entity.
 
@@ -49,7 +50,10 @@ def room_lights(level: dict[str, Any], room: dict[str, Any]) -> list[str]:
     placed = [
         device["entity"]
         for device in level.get("devices") or []
-        if device.get("kind") == "light" and device.get("entity") and point_in_polygon(_centre(device), room["points"])
+        if device.get("kind") == "light"
+        and device.get("entity")
+        and not device.get("confirm")
+        and point_in_polygon(_centre(device), room["points"])
     ]
     return list(dict.fromkeys([*placed, *(room.get("lights") or [])]))
 

@@ -25,6 +25,8 @@ PLAN = {
                 {"id": "l1", "kind": "light", "entity": "light.a", "at": [1, 1]},
                 {"id": "l2", "kind": "light", "entity": "light.b", "at": [3, 3]},
                 {"id": "l3", "kind": "light", "entity": "light.outside", "at": [9, 9]},
+                # Asks before switching, so a tap on the room leaves it out.
+                {"id": "l4", "kind": "light", "entity": "light.pump", "at": [2, 2], "confirm": True},
                 {"id": "p1", "kind": "screen", "entity": "remote.projector", "at": [0, 2], "to": [2, 2]},
                 {
                     "id": "m1",
@@ -86,7 +88,7 @@ async def test_a_delayed_mower_moves_smoothly_between_its_reports(hass: HomeAssi
     clock = [1000.0]
     with patch("custom_components.floorcast.robots.time.monotonic", lambda: clock[0]):
         plan = copy.deepcopy(PLAN)
-        plan["levels"][0]["devices"][4]["ground"] = {"delay": 5}
+        next(d for d in plan["levels"][0]["devices"] if d["id"] == "m1")["ground"] = {"delay": 5}
         async_dispatcher_send(hass, SIGNAL_PLAN_UPDATED, plan)
         await hass.async_block_till_done()
         robots = floorcast

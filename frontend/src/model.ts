@@ -42,6 +42,8 @@ export interface Opening {
   cover?: string | null;
   /** Window: the blind is drawn on the other side of the wall than found by the rooms. */
   blindFlip?: boolean;
+  /** Window: the card asks before a tap moves its blind. */
+  confirm?: boolean;
 }
 
 export interface Room {
@@ -267,6 +269,8 @@ export interface Device {
   calibration?: { image: Point; plan: Point }[];
   /** Camera: detect resolution of Frigate in pixels, when Frigate does not report it. */
   detect?: [number, number];
+  /** Light or screen: the card asks before a tap switches it, and a tap on its room leaves it out. */
+  confirm?: boolean;
 }
 
 type Reading = { state: string; attributes: Record<string, any> } | undefined;
@@ -809,7 +813,7 @@ export function roomThermometers(level: Level, room: Room): Device[] {
 
 export function roomLights(level: Level, room: Room): string[] {
   const placed = (level.devices ?? [])
-    .filter((device) => device.kind === "light" && device.entity && pointInPolygon(deviceCentre(device), room.points))
+    .filter((device) => device.kind === "light" && device.entity && !device.confirm && pointInPolygon(deviceCentre(device), room.points))
     .map((device) => device.entity!);
   return [...new Set([...placed, ...(room.lights ?? [])])];
 }

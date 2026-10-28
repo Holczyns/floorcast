@@ -2520,6 +2520,7 @@ class FloorCastPanel extends LitElement {
                       Flip blind side
                     </button>
                   </div>
+                  ${this.confirmCheck(opening)}
                   <p class="muted">The bar outside the window is as long as the blind covers it; the number is its position, 100% open.</p>`
               : nothing}`}
       ${this.deleteButton()}
@@ -2945,6 +2946,7 @@ class FloorCastPanel extends LitElement {
           Flip light side
         </button>
       </div>
+      ${this.confirmCheck(device)}
       <p class="muted">
         Draw the screen as a line: a projector screen, a TV or a monitor. While it is on, its light falls into the room as shown
         when selected. On the card a tap switches it on or off; holding opens a remote control with arrows,
@@ -3236,12 +3238,29 @@ class FloorCastPanel extends LitElement {
       ${sharing > 1 ? html`<p class="muted">${sharing} light points use this entity and switch together.</p>` : nothing}
       ${device.to ? html`<p class="muted">Length ${dist(device.at, device.to).toFixed(2)} m</p>` : nothing}
       ${this.number(device.to ? "Glow width" : "Glow", device.radius ?? DEFAULT_GLOW, (v) => (device.radius = Math.max(0.2, v)), 0.25, "m")}
+      ${this.confirmCheck(device)}
       <p class="muted">
-        ${room ? html`In ${room.name}: tapping the room switches this light with the others in it.` : "Outside any room."}
+        ${!room
+          ? "Outside any room."
+          : device.confirm
+            ? html`In ${room.name}: tapping the room leaves this light out.`
+            : html`In ${room.name}: tapping the room switches this light with the others in it.`}
         The glow stops at walls and reaches rooms open to this one.
       </p>
       ${this.deleteButton()}
     `;
+  }
+
+  /** Ask before switching: the card asks before a tap switches the device or moves the blind. */
+  private confirmCheck(target: { confirm?: boolean }) {
+    return html`<label class="check"
+        ><input
+          type="checkbox"
+          .checked=${!!target.confirm}
+          @change=${(e: Event) => this.change(() => (target.confirm = (e.target as HTMLInputElement).checked || undefined))}
+        />
+        Ask before switching</label
+      >`;
   }
 
   private roomProperties(room?: Room) {

@@ -97,6 +97,14 @@ function store(key: string, on: boolean): void {
   }
 }
 
+/** What a tap does to a blind, as floorcast.press decides it: stop it moving, close it when open, else open it. */
+function coverAction(stateObj: { state: string; attributes: Record<string, any> } | undefined): string {
+  if (stateObj?.state === "opening" || stateObj?.state === "closing") return "Stop";
+  const position = stateObj?.attributes.current_position;
+  const open = typeof position === "number" ? position > 0 : stateObj?.state === "open";
+  return open ? "Close" : "Open";
+}
+
 class FloorCastCard extends LitElement {
   static properties = {
     hass: { attribute: false },
@@ -108,6 +116,7 @@ class FloorCastCard extends LitElement {
     _people: { state: true },
     _objects: { state: true },
     _pad: { state: true },
+    _ask: { state: true },
     _showWalks: { state: true },
     _walks: { state: true },
   };
@@ -127,6 +136,11 @@ class FloorCastCard extends LitElement {
   private _objects: Record<string, CameraObject[]> = {};
   // Screen whose remote control is open over the plan.
   private _pad?: Device;
+  // A switch the card asks about first: the question and what Yes runs.
+  private _ask?: { text: string; run: () => void; top: number };
+  private _askTimer?: number;
+  // Where the last touch on the card was, from its top: the question stands next to it.
+  private _pointerTop = 0;
   private _resize = new ResizeObserver((entries) => {
     this._width = entries[0].contentRect.width;
   });
@@ -451,7 +465,7 @@ class FloorCastCard extends LitElement {
     this._shownStills = new Set();
     this._shownGround = new Set();
     return html`
-      <ha-card .header=${this._config.title}>
+      <ha-card .header=${this._config.title} @pointerdown=${this.notePointer}>
         ${(side || levels.length < 2) && !gardenToggle && !this._config.history
           ? nothing
           : html`<div class="tabs">
@@ -482,7 +496,7 @@ class FloorCastCard extends LitElement {
         <div class="levels ${side ? "side" : ""}">
           ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
         </div>
-        ${this.renderPad()}
+        ${this.renderPad()} ${this.renderAsk()}
       </ha-card>
     `;
   }
@@ -519,7 +533,12 @@ class FloorCastCard extends LitElement {
         return svg`<path class="opening-hit" stroke-width=${Math.max(wall.t + 0.2, 24 / pxPerMetre)}
           d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"
           @pointerdown=${() => this.holdStart(() => this.openMoreInfo(entity))}
-          @pointerup=${() => this.holdEnd(() => (opening.cover ? this.press({ opening: opening.id }) : this.openMoreInfo(entity)))}
+          @pointerup=${() =>
+            this.holdEnd(() =>
+              opening.cover
+                ? this.ask(opening.confirm, opening.cover, coverAction(this.hass.states[opening.cover]), () => this.press({ opening: opening.id }))
+                : this.openMoreInfo(entity),
+            )}
           @pointerleave=${() => window.clearTimeout(this._holdTimer)}></path>`;
       });
   }
@@ -533,12 +552,60 @@ class FloorCastCard extends LitElement {
         const to = device.to ?? [device.at[0] + 2, device.at[1]];
         return svg`<g class="mower-hit"
             @pointerdown=${() => this.holdStart(() => (this._pad = device))}
-            @pointerup=${() => this.holdEnd(() => this.press({ device: device.id }))}
+            @pointerup=${() =>
+              this.holdEnd(() => this.ask(device.confirm, device.entity ?? device.remote, on ? "Turn off" : "Turn on", () => this.press({ device: device.id })))}
             @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
           ${renderScreen(device, on)}
           <path class="opening-hit" stroke-width=${Math.max(0.5, 24 / pxPerMetre)} d="M${device.at[0]} ${device.at[1]}L${to[0]} ${to[1]}"></path>
         </g>`;
       });
+  }
+
+  private toggleLight(light: Device, on: boolean): void {
+    this.ask(light.confirm, light.entity, on ? "Turn off" : "Turn on", () =>
+      this.hass.callService("homeassistant", "toggle", { entity_id: light.entity }),
+    );
+  }
+
+  /** A device with Ask before switching runs its tap only after Yes in a bar over the plan; the bar goes after 5 s. */
+  private ask(confirm: boolean | undefined, entity: string | null | undefined, action: string, run: () => void): void {
+    if (!confirm) {
+      run();
+      return;
+    }
+    const name = (entity && this.hass.states[entity]?.attributes.friendly_name) || entity || "this device";
+    window.clearTimeout(this._askTimer);
+    this._ask = { text: `${action} ${name}?`, run, top: this._pointerTop };
+    this._askTimer = window.setTimeout(() => (this._ask = undefined), 5000);
+  }
+
+  private notePointer(event: PointerEvent): void {
+    this._pointerTop = event.clientY - (event.currentTarget as HTMLElement).getBoundingClientRect().top;
+  }
+
+  private renderAsk() {
+    const ask = this._ask;
+    if (!ask) return nothing;
+    const close = () => {
+      window.clearTimeout(this._askTimer);
+      this._ask = undefined;
+    };
+    // Below the finger, or above it near the bottom of the card.
+    const below = ask.top + 96 < (this.shadowRoot?.querySelector("ha-card")?.clientHeight ?? 0);
+    const place = below ? `top:${ask.top + 32}px` : `top:${Math.max(8, ask.top - 88)}px`;
+    return html`<div class="ask" role="alertdialog" style=${place}>
+      <span>${ask.text}</span>
+      <button
+        class="key yes"
+        @click=${() => {
+          close();
+          ask.run();
+        }}
+      >
+        Yes
+      </button>
+      <button class="key" @click=${close}>No</button>
+    </div>`;
   }
 
   /** Keys of the remote, as the Android TV Remote integration names them. */
@@ -916,7 +983,7 @@ class FloorCastCard extends LitElement {
         const colour = on && rgb ? `rgb(${rgb.join(",")})` : "";
         const handlers = {
           down: () => this.holdStart(() => this.openMoreInfo(light.entity!)),
-          up: () => this.holdEnd(() => this.hass.callService("homeassistant", "toggle", { entity_id: light.entity })),
+          up: () => this.holdEnd(() => this.toggleLight(light, on)),
         };
         if (light.to) {
           const d = `M${light.at[0]} ${light.at[1]}L${light.to[0]} ${light.to[1]}`;
@@ -928,7 +995,7 @@ class FloorCastCard extends LitElement {
         }
         return svg`<g class="lamp ${on ? "on" : ""}" style=${colour ? `--lamp:${colour}` : ""}
             @pointerdown=${() => this.holdStart(() => this.openMoreInfo(light.entity!))}
-            @pointerup=${() => this.holdEnd(() => this.hass.callService("homeassistant", "toggle", { entity_id: light.entity }))}
+            @pointerup=${handlers.up}
             @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
           <circle class="lamp-hit" cx=${light.at[0]} cy=${light.at[1]} r=${r * 1.8}></circle>
           <circle class="lamp-ring" cx=${light.at[0]} cy=${light.at[1]} r=${r}></circle>
@@ -1034,6 +1101,32 @@ class FloorCastCard extends LitElement {
         overflow: hidden;
         position: relative;
         background: var(--fc-background);
+      }
+      .ask {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: calc(100% - 24px);
+        padding: 8px 8px 8px 16px;
+        border-radius: 28px;
+        background: var(--card-background-color, #1c1f24);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        color: var(--primary-text-color);
+        font-size: 14px;
+      }
+      .ask span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ask .yes {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: #fff;
       }
       .pad-backdrop {
         position: absolute;
