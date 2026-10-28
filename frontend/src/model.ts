@@ -61,7 +61,7 @@ export interface Room {
   sensors?: string[];
   /** Name left off the card; temperature and other readings stay. */
   hideName?: boolean;
-  /** Seconds its radar occupancy stays on after the last person left. */
+  /** Seconds its occupancy stays on after the last person left. */
   hold?: number;
 }
 
@@ -144,7 +144,6 @@ export interface Item {
   corners?: "round" | "square";
 }
 
-/** A device placed on the plan; for now a light with the reach of its glow. */
 /**
  * EXPERIMENTAL: how a camera image is laid on the ground. A camera: the zones or rooms it is laid on and
  * its ground calibration spots on the plan. A mower camera: its spots ahead of the mower. Five spots at
@@ -209,6 +208,7 @@ export const MIN_GROUND_SPOTS = 5;
 /** What the preview of a camera shows on the card: its still in a window, its image on the ground, or both. */
 export type PreviewMode = "window" | "ground" | "both";
 
+/** A device placed on the plan: a light, sensor, screen, sprinkler, robot, camera or radar. */
 export interface Device {
   id: string;
   /** "thermometer" is the former kind of a temperature sensor; normalizeSensors turns it into a sensor. */
@@ -300,7 +300,6 @@ export function isPowered(state: string | undefined): boolean {
   return !!state && !["off", "standby", "unavailable", "unknown"].includes(state);
 }
 
-/** An object Frigate tracks, as the integration places it on the plan. */
 /** A small image of a camera the integration sends about every second while a card shows it. */
 export interface StillImage {
   entity: string;
@@ -310,6 +309,7 @@ export interface StillImage {
   time: number;
 }
 
+/** An object Frigate tracks, as the integration places it on the plan. */
 export interface CameraObject {
   id: string;
   x: number;

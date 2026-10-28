@@ -334,7 +334,7 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   occupied, w
       >
       <p>
         Their ids come from the ids in the plan, their names from the names you gave: search for <i>FloorCast</i> in the
-        entities. A room keeps its occupancy for its <i>Radar occupancy hold</i>.
+        entities. A room keeps its occupancy for its <i>Occupancy hold</i>.
       </p>
       <p>Zones are drawn in <b>Zones</b> like rooms. Their use:</p>
       <table>
@@ -1953,9 +1953,9 @@ data:
       <p class="muted">
         Lights: ${t.length?t.join(", "):"none"}. Thermometers:
         ${i.length?i.map(n=>n.entity).join(", "):"none"}. Place both in the Devices tab; the room
-        takes what stands in it. People are counted by the radars that see the room.
+        takes what stands in it. People are counted by the radars and cameras that see the room.
       </p>
-      ${this.hasRadar?this.number("Radar occupancy hold",e.hold??tt,n=>e.hold=Math.max(0,n),5,"s"):m}
+      ${this.hasRadar?this.number("Occupancy hold",e.hold??tt,n=>e.hold=Math.max(0,n),5,"s"):m}
       ${this.deleteButton()}
     `}get hasRadar(){return(this.level.devices??[]).some(e=>e.kind==="radar"||e.kind==="camera"&&!!e.frigate&&(e.calibration?.length??0)>=4)}trackingProperties(e){let t=(e==="radar"?this._plan.tracking:this._plan.tracking?.camera)??{},i=(s,l)=>this._plan.tracking=e==="radar"?{...this._plan.tracking,[s]:l}:{...this._plan.tracking,camera:{...this._plan.tracking?.camera,[s]:l}};return u`
       <h3>${e==="radar"?"Radar tracking":"Camera tracking"}</h3>

@@ -3270,16 +3270,17 @@ class FloorCastPanel extends LitElement {
       <p class="muted">
         Lights: ${lights.length ? lights.join(", ") : "none"}. Thermometers:
         ${thermometers.length ? thermometers.map((t) => t.entity).join(", ") : "none"}. Place both in the Devices tab; the room
-        takes what stands in it. People are counted by the radars that see the room.
+        takes what stands in it. People are counted by the radars and cameras that see the room.
       </p>
       ${this.hasRadar
-        ? this.number("Radar occupancy hold", room.hold ?? DEFAULT_ROOM_HOLD, (v) => (room.hold = Math.max(0, v)), 5, "s")
+        ? this.number("Occupancy hold", room.hold ?? DEFAULT_ROOM_HOLD, (v) => (room.hold = Math.max(0, v)), 5, "s")
         : nothing}
       ${this.deleteButton()}
     `;
   }
 
   /** The level has a radar or a calibrated camera, so its people are tracked and counted. */
+  /** A radar or a calibrated camera on the level, so its rooms can be counted. */
   private get hasRadar(): boolean {
     return (this.level.devices ?? []).some(
       (device) => device.kind === "radar" || (device.kind === "camera" && !!device.frigate && (device.calibration?.length ?? 0) >= 4),

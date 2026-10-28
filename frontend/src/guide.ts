@@ -308,7 +308,7 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   occupied, w
       >
       <p>
         Their ids come from the ids in the plan, their names from the names you gave: search for <i>FloorCast</i> in the
-        entities. A room keeps its occupancy for its <i>Radar occupancy hold</i>.
+        entities. A room keeps its occupancy for its <i>Occupancy hold</i>.
       </p>
       <p>Zones are drawn in <b>Zones</b> like rooms. Their use:</p>
       <table>
