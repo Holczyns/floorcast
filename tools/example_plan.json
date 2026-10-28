@@ -1,0 +1,117 @@
+{
+ "wallTypes": [
+  { "id": "outer", "name": "Outer wall", "t": 0.3 },
+  { "id": "load", "name": "Load-bearing wall", "t": 0.25 },
+  { "id": "partition", "name": "Partition", "t": 0.12 }
+ ],
+ "roundCorners": true,
+ "levels": [
+  {
+   "id": "ground",
+   "name": "Ground floor",
+   "walls": [
+    { "id": "n", "a": [0, 0], "b": [12, 0], "t": 0.3, "type": "outer" },
+    { "id": "e", "a": [12, 0], "b": [12, 9], "t": 0.3, "type": "outer" },
+    { "id": "s", "a": [12, 9], "b": [0, 9], "t": 0.3, "type": "outer" },
+    { "id": "w", "a": [0, 9], "b": [0, 0], "t": 0.3, "type": "outer" },
+    { "id": "middle", "a": [0, 4], "b": [12, 4], "t": 0.12, "type": "partition" },
+    { "id": "hall", "a": [3, 0], "b": [3, 4], "t": 0.12, "type": "partition" },
+    { "id": "east", "a": [8, 0], "b": [8, 9], "t": 0.25, "type": "load" }
+   ],
+   "openings": [
+    { "id": "front_door", "wall": "n", "at": 1.5, "width": 1, "type": "door", "swingRight": true, "contact": "binary_sensor.front_door" },
+    { "id": "kitchen_window", "wall": "n", "at": 5.5, "width": 1.6, "type": "window", "cover": "cover.kitchen_blind" },
+    { "id": "bathroom_window", "wall": "n", "at": 10, "width": 0.8, "type": "window" },
+    { "id": "bedroom_window", "wall": "s", "at": 2, "width": 1.4, "type": "window", "cover": "cover.bedroom_blind" },
+    { "id": "terrace_window", "wall": "s", "at": 7, "width": 2.4, "type": "window", "cover": "cover.living_room_blind", "contact": "binary_sensor.terrace_window" },
+    { "id": "living_window", "wall": "w", "at": 2.5, "width": 1.2, "type": "window" },
+    { "id": "east_window", "wall": "e", "at": 6.5, "width": 1.2, "type": "window" },
+    { "id": "living_door", "wall": "middle", "at": 1.5, "width": 0.9, "type": "door", "hingeEnd": true },
+    { "id": "kitchen_opening", "wall": "middle", "at": 5.5, "width": 1.6, "type": "door", "drawn": "open" },
+    { "id": "bathroom_door", "wall": "middle", "at": 10, "width": 0.8, "type": "door", "swingRight": true },
+    { "id": "kitchen_door", "wall": "hall", "at": 2, "width": 0.9, "type": "door" },
+    { "id": "bedroom_door", "wall": "east", "at": 6.5, "width": 0.9, "type": "door", "swingRight": true }
+   ],
+   "rooms": [
+    { "id": "hall", "name": "Hall", "points": [[0.15, 0.15], [2.94, 0.15], [2.94, 3.94], [0.15, 3.94]] },
+    { "id": "kitchen", "name": "Kitchen", "points": [[3.06, 0.15], [7.875, 0.15], [7.875, 3.94], [3.06, 3.94]] },
+    { "id": "bathroom", "name": "Bathroom", "points": [[8.125, 0.15], [11.85, 0.15], [11.85, 3.94], [8.125, 3.94]] },
+    { "id": "living_room", "name": "Living room", "points": [[0.15, 4.06], [7.875, 4.06], [7.875, 8.85], [0.15, 8.85]], "hold": 60 },
+    { "id": "bedroom", "name": "Bedroom", "points": [[8.125, 4.06], [11.85, 4.06], [11.85, 8.85], [8.125, 8.85]] },
+    { "id": "terrace", "name": "Terrace", "outdoor": true, "points": [[1, 9.15], [7, 9.15], [7, 12], [1, 12]] }
+   ],
+   "items": [
+    { "id": "lawn", "type": "lawn", "points": [[-4, 0], [0, 0], [0, 9], [12, 9], [12, 0], [16, 0], [16, 21], [-4, 21]] },
+    { "id": "driveway", "type": "paving", "rect": [-4, -5, 7, 4.85], "rotation": 0 },
+    { "id": "path", "type": "paving", "rect": [3.2, -3, 1.2, 2.85], "rotation": 0 },
+    { "id": "terrace", "type": "terrace", "name": "Terrace", "rect": [1, 9.15, 6, 2.85], "rotation": 0 },
+    { "id": "bed", "type": "bed", "rect": [8.6, 9.6, 6.4, 1], "rotation": 0 },
+    { "id": "vegetables", "type": "vegetable", "rect": [-3.5, 13.5, 3, 4], "rotation": 0 },
+    { "id": "hedge", "type": "hedge", "rect": [15.3, 9.5, 0.6, 11.3], "rotation": 0 },
+    { "id": "garden_house", "type": "garden_house", "rect": [11.8, 17.4, 3.2, 3], "rotation": 0 },
+    { "id": "trampoline", "type": "trampoline", "center": [4, 17.5], "diameter": 3 },
+    { "id": "manhole", "type": "manhole", "center": [14, 3.6], "diameter": 0.7 },
+    { "id": "counter", "type": "obstacle", "name": "Counter", "rect": [3.2, 0.3, 4.5, 0.65], "rotation": 0 },
+    { "id": "sofa", "type": "obstacle", "name": "Sofa", "rect": [0.3, 5.2, 0.95, 2.8], "rotation": 0 },
+    { "id": "table", "type": "round_obstacle", "name": "Table", "center": [5, 5.3], "diameter": 1.3 },
+    { "id": "bed_frame", "type": "obstacle", "name": "Bed", "rect": [9.4, 6.3, 1.8, 2.3], "rotation": 0 },
+    { "id": "wardrobe", "type": "obstacle", "name": "Wardrobe", "rect": [11.1, 4.3, 0.6, 1.8], "rotation": 0 },
+    { "id": "bath", "type": "obstacle", "name": "Bath", "rect": [9.9, 0.35, 1.8, 0.8], "rotation": 0 }
+   ],
+   "devices": [
+    { "id": "light_hall", "kind": "light", "entity": "light.hall", "at": [1.5, 2], "radius": 2 },
+    { "id": "light_kitchen", "kind": "light", "entity": "light.kitchen", "at": [5.5, 2.4], "radius": 2.5 },
+    { "id": "light_counter", "kind": "light", "entity": "light.kitchen_counter", "at": [3.4, 1.1], "to": [7.6, 1.1], "radius": 1 },
+    { "id": "light_dining", "kind": "light", "entity": "light.dining", "at": [5, 5.3], "radius": 2 },
+    { "id": "light_living_1", "kind": "light", "entity": "light.living_room", "at": [2.4, 5.5], "radius": 2 },
+    { "id": "light_living_2", "kind": "light", "entity": "light.living_room", "at": [2.4, 7.7], "radius": 2 },
+    { "id": "light_bathroom", "kind": "light", "entity": "light.bathroom", "at": [9.4, 2.2], "radius": 2 },
+    { "id": "light_bedroom", "kind": "light", "entity": "light.bedroom", "at": [10.9, 5.3], "radius": 2 },
+    { "id": "light_terrace", "kind": "light", "entity": "light.terrace", "at": [4, 9.5], "radius": 3 },
+    {
+     "id": "sensor_living", "kind": "sensor", "sensorType": "temperature", "entity": "sensor.living_room_temperature", "at": [4.6, 7.4],
+     "secondary": [{ "entity": "sensor.living_room_humidity" }]
+    },
+    {
+     "id": "sensor_bedroom", "kind": "sensor", "sensorType": "temperature", "entity": "sensor.bedroom_temperature", "at": [9.2, 5.1],
+     "secondary": [{ "entity": "sensor.bedroom_humidity" }]
+    },
+    {
+     "id": "sensor_septic", "kind": "sensor", "sensorType": "generic", "label": "Septic tank", "entity": "sensor.septic_tank_level", "at": [14, 2.5],
+     "main": { "unit": "entity", "decimals": 1 }
+    },
+    { "id": "screen_tv", "kind": "screen", "entity": "media_player.living_room_tv", "remote": "remote.living_room_tv", "at": [7.7, 6.2], "to": [7.7, 7.8], "radius": 3, "arc": 50, "flip": true },
+    { "id": "sprinkler_1", "kind": "sprinkler", "entity": "valve.garden_zone_1", "at": [-3.7, 20.7], "radius": 7, "heading": 0, "arc": 90, "nozzle": "rotor" },
+    { "id": "sprinkler_2", "kind": "sprinkler", "entity": "valve.garden_zone_2", "at": [15, 20.7], "radius": 7, "heading": 270, "arc": 90, "nozzle": "rotor" },
+    { "id": "sprinkler_3", "kind": "sprinkler", "entity": "valve.garden_zone_3", "at": [10.5, 12.3], "radius": 4, "heading": 90, "arc": 180, "nozzle": "spray" },
+    {
+     "id": "mower", "kind": "mower", "entity": "lawn_mower.mower", "map": "camera.mower_map", "battery": "sensor.mower_battery", "at": [8, 20.4], "rotation": 0, "mirror": false,
+     "projection": { "maxX": 810, "minY": -11220, "scale": 0.12623476587556126, "padding": 40, "width": 1115, "height": 2048 }
+    },
+    {
+     "id": "vacuum", "kind": "vacuum", "entity": "vacuum.robot_vacuum", "roomSensor": "sensor.robot_vacuum_current_room", "at": [2.4, 3.4], "rotation": 0, "mirror": false,
+     "pairs": [{ "robot": [25000, 25000], "plan": [2.4, 3.4] }]
+    },
+    { "id": "radar_living", "kind": "radar", "source": "radar_living_room", "at": [0.35, 4.35], "heading": 135, "arc": 120, "radius": 6.5 },
+    { "id": "radar_kitchen", "kind": "radar", "source": "radar_kitchen", "at": [7.6, 0.4], "heading": 225, "arc": 120, "radius": 5 },
+    { "id": "camera_front", "kind": "camera", "entity": "camera.front", "frigate": "front", "at": [0.2, -0.4], "heading": 290, "arc": 100, "radius": 10 },
+    {
+     "id": "camera_garden", "kind": "camera", "entity": "camera.garden", "frigate": "garden", "at": [11.8, 9.4], "heading": 225, "arc": 100, "radius": 12, "preview": "window",
+     "calibration": [
+      { "image": [0.08, 0.92], "plan": [11.8, 12.5] },
+      { "image": [0.92, 0.9], "plan": [8.5, 9.6] },
+      { "image": [0.7, 0.45], "plan": [1, 12] },
+      { "image": [0.2, 0.42], "plan": [6, 20] },
+      { "image": [0.45, 0.6], "plan": [6.5, 13.5] }
+     ]
+    }
+   ],
+   "zones": [
+    { "id": "sofa", "name": "Sofa", "kind": "stationary", "points": [[0.2, 5.1], [1.8, 5.1], [1.8, 8.1], [0.2, 8.1]] },
+    { "id": "counter", "name": "Counter", "kind": "count", "points": [[3.1, 0.2], [7.8, 0.2], [7.8, 1.7], [3.1, 1.7]] },
+    { "id": "entrance", "name": "Entrance", "kind": "entrance", "points": [[0.9, 0.2], [2.1, 0.2], [2.1, 1.1], [0.9, 1.1]] },
+    { "id": "curtain", "name": "Curtain", "kind": "exclude", "points": [[3.6, 8.35], [6.4, 8.35], [6.4, 8.8], [3.6, 8.8]] }
+   ]
+  }
+ ]
+}

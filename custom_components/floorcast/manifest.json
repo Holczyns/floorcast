@@ -1,0 +1,26 @@
+{
+  "domain": "floorcast",
+  "name": "FloorCast",
+  "after_dependencies": [
+    "camera",
+    "frigate",
+    "frontend",
+    "http",
+    "mqtt",
+    "panel_custom"
+  ],
+  "codeowners": [
+    "@Holczyns"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "websocket_api"
+  ],
+  "documentation": "https://github.com/Holczyns/floorcast",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/Holczyns/floorcast/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

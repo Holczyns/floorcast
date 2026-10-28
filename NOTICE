@@ -1,0 +1,22 @@
+FloorCast
+Copyright (C) 2026 Michal Holowko <https://github.com/Holczyns>
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+License version 3 as published by the Free Software Foundation. It is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License in the LICENSE file for more details.
+
+Additional term under section 7(b) of the GNU General Public License: a modified version, and any work based on this
+program, must keep the attribution "Based on FloorCast by Michal Holowko (https://github.com/Holczyns/floorcast)" in
+its documentation (such as its README) and in the Appropriate Legal Notices it displays.
+
+Additional term under section 7(e) of the GNU General Public License: the license does not grant any right to use the
+name FloorCast or the FloorCast logo, except to refer to this program. A modified version must be published under a
+different name and without the logo, and must keep this notice.
+
+Contributions: by offering a change to this project (a pull request, a patch or code in an issue) you confirm that you
+have the right to offer it, and you grant Michal Holowko a perpetual, worldwide, royalty-free and irrevocable license
+to use, change, distribute and license it under the GNU General Public License or any other terms.
+
+Third-party code: the built card and editor in custom_components/floorcast/www include Lit
+(https://lit.dev), Copyright Google LLC, under the BSD-3-Clause license; its notices are kept in the built files.

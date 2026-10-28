@@ -1,0 +1,33 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "FloorCast is already set up."
+    },
+    "step": {
+      "user": {
+        "title": "FloorCast",
+        "description": "FloorCast adds a floor plan editor to the sidebar and a floor plan card for dashboards. Draw the plan in the FloorCast panel after setup."
+      }
+    }
+  },
+  "services": {
+    "press": {
+      "name": "Press",
+      "description": "Does what a tap on the plan does: switches the lights of a room, moves the blind of a window, switches a device.",
+      "fields": {
+        "room": {
+          "name": "Room",
+          "description": "Id of a room on the plan; its lights switch together."
+        },
+        "opening": {
+          "name": "Window or door",
+          "description": "Id of a window or door; its blind stops, closes or opens."
+        },
+        "device": {
+          "name": "Device",
+          "description": "Id of a device on the plan; a screen switches on or off, others toggle."
+        }
+      }
+    }
+  }
+}

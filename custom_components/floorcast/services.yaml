@@ -1,0 +1,14 @@
+press:
+  fields:
+    room:
+      example: living_room
+      selector:
+        text:
+    opening:
+      example: g_o2
+      selector:
+        text:
+    device:
+      example: screen_abc123
+      selector:
+        text:

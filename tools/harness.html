@@ -1,0 +1,443 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>FloorCast harness</title>
+    <style>
+      body {
+        margin: 0;
+        background: #111418;
+        color: #e1e5ea;
+        font-family: Roboto, "Segoe UI", sans-serif;
+        --primary-color: #03a9f4;
+        --primary-text-color: #e1e5ea;
+        --secondary-text-color: #9aa3ad;
+        --divider-color: #2c3239;
+        --card-background-color: #1c2026;
+        --primary-background-color: #111418;
+      }
+      #cards {
+        display: flex;
+        gap: 16px;
+        padding: 16px;
+        align-items: flex-start;
+      }
+      ha-card {
+        display: block;
+        border-radius: 12px;
+        background: #1c2026;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      // The card and the editor against a mocked Home Assistant. The plan is house/plan.json when it
+      // exists (kept out of git), otherwise tools/example_plan.json. Every mock (states, people, robots,
+      // cameras) is laid out from the devices of the plan, so it works with any plan.
+      customElements.define("ha-card", class extends HTMLElement {});
+      // The editor saves the plan through the dev server; the card page hears about it through the
+      // browser storage, as a card in HA hears about a save.
+      const KEY = "floorcast-harness-saved";
+      const params = new URLSearchParams(location.search);
+      const PLAN_FILES = params.has("example") ? ["example_plan.json"] : ["../house/plan.json", "example_plan.json"];
+      let planFile = PLAN_FILES[0];
+      const loadPlan = async () => {
+        for (const file of PLAN_FILES) {
+          const response = await fetch(file, { cache: "no-store" });
+          if (!response.ok) continue;
+          planFile = file;
+          return response.json();
+        }
+        throw new Error("no plan");
+      };
+      let plan = await loadPlan();
+
+      // ---- plan geometry ----
+      const centre = (points) => [points.reduce((s, p) => s + p[0], 0) / points.length, points.reduce((s, p) => s + p[1], 0) / points.length];
+      const inside = (p, points) => {
+        let c = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+          const [xi, yi] = points[i], [xj, yj] = points[j];
+          if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) c = !c;
+        }
+        return c;
+      };
+      const itemBox = (item) =>
+        item.rect ? item.rect : item.points ? (() => {
+          const xs = item.points.map((p) => p[0]), ys = item.points.map((p) => p[1]);
+          return [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)];
+        })() : [item.center[0] - 0.5, item.center[1] - 0.5, 1, 1];
+      const ground = plan.levels[0];
+      const devices = (kind) => (ground.devices ?? []).filter((d) => d.kind === kind);
+      const rooms = (ground.rooms ?? []).filter((r) => !r.stairs && !r.outdoor);
+      const roomOf = (p) => rooms.find((r) => inside(p, r.points));
+      const radars = devices("radar");
+      const cameras = devices("camera");
+      const lawn = (ground.items ?? []).find((i) => i.type === "lawn");
+      const paving = (ground.items ?? []).find((i) => i.type === "paving");
+      // A walk between the rooms of the first two radars, or the first two rooms.
+      const walkRooms = [...new Set([...radars.map((r) => roomOf(r.at)).filter(Boolean), ...rooms])].slice(0, 2);
+      const walkFrom = centre(walkRooms[0].points), walkTo = centre((walkRooms[1] ?? walkRooms[0]).points);
+      const sofa = (ground.zones ?? []).find((z) => z.kind === "stationary");
+
+      // ---- states ----
+      const listeners = new Set();
+      const states = {};
+      const set = (id, state, attributes = {}) => (states[id] = { entity_id: id, state, attributes: { friendly_name: id, ...attributes }, last_changed: "" });
+      // Every sensor of the plan reads a plausible value.
+      let reading = 0;
+      for (const level of plan.levels)
+        for (const d of level.devices ?? []) {
+          if (d.kind !== "sensor" && d.kind !== "thermometer") continue;
+          const temperature = d.kind === "thermometer" || d.sensorType === "temperature";
+          const humidity = d.sensorType === "humidity";
+          if (d.entity && !states[d.entity])
+            set(
+              d.entity,
+              temperature ? (20.4 + (reading++ % 4) * 0.6).toFixed(1) : humidity ? "54" : "6.4",
+              temperature ? { device_class: "temperature", unit_of_measurement: "°C" } : humidity ? { device_class: "humidity", unit_of_measurement: "%" } : { unit_of_measurement: "m³" },
+            );
+          for (const id of [d.extra, ...(d.secondary ?? []).map((s) => s.entity)])
+            if (id && !states[id]) set(id, String(48 + reading * 3), { device_class: "humidity", unit_of_measurement: "%" });
+        }
+      // Lights: every other one on, the first line light in colour.
+      let lightIndex = 0;
+      for (const level of plan.levels)
+        for (const d of level.devices ?? []) {
+          if (d.kind !== "light" || !d.entity || states[d.entity]) continue;
+          set(d.entity, lightIndex++ % 2 ? "off" : "on", d.to ? { rgb_color: [120, 180, 255] } : {});
+        }
+      // The first sprinkler waters, screens are on, robots work.
+      devices("sprinkler").forEach((d, i) => d.entity && set(d.entity, i === 0 ? "open" : "closed"));
+      for (const d of devices("screen")) {
+        if (d.entity) set(d.entity, "on");
+        if (d.remote && !states[d.remote]) set(d.remote, "on");
+      }
+      for (const d of devices("mower")) {
+        if (d.entity) set(d.entity, "mowing");
+        if (d.battery) set(d.battery, "18", { device_class: "battery", unit_of_measurement: "%" });
+        if (d.map)
+          set(d.map, "idle", {
+            mowing_map_api_path: "/api/dreame_lawn_mower/mowing-map/mock",
+            position_x: 0, position_y: -9000, position_heading: 90, charger_x: 810, charger_y: -10,
+          });
+      }
+      for (const d of devices("vacuum")) {
+        if (d.entity) set(d.entity, "cleaning", { battery_level: 64 });
+        const room = roomOf(d.at) ?? rooms[0];
+        if (d.roomSensor) set(d.roomSensor, room?.name ?? "");
+      }
+      // Blinds 40% open, contacts: windows open, doors shut.
+      for (const level of plan.levels)
+        for (const o of level.openings ?? []) {
+          if (o.cover) set(o.cover, "open", { current_position: 40 });
+          if (o.contact) set(o.contact, o.type === "window" ? "on" : "off", { device_class: o.type });
+        }
+      for (const d of cameras) if (d.entity) set(d.entity, "recording", { entity_picture: "/tools/mock_camera.svg?token=mock" });
+      // Every other entity of the plan exists, switched off.
+      for (const level of plan.levels) {
+        const ids = [...(level.devices ?? []).flatMap((d) => [d.entity, d.remote, d.battery]), ...(level.rooms ?? []).flatMap((r) => r.lights ?? [])];
+        for (const id of ids) if (id && !states[id]) set(id, "off");
+      }
+      // Raw targets of every radar of the plan.
+      for (const radar of radars)
+        for (const i of [1, 2, 3]) {
+          set(`sensor.${radar.source}_target_${i}_x`, "0", { unit_of_measurement: "mm" });
+          set(`sensor.${radar.source}_target_${i}_y`, "0", { unit_of_measurement: "mm" });
+        }
+
+      // ---- people, objects and robots, as the integration sends them ----
+      // With ?people the page plays the tracking of the integration: a walker, someone held on the
+      // resting place and an unconfirmed target; without it the card shows raw targets.
+      const tracking = params.has("people");
+      const peopleListeners = new Set();
+      const objectListeners = new Set();
+      const robotListeners = new Set();
+      const trails = {};
+      const robots = {};
+      const robotSnapshot = () => ({
+        [ground.id]: Object.fromEntries(Object.entries(robots).map(([id, r]) => [id, { place: r.place, track: r.track }])),
+      });
+      let robotStep = 0;
+      setInterval(() => {
+        robotStep += 1;
+        for (const device of [...devices("mower"), ...devices("vacuum")]) {
+          let at;
+          if (device.kind === "mower") {
+            // Stripes over the lawn.
+            const [x, y, w, h] = lawn ? itemBox(lawn) : [device.at[0] - 3, device.at[1] - 3, 6, 6];
+            const lanes = Math.max(1, Math.floor(w / 0.7));
+            const lane = Math.floor(robotStep / 30) % lanes, along = (robotStep % 30) / 30;
+            at = [x + 0.4 + lane * 0.7, lane % 2 ? y + h - 0.4 - along * (h - 0.8) : y + 0.4 + along * (h - 0.8)];
+          } else {
+            // A square in the room of its dock.
+            const room = roomOf(device.at) ?? rooms[0];
+            const [cx, cy] = centre(room.points);
+            const t = (robotStep % 40) / 40, side = Math.floor(t * 4), f = (t * 4) % 1;
+            const square = [[cx - 1, cy - 0.8], [cx + 1, cy - 0.8], [cx + 1, cy + 0.8], [cx - 1, cy + 0.8]];
+            const a = square[side], b = square[(side + 1) % 4];
+            at = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+          }
+          const robot = (robots[device.id] ??= { place: null, track: [] });
+          const state = device.entity ? states[device.entity]?.state : undefined;
+          robot.place = { at, dock: device.dock ?? device.at, state, ...(device.kind === "vacuum" ? { room: roomOf(device.at)?.id } : {}) };
+          robot.track.push(at);
+          robot.track = robot.track.slice(-1200);
+          const change = { id: device.id, level: ground.id, place: robot.place, added: [at], reset: false };
+          robotListeners.forEach((callback) => callback({ change }));
+        }
+      }, 500);
+      let walk = 0;
+      setInterval(() => {
+        walk += 1;
+        const t = (Math.sin(walk / 12) + 1) / 2;
+        const px = walkFrom[0] + (walkTo[0] - walkFrom[0]) * t, py = walkFrom[1] + (walkTo[1] - walkFrom[1]) * t;
+        // The walker in the coordinates of each radar, in millimetres.
+        for (const radar of radars) {
+          const h = ((radar.heading ?? 0) * Math.PI) / 180;
+          const dx = px - radar.at[0], dy = py - radar.at[1];
+          const forward = dx * Math.sin(h) - dy * Math.cos(h);
+          const side = dx * Math.cos(h) + dy * Math.sin(h);
+          for (const [axis, value] of [["x", (radar.mirror ? -side : side) * 1000], ["y", forward * 1000]]) {
+            const id = `sensor.${radar.source}_target_1_${axis}`;
+            states[id] = { ...states[id], state: String(Math.round(value)) };
+          }
+        }
+        const people = [{ id: "r1", x: px, y: py, status: "seen", source: "radar", sources: radars.map((r) => r.source) }];
+        if (sofa) {
+          const [sx, sy] = centre(sofa.points);
+          people.push({ id: "r2", x: sx, y: sy, status: "held", source: "radar" });
+        }
+        const [ux, uy] = centre(rooms.at(-1).points);
+        people.push({ id: "r3", x: ux, y: uy, status: "unconfirmed", source: "radar" });
+        // Someone the first calibrated camera sees, walking towards it.
+        const camera = cameras.find((c) => c.frigate && (c.calibration?.length ?? 0) >= 4);
+        const raw = {};
+        if (camera && t > 0.45) {
+          const h = ((camera.heading ?? 0) * Math.PI) / 180, d = 2 + 6 * (1 - t);
+          const cx = camera.at[0] + Math.sin(h) * d + 0.6 * Math.sin(walk / 4), cy = camera.at[1] - Math.cos(h) * d;
+          people.push({ id: "c1", x: cx, y: cy, status: "seen", source: "camera", camera: camera.frigate, sources: [camera.frigate] });
+          raw[ground.id] = { [camera.frigate]: [[cx + 0.35 * Math.sin(walk), cy + 0.3]] };
+        }
+        // Each person carries its last 20 s, as the history of the integration gives it.
+        const now = Date.now();
+        for (const person of people) {
+          const trail = (trails[person.id] ??= []);
+          const last = trail.at(-1);
+          if (!last || Math.hypot(last[0] - person.x, last[1] - person.y) > 0.3) trail.push([person.x, person.y, now]);
+          while (trail.length && now - trail[0][2] > 20000) trail.shift();
+          person.trail = trail.map(([x, y]) => [x, y]);
+        }
+        peopleListeners.forEach((callback) => callback({ people: { [ground.id]: people }, raw }));
+        // A car on the paving and a person on the lawn, as the cameras place them.
+        const objects = [];
+        if (paving) {
+          const [x, y, w, h] = itemBox(paving);
+          objects.push({ id: "o1", x: x + w / 2, y: y + h / 2, label: "car", camera: cameras[0]?.frigate ?? "front", stationary: true });
+        }
+        if (lawn) {
+          const [x, y, w, h] = itemBox(lawn);
+          objects.push({ id: "o2", x: x + w * 0.3, y: y + h * 0.3, label: "person", camera: cameras.at(-1)?.frigate ?? "back", stationary: false });
+        }
+        const active = people.filter((p) => p.camera).map((p) => p.camera);
+        objectListeners.forEach((callback) => callback({ objects: { [ground.id]: objects }, active }));
+      }, 500);
+      // The mower map camera reports a moving position, for the editor overlay.
+      let lane = 0, along = -10500, step = 300;
+      setInterval(() => {
+        along += step;
+        if (along > 1200 || along < -10500) { step = -step; lane += 1; along += step; }
+        for (const d of devices("mower")) {
+          const map = d.map && states[d.map];
+          if (map) states[d.map] = { ...map, attributes: { ...map.attributes, position_x: 500 - (lane % 25) * 300, position_y: along, position_heading: step > 0 ? 90 : 270 } };
+        }
+        hass.states = { ...states };
+        const next = { ...hass };
+        for (const element of elements) element.hass = next;
+      }, 400);
+
+      const elements = [];
+      // Switching works like in HA: states change and every card and the editor redraw.
+      const callService = async (domain, service, data = {}) => {
+        // The press service of the integration, as it acts on the test page: a room switches its lights.
+        if (domain === "floorcast") {
+          console.log("floorcast.press", JSON.stringify(data));
+          if (data.room) {
+            const level = plan.levels.find((l) => l.rooms.some((r) => r.id === data.room));
+            const room = level.rooms.find((r) => r.id === data.room);
+            const lights = (level.devices ?? []).filter((d) => d.kind === "light" && d.entity && inside(d.at, room.points)).map((d) => d.entity);
+            const on = lights.some((id) => states[id]?.state === "on");
+            return callService("homeassistant", on ? "turn_off" : "turn_on", { entity_id: lights });
+          }
+          return null;
+        }
+        const ids = [data.entity_id ?? []].flat();
+        for (const id of ids) {
+          const current = states[id];
+          if (!current) continue;
+          if (id.startsWith("valve.")) {
+            const open = service === "toggle" ? current.state !== "open" : service === "open_valve" || service === "turn_on";
+            states[id] = { ...current, state: open ? "open" : "closed" };
+            continue;
+          }
+          const on = service === "toggle" ? current.state !== "on" : service === "turn_on";
+          if (!["toggle", "turn_on", "turn_off"].includes(service)) continue;
+          states[id] = { ...current, state: on ? "on" : "off", attributes: { ...current.attributes, brightness: on ? 255 : undefined } };
+        }
+        hass.states = { ...states };
+        const next = { ...hass };
+        for (const element of elements) element.hass = next;
+      };
+      const hass = {
+        states,
+        language: "en",
+        user: { is_admin: true },
+        callService,
+        callApi: async (method, path) => {
+          if (path.startsWith("dreame_lawn_mower/mowing-map"))
+            return {
+              width: 1115, height: 2048, background_path: "/tools/mock_mower_map.svg",
+              projection: { max_x: 810, min_y: -11220, scale: 0.12623476587556126, padding: 40, native_width: 1115, native_height: 2048 },
+            };
+          throw new Error(`no mock for ${path}`);
+        },
+        fetchWithAuth: (path) => fetch(path),
+        callWS: async (msg) => {
+          console.log("ws", msg.type);
+          if (msg.type === "floorcast/plan/get") return { plan: structuredClone(plan) };
+          // Where people walked: from room to room through the rooms of the first level.
+          if (msg.type === "floorcast/history/get") {
+            const centres = rooms.map((r) => centre(r.points));
+            return { walks: msg.level !== ground.id ? [] : centres.slice(1).map((c, i) => [centres[i], c]) };
+          }
+          if (msg.type === "floorcast/history/clear") return null;
+          if (msg.type === "floorcast/frigate/cameras")
+            return { cameras: cameras.filter((c) => c.frigate).map((c) => ({ name: c.frigate, size: [1280, 720] })) };
+          // Frigate: two recent paths of people walking across the image.
+          if (msg.type === "frigate/events/get")
+            return [
+              { data: { path_data: [...Array(8).keys()].map((i) => [[0.2 + i * 0.08, 0.95 - i * 0.07], i]) } },
+              { data: { path_data: [...Array(8).keys()].map((i) => [[0.5, 0.95 - i * 0.08], i]) } },
+            ];
+          if (msg.type === "call_service" && msg.service === "get_vacuum_current_position") {
+            // Docked where the first calibration pair puts it; while cleaning it walks a square.
+            const vacuum = devices("vacuum").find((d) => d.entity === msg.target.entity_id);
+            const [dx, dy] = vacuum?.pairs?.[0]?.robot ?? [25000, 25000];
+            const docked = states[msg.target.entity_id]?.state === "docked";
+            const t = (robotStep % 40) / 40, side = Math.floor(t * 4), f = (t * 4) % 1;
+            const square = [[0, 0], [3000, 0], [3000, 2500], [0, 2500]];
+            const a = square[side], b = square[(side + 1) % 4];
+            const x = docked ? dx : dx + 600 + a[0] + (b[0] - a[0]) * f;
+            const y = docked ? dy : dy + 400 + a[1] + (b[1] - a[1]) * f;
+            return { response: { [msg.target.entity_id]: { x, y } } };
+          }
+          if (msg.type === "floorcast/plan/save") {
+            // The example plan stays as it is; its changes live in this page only.
+            if (planFile !== "example_plan.json") {
+              const response = await fetch(planFile, { method: "PUT", body: JSON.stringify(msg.plan) });
+              if (!response.ok) throw new Error(`save failed: ${response.status}`);
+            }
+            plan = structuredClone(msg.plan);
+            localStorage.setItem(KEY, String(Date.now()));
+            listeners.forEach((callback) => callback({ plan: structuredClone(plan) }));
+            return null;
+          }
+          return null;
+        },
+        connection: {
+          subscribeMessage: async (callback, message) => {
+            // People tracking runs in Home Assistant only; without ?people the card falls back to raw targets.
+            if (message?.type === "floorcast/objects/subscribe" && tracking) {
+              objectListeners.add(callback);
+              return () => objectListeners.delete(callback);
+            }
+            if (message?.type === "floorcast/robots/subscribe" && tracking) {
+              robotListeners.add(callback);
+              setTimeout(() => callback({ snapshot: robotSnapshot() }), 0);
+              return () => robotListeners.delete(callback);
+            }
+            // Ground views as the integration sends them: a camera over the box of its chosen zones, in stripes.
+            if (message?.type === "floorcast/ground/subscribe" && tracking) {
+              const views = [];
+              for (const level of plan.levels) {
+                const areas = [...(level.zones ?? []), ...level.rooms];
+                for (const device of level.devices ?? []) {
+                  if (!message.devices?.includes(device.id)) continue;
+                  const chosen = areas.filter((a) => device.ground?.zones?.includes(a.id));
+                  if (!chosen.length) continue;
+                  const points = chosen.flatMap((a) => a.points);
+                  const x = Math.min(...points.map((p) => p[0])), y = Math.min(...points.map((p) => p[1]));
+                  const w = Math.max(...points.map((p) => p[0])) - x, h = Math.max(...points.map((p) => p[1])) - y;
+                  const canvas = Object.assign(document.createElement("canvas"), { width: 200, height: 200 });
+                  const g = canvas.getContext("2d");
+                  for (let i = 0; i < 10; i++) { g.fillStyle = i % 2 ? "#8a6d4a" : "#b8936a"; g.fillRect(i * 20, 0, 20, 200); }
+                  views.push({ id: device.id, level: level.id, data: canvas.toDataURL("image/png"), box: [x, y, w, h] });
+                }
+              }
+              setTimeout(() => callback({ views }), 50);
+              return () => undefined;
+            }
+            // Stills as the integration sends them: a 4:3 JPEG with the time, every second.
+            if (message?.type === "floorcast/still/subscribe" && tracking) {
+              const canvas = Object.assign(document.createElement("canvas"), { width: 640, height: 480 });
+              const draw = () => {
+                const g = canvas.getContext("2d");
+                g.fillStyle = "#2d4b2c"; g.fillRect(0, 0, 640, 480);
+                g.fillStyle = "#7fa8c9"; g.fillRect(0, 0, 640, 160);
+                g.fillStyle = "#fff"; g.font = "40px sans-serif";
+                g.fillText(`${message.entity_id} ${new Date().toLocaleTimeString()}`, 20, 440);
+                const data = canvas.toDataURL("image/jpeg", 0.7);
+                callback({ image: { entity: message.entity_id, data, width: 640, height: 480, time: Date.now() / 1000 } });
+              };
+              setTimeout(draw, 300);
+              const timer = setInterval(draw, 1000);
+              return () => clearInterval(timer);
+            }
+            if (message?.type === "floorcast/people/subscribe" && tracking) {
+              peopleListeners.add(callback);
+              return () => peopleListeners.delete(callback);
+            }
+            if (message?.type !== "floorcast/plan/subscribe") throw new Error("Unknown command");
+            listeners.add(callback);
+            setTimeout(() => callback({ plan: structuredClone(plan) }), 0);
+            return () => listeners.delete(callback);
+          },
+        },
+      };
+      window.hass = hass;
+      // More info opens in HA as a dialog; here it only names the entity.
+      window.addEventListener("hass-more-info", (event) => console.log("more info", event.detail.entityId));
+      // A save in the editor tab reaches the card tab.
+      window.addEventListener("storage", async (event) => {
+        if (event.key !== KEY) return;
+        plan = await loadPlan();
+        listeners.forEach((callback) => callback({ plan: structuredClone(plan) }));
+      });
+      const mode = params.get("mode") ?? "card";
+      const root = document.getElementById("root");
+      if (mode === "panel") {
+        await import("../custom_components/floorcast/www/floorcast-panel.js");
+        const panel = document.createElement("floorcast-panel");
+        panel.hass = hass;
+        elements.push(panel);
+        root.appendChild(panel);
+      } else {
+        await import("../custom_components/floorcast/www/floorcast-card.js");
+        const wrap = document.createElement("div");
+        wrap.id = "cards";
+        root.appendChild(wrap);
+        for (const width of [380, 760]) {
+          const holder = document.createElement("div");
+          holder.style.width = width + "px";
+          const card = document.createElement("floorcast-card");
+          card.setConfig({ type: "custom:floorcast-card" });
+          card.hass = hass;
+          elements.push(card);
+          holder.appendChild(card);
+          wrap.appendChild(holder);
+        }
+      }
+    </script>
+  </body>
+</html>
