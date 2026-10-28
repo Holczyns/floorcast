@@ -63,6 +63,8 @@ export interface Room {
   sensors?: string[];
   /** Name left off the card; temperature and other readings stay. */
   hideName?: boolean;
+  /** Motion, occupancy or presence sensors keeping the room occupied while on; they count nobody. */
+  occupancy?: string[];
   /** Seconds its occupancy stays on after the last person left. */
   hold?: number;
 }

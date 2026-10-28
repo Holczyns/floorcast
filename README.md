@@ -105,6 +105,9 @@ Every room a radar or a calibrated camera sees, and every counting zone, gets:
 | `sensor.floorcast_<level id>_<room id>_count` | People counted there |
 | `binary_sensor.floorcast_<level id>_<room id>_occupancy` | On while someone is counted there and for the hold time after |
 
+A room with presence sensors (motion, occupancy, presence) also gets the occupancy entity, without a radar too; it
+does not get a count. The `sources` attribute names what occupies the room now: `radar`, `camera` or `sensor`.
+
 Search for *FloorCast* in **Settings → Entities** to find them. `floorcast.press` does what a tap on the plan does,
 for a `room`, an `opening` or a `device` given by its id.
 

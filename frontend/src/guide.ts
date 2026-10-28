@@ -319,6 +319,12 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   occupied, w
         Their ids come from the ids in the plan, their names from the names you gave: search for <i>FloorCast</i> in the
         entities. A room keeps its occupancy for its <i>Occupancy hold</i>.
       </p>
+      <p>
+        A room can also take <i>Presence sensors</i> (motion, occupancy or presence) in its form. While one is on the room is
+        occupied, also without a radar; such a room gets the occupancy entity but no count, because a motion sensor does not
+        know how many people are there. The <code>sources</code> attribute of the occupancy entity names what occupies it now:
+        <code>radar</code>, <code>camera</code> or <code>sensor</code>.
+      </p>
       <p>Zones are drawn in <b>Zones</b> like rooms. Their use:</p>
       <table>
         <tr>

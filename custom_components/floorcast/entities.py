@@ -54,19 +54,21 @@ def async_follow_areas(
     tracking: PeopleTracking,
     add_entities: AddEntitiesCallback,
     create: Callable[[PeopleTracking, Area], AreaEntity],
+    include: Callable[[Area], bool] = lambda area: True,
 ) -> Callable[[], None]:
     entities: dict[str, AreaEntity] = {}
 
     @callback
     def sync() -> None:
         registry = er.async_get(hass)
-        for key in [key for key in entities if key not in tracking.areas]:
+        areas = {key: area for key, area in tracking.areas.items() if include(area)}
+        for key in [key for key in entities if key not in areas]:
             entity = entities.pop(key)
             if entity.entity_id and registry.async_get(entity.entity_id):
                 registry.async_remove(entity.entity_id)
         for entity in entities.values():
             entity.area_changed()
-        new = [create(tracking, area) for key, area in tracking.areas.items() if key not in entities]
+        new = [create(tracking, area) for key, area in areas.items() if key not in entities]
         entities.update({entity.key: entity for entity in new})
         if new:
             add_entities(new)

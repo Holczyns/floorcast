@@ -1,4 +1,7 @@
-"""Number of people in each room a radar sees into and in each counting zone."""
+"""Number of people in each room a radar or calibrated camera sees into and in each counting zone.
+
+A room only its presence sensors watch has no count: a motion sensor does not know how many are there.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +17,7 @@ from .people import Area, PeopleTracking
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add_entities: AddEntitiesCallback) -> None:
     tracking: PeopleTracking = hass.data[DATA_PEOPLE]
-    entry.async_on_unload(async_follow_areas(hass, tracking, add_entities, PeopleCount))
+    entry.async_on_unload(async_follow_areas(hass, tracking, add_entities, PeopleCount, lambda area: area.counted))
 
 
 class PeopleCount(AreaEntity, SensorEntity):

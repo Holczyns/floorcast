@@ -1,4 +1,5 @@
-"""Occupancy of each counted area: on while someone is counted there and for its hold time after.
+"""Occupancy of each room and counting zone: on while someone is counted there or a presence sensor of
+the room is on, and for its hold time after. The sources attribute names what occupies it now.
 
 The people tracking decides it (people.py, rule 5), so the entity and the cards always agree;
 the entity keeps no state of its own.
@@ -32,3 +33,7 @@ class Occupancy(AreaEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         return self.tracking.occupied.get(self.key, False)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, list[str]]:
+        return {"sources": self.tracking.area_sources.get(self.key, [])}

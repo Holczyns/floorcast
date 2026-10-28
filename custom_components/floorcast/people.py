@@ -12,8 +12,10 @@ and the people each camera tracks (cameras.py). One set of rules places them:
    its own settings, but with the same entrance, exclude and stationary zones.
 4. Counted people of both are counted per room and counting zone. A camera person within the
    merge distance of a radar person is the same person and counts once.
-5. A room or zone is occupied while someone is counted in it and for its hold time after; the
-   occupancy entities and the cards both show this one state.
+5. A room or zone is occupied while someone is counted in it, or while one of the room's
+   presence sensors (motion, occupancy, presence) is on, and for its hold time after; the
+   occupancy entities and the cards both show this one state. A presence sensor never counts
+   people: a room only its sensors watch gets occupancy, not a count.
 6. People positions go to the history of where people walked (history.py); each person carries
    its last seconds from there as its short track.
 7. Only what a radar sends counts: a target whose x or y it has not sent for STALE seconds is one
@@ -21,8 +23,9 @@ and the people each camera tracks (cameras.py). One set of rules places them:
    a radar whose target count is 0.
 
 Counts feed the sensor and binary sensor entities, positions go to the cards through a
-websocket subscription. Rooms get a count when some source sees into them. The areas,
-trackers and their settings follow the plan whenever it is saved.
+websocket subscription. Rooms get a count when some source sees into them, and occupancy when
+they also or only have presence sensors. The areas, trackers and their settings follow the plan
+whenever it is saved.
 """
 
 from __future__ import annotations
@@ -78,6 +81,9 @@ class Area:
     name: str
     points: Polygon
     hold: float
+    # False for a room only its presence sensors watch: it has occupancy but no count.
+    counted: bool = True
+    sensors: tuple[str, ...] = ()
 
 
 @dataclass
@@ -139,8 +145,12 @@ def _sees(source: Source, polygon: Polygon) -> bool:
     return any(in_view(source.at, source.heading, source.view, source.reach, p) for p in probes)
 
 
+def _presence_sensors(room: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(entity for entity in room.get("occupancy") or [] if isinstance(entity, str) and entity)
+
+
 def level_setup(level: dict[str, Any]) -> LevelSetup | None:
-    """What tracking needs from a level, or None when it has no radar nor calibrated camera."""
+    """What tracking needs from a level, or None when it has no radar, calibrated camera nor presence sensor."""
     sources: list[Source] = []
     for device in level.get("devices") or []:
         at = device.get("at")
@@ -172,8 +182,6 @@ def level_setup(level: dict[str, Any]) -> LevelSetup | None:
                     **common,
                 )
             )
-    if not sources:
-        return None
     rooms = [_points(room.get("points")) for room in level.get("rooms") or []]
     rooms = [room for room in rooms if len(room) >= 3]
     for source in sources:
@@ -184,7 +192,9 @@ def level_setup(level: dict[str, Any]) -> LevelSetup | None:
         if len(points) < 3 or room.get("stairs"):
             continue
         # A room gets a count when some source sees its middle or one of its corners.
-        if not any(_sees(source, points) for source in sources):
+        seen = any(_sees(source, points) for source in sources)
+        sensors = _presence_sensors(room)
+        if not seen and not sensors:
             continue
         hold = room.get("hold")
         areas.append(
@@ -195,10 +205,14 @@ def level_setup(level: dict[str, Any]) -> LevelSetup | None:
                 room.get("name") or room["id"],
                 points,
                 float(hold) if isinstance(hold, int | float) else DEFAULT_HOLD,
+                counted=seen,
+                sensors=sensors,
             )
         )
+    if not sources and not areas:
+        return None
     zones: dict[str, list[Zone]] = {"entrance": [], "exclude": [], "stationary": []}
-    for zone in level.get("zones") or []:
+    for zone in level.get("zones") or [] if sources else []:
         points = _points(zone.get("points"))
         if len(points) < 3:
             continue
@@ -260,6 +274,8 @@ class PeopleTracking:
         self.counts: dict[str, int] = {}
         # Rule 5: whether each area is occupied, and the timers ending the hold of emptied ones.
         self.occupied: dict[str, bool] = {}
+        # What occupies each area now: radar, camera and sensor, for the occupancy entity.
+        self.area_sources: dict[str, list[str]] = {}
         self._release: dict[str, Any] = {}
         # Count and occupancy of every room and zone, by level and id, for the cards.
         self.area_states: dict[str, dict[str, dict[str, Any]]] = {}
@@ -301,6 +317,7 @@ class PeopleTracking:
         self.areas = areas
         self.counts = {key: self.counts.get(key, 0) for key in areas}
         self.occupied = {key: self.occupied.get(key, False) for key in areas}
+        self.area_sources = {key: self.area_sources.get(key, []) for key in areas}
         self.people = {lid: self.people.get(lid, []) for lid in levels}
         if changed:
             async_dispatcher_send(self.hass, SIGNAL_AREAS_CHANGED)
@@ -342,6 +359,11 @@ class PeopleTracking:
         self.raw[level_id] = raw
         return detections
 
+    def _sensor_on(self, area: Area) -> bool:
+        return any(
+            (state := self.hass.states.get(entity)) is not None and state.state == "on" for entity in area.sensors
+        )
+
     def _number(self, entity_id: str) -> float | None:
         state = self.hass.states.get(entity_id)
         try:
@@ -369,6 +391,7 @@ class PeopleTracking:
         now = time.monotonic()
         wall = time.time()
         counts = dict.fromkeys(self.areas, 0)
+        kinds: dict[str, set[str]] = {key: set() for key in self.areas}
         raw_before = {level: dict(cameras) for level, cameras in self.raw.items()}
         people_changed = False
         for level_id, setup in self.levels.items():
@@ -377,9 +400,11 @@ class PeopleTracking:
             radar = trackers["radar"].update(self._radar_detections(setup), now, *zones)
             camera = trackers["camera"].update(self._camera_detections(level_id, setup), now, *zones)
             for person in counted_once(radar, camera, self.settings["radar"].tracker.merge_distance):
+                kind = "radar" if any(person is r for r in radar) else "camera"
                 for area in setup.areas:
-                    if point_in_polygon((person.x, person.y), area.points):
+                    if area.counted and point_in_polygon((person.x, person.y), area.points):
                         counts[area.key] += 1
+                        kinds[area.key].add(kind)
             shown = [
                 *(_shown(p, "radar") for p in radar if p.status != "sleeping"),
                 *(_shown(p, "camera") for p in camera if p.status != "sleeping"),
@@ -391,22 +416,29 @@ class PeopleTracking:
             if shown != self.people.get(level_id):
                 self.people[level_id] = shown
                 people_changed = True
-        # Rule 5: someone counted occupies the area at once; an emptied area stays occupied for its hold.
+        # Rule 5: someone counted or a presence sensor on occupies the area at once; an emptied area
+        # stays occupied for its hold.
         occupied = {key: self.occupied.get(key, False) for key in self.areas}
         for key, area in self.areas.items():
-            if counts[key]:
+            if self._sensor_on(area):
+                kinds[key].add("sensor")
+            if kinds[key]:
                 occupied[key] = True
                 if key in self._release:
                     self._release.pop(key)()
             elif occupied[key] and key not in self._release:
                 self._release[key] = async_call_later(self.hass, area.hold, partial(self._released, key))
+        sources = {key: sorted(found) for key, found in kinds.items()}
+        if sources != self.area_sources:
+            self.area_sources = sources
+            async_dispatcher_send(self.hass, SIGNAL_PEOPLE)
         self._publish(counts, occupied, people_changed or self.raw != raw_before)
 
     @callback
     def _released(self, key: str, _now: Any) -> None:
         """The hold of an emptied area is over."""
         self._release.pop(key, None)
-        if key in self.occupied and not self.counts.get(key):
+        if key in self.occupied and not self.counts.get(key) and not self._sensor_on(self.areas[key]):
             self._publish(self.counts, {**self.occupied, key: False}, False)
 
     def _publish(self, counts: dict[str, int], occupied: dict[str, bool], people_changed: bool) -> None:

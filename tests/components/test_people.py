@@ -130,3 +130,48 @@ async def test_a_radar_counting_no_target_has_none(hass: HomeAssistant, setup):
     hass.states.async_set("sensor.radar_presence_target_count", "1")
     await tick(hass)
     assert hass.states.get(COUNT).state == "1"
+
+
+async def test_a_room_only_a_presence_sensor_watches_gets_occupancy_but_no_count(hass: HomeAssistant, hass_storage):
+    garden = {**GARDEN, "hold": 5, "occupancy": ["binary_sensor.garden_motion"]}
+    hass_storage["floorcast.plan"] = {"version": 1, "key": "floorcast.plan", "data": plan([SALON, garden])}
+    hass.states.async_set("binary_sensor.garden_motion", "off", {"device_class": "motion"})
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    occupancy = "binary_sensor.floorcast_ground_garden_occupancy"
+    assert hass.states.get("sensor.floorcast_ground_garden_count") is None
+    assert hass.states.get(occupancy).state == "off"
+
+    hass.states.async_set("binary_sensor.garden_motion", "on", {"device_class": "motion"})
+    await tick(hass)
+    assert hass.states.get(occupancy).state == "on"
+    assert hass.states.get(occupancy).attributes["sources"] == ["sensor"]
+    # The sensor goes off: the room stays occupied for its hold, then is free.
+    hass.states.async_set("binary_sensor.garden_motion", "off", {"device_class": "motion"})
+    await tick(hass)
+    assert hass.states.get(occupancy).state == "on"
+    assert hass.states.get(occupancy).attributes["sources"] == []
+    await tick(hass, 6)
+    assert hass.states.get(occupancy).state == "off"
+
+
+async def test_a_presence_sensor_and_a_radar_occupy_a_room_together(hass: HomeAssistant, hass_storage):
+    salon = {**SALON, "occupancy": ["binary_sensor.salon_presence"]}
+    hass_storage["floorcast.plan"] = {"version": 1, "key": "floorcast.plan", "data": plan([salon])}
+    hass.states.async_set("binary_sensor.salon_presence", "on", {"device_class": "presence"})
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    target(hass, 0, 2000)
+    await tick(hass)
+    assert hass.states.get(COUNT).state == "1"
+    assert hass.states.get(OCCUPANCY).attributes["sources"] == ["radar", "sensor"]
+    # The person leaves the radar's view; the sensor still sees someone, so the room stays occupied.
+    target(hass, 0, 0)
+    await tick(hass, 10)
+    assert hass.states.get(COUNT).state == "0"
+    assert hass.states.get(OCCUPANCY).state == "on"
+    assert hass.states.get(OCCUPANCY).attributes["sources"] == ["sensor"]

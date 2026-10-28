@@ -3312,6 +3312,7 @@ class FloorCastPanel extends LitElement {
     if (!room) return nothing;
     const lights = roomLights(this.level, room);
     const thermometers = roomThermometers(this.level, room);
+    const sensors = room.occupancy ?? [];
     return html`
       <h3>Room</h3>
       ${this.text("Name", room.name, (v) => (room.name = v))}
@@ -3336,23 +3337,48 @@ class FloorCastPanel extends LitElement {
         ${thermometers.length ? thermometers.map((t) => t.entity).join(", ") : "none"}. Place both in the Devices tab; the room
         takes what stands in it. People are counted by the radars and cameras that see the room.
       </p>
-      ${this.hasRadar
+      <h4>Presence sensors</h4>
+      ${sensors.map(
+        (entity, i) => html`<div class="pick">
+            <span>Sensor ${i + 1}</span>
+            <floorcast-entity-picker
+              .hass=${this.hass}
+              .domains=${["binary_sensor"]}
+              .deviceClass=${["motion", "occupancy", "presence"]}
+              .value=${entity || null}
+              optional
+              @value-changed=${(e: CustomEvent) =>
+                this.change(() => {
+                  const next = [...sensors];
+                  next[i] = e.detail ?? "";
+                  room.occupancy = next.filter(Boolean);
+                })}
+            ></floorcast-entity-picker>
+          </div>
+          ${this.stateLine(entity)}`,
+      )}
+      <div class="row">
+        <button @click=${() => this.change(() => (room.occupancy = [...sensors, ""]))}>Add a presence sensor</button>
+      </div>
+      <p class="muted">
+        A motion, occupancy or presence sensor keeps the room occupied while it is on: the room's occupancy entity and the card
+        follow it. It does not count people.
+      </p>
+      ${this.hasRadar || sensors.length
         ? this.number("Occupancy hold", room.hold ?? DEFAULT_ROOM_HOLD, (v) => (room.hold = Math.max(0, v)), 5, "s")
         : nothing}
       ${this.deleteButton()}
     `;
   }
 
-  /** The level has a radar or a calibrated camera, so its people are tracked and counted. */
-  /** A radar or a calibrated camera on the level, so its rooms can be counted. */
+  /** A radar or a calibrated camera on the level, so its people are tracked and its rooms counted. */
   private get hasRadar(): boolean {
     return (this.level.devices ?? []).some(
       (device) => device.kind === "radar" || (device.kind === "camera" && !!device.frigate && (device.calibration?.length ?? 0) >= 4),
     );
   }
 
-  /** Settings of the people tracking, shared by all levels; empty fields use the defaults. */
-  /** Settings of the people tracking of radars or of cameras; zones and rooms are common to both. */
+  /** Settings of the people tracking of radars or of cameras, shared by all levels; zones and rooms are common to both. */
   private trackingProperties(kind: "radar" | "camera") {
     type Key = Exclude<keyof TrackingSettings, "camera">;
     const values: Omit<TrackingSettings, "camera"> = (kind === "radar" ? this._plan!.tracking : this._plan!.tracking?.camera) ?? {};
