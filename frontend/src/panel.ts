@@ -316,9 +316,9 @@ class FloorCastPanel extends LitElement {
     _view: { state: true },
     _draft: { state: true },
     _cursor: { state: true },
-    _addOpen: { state: true },
     _confirmDelete: { state: true },
     _paletteMode: { state: true },
+    _deleteLevel: { state: true },
     _locked: { state: true },
     _toast: { state: true },
     _find: { state: true },
@@ -353,10 +353,10 @@ class FloorCastPanel extends LitElement {
   private _levelId = "";
   private _tool: Tool = "select";
   private _mode: Mode = "plan";
-  /** The palette of + Add is open. */
-  private _addOpen = false;
   /** The palette edited in Settings, dark or light; the one the plan shows without a choice. */
   private _paletteMode?: "dark" | "light";
+  /** A level whose delete was pressed once; a second press within a few seconds deletes it. */
+  private _deleteLevel?: string;
   /** Delete was pressed once: a second press within a few seconds deletes. */
   private _confirmDelete = false;
   private _confirmTimer?: number;
@@ -1911,25 +1911,9 @@ class FloorCastPanel extends LitElement {
     this._draft = [];
     this._message = "";
     this._selection = undefined;
-    this._addOpen = false;
   }
 
-  private toolButton(tool: Tool, label: string) {
-    const locked = this._locked && LAYOUT_TOOLS.includes(tool);
-    return html`<button
-      class=${this._tool === tool ? "on" : ""}
-      ?disabled=${locked}
-      title=${locked ? "Unlock the layout to draw" : ""}
-      @click=${() => {
-        this._tool = tool;
-        this._draft = [];
-        this._message = HINTS[tool];
-        if (tool !== "select") this._selection = undefined;
-      }}
-    >
-      ${label}
-    </button>`;
-  }
+
 
   /** While a tool places something: what a click does, and how to stop. */
   /** A device left off the plan by the Devices layer; the tab that edits it always shows it. */
@@ -2446,22 +2430,24 @@ class FloorCastPanel extends LitElement {
         )}
       </nav>
       ${tools.length
-        ? html`<div class="tools">
-              ${this.toolButton("select", "Select")}
-              <button class="add ${this._addOpen ? "on" : ""}" @click=${() => (this._addOpen = !this._addOpen)}>+ Add ▾</button>
-              ${this._tool !== "select" ? html`<span class="tool-now">${TOOL_NAMES[this._tool] ?? ""}</span>` : nothing}
-              ${this.toolOptions()}
+        ? html`<section class="add-section">
+            <h4>Add</h4>
+            <div class="palette">
+              ${tools.map(([tool, label, key]) => {
+                const locked = this._locked && LAYOUT_TOOLS.includes(tool);
+                const on = this._tool === tool;
+                return html`<button
+                  class=${on ? "on" : ""}
+                  ?disabled=${locked}
+                  title=${locked ? "Unlock the layout to draw" : HINTS[tool]}
+                  @click=${() => (on ? this.cancelTool() : this.startTool(tool))}
+                >
+                  <span>${label}</span><kbd>${key}</kbd>
+                </button>`;
+              })}
             </div>
-            ${this._addOpen
-              ? html`<div class="palette">
-                  ${tools.map(([tool, label, key]) => {
-                    const locked = this._locked && LAYOUT_TOOLS.includes(tool);
-                    return html`<button ?disabled=${locked} title=${locked ? "Unlock the layout to draw" : HINTS[tool]} @click=${() => this.startTool(tool)}>
-                      <span>${label}</span><kbd>${key}</kbd>
-                    </button>`;
-                  })}
-                </div>`
-              : nothing}`
+            ${this.toolOptions() !== nothing ? html`<div class="tools">${this.toolOptions()}</div>` : nothing}
+          </section>`
         : nothing}
       ${this._selection
         ? html`<button class="back" @click=${() => (this._selection = undefined)}>‹ ${MODES.find((m) => m.mode === this._mode)!.label}</button>
@@ -2856,27 +2842,58 @@ class FloorCastPanel extends LitElement {
     </nav>`;
   }
 
+  /** Settings of the whole plan: its levels, wall types, corners, colours and file. */
   private levelProperties() {
-    const level = this.level;
+    const levels = this._plan!.levels;
+    const moveLevel = (index: number, by: number) =>
+      this.change(() => {
+        const list = [...levels];
+        const [level] = list.splice(index, 1);
+        list.splice(index + by, 0, level);
+        this._plan!.levels = list;
+      });
     return html`
-      <h3>Level</h3>
-      ${this.text("Name", level.name, (v) => (level.name = v))}
-      <p class="muted">
-        ${level.walls.length} walls · ${level.openings.length} doors and windows · ${level.rooms.length} rooms ·
-        ${level.items.length} objects
-      </p>
+      <h3>Levels</h3>
+      ${levels.map(
+        (level, i) => html`<div class="level-row ${level.id === this.level.id ? "current" : ""}">
+          <input
+            type="text"
+            .value=${level.name}
+            @change=${(e: Event) => this.change(() => (level.name = (e.target as HTMLInputElement).value.trim() || level.name))}
+          />
+          <button class="small" title="Up" ?disabled=${i === 0} @click=${() => moveLevel(i, -1)}>↑</button>
+          <button class="small" title="Down" ?disabled=${i === levels.length - 1} @click=${() => moveLevel(i, 1)}>↓</button>
+          <button
+            class="small danger ${this._deleteLevel === level.id ? "armed" : ""}"
+            title=${levels.length < 2 ? "The plan needs one level" : "Delete the level with everything on it"}
+            ?disabled=${levels.length < 2}
+            @click=${() => {
+              if (this._deleteLevel !== level.id) {
+                this._deleteLevel = level.id;
+                window.setTimeout(() => (this._deleteLevel = undefined), 3000);
+                return;
+              }
+              this._deleteLevel = undefined;
+              this.change(() => (this._plan!.levels = levels.filter((l) => l.id !== level.id)));
+              if (this._levelId === level.id) this._levelId = this._plan!.levels[0].id;
+              this.notify(`Level ${level.name} deleted`);
+              this.fit();
+            }}
+          >
+            ${this._deleteLevel === level.id ? "Delete?" : "×"}
+          </button>
+          <em class="muted">${level.rooms.length} rooms · ${(level.devices ?? []).length} devices</em>
+        </div>`,
+      )}
       <div class="row">
         <button
-          class="danger"
-          ?disabled=${this._plan!.levels.length < 2}
           @click=${() => {
-            if (!confirm(`Delete level ${level.name}?`)) return;
-            this.change(() => (this._plan!.levels = this._plan!.levels.filter((l) => l.id !== level.id)));
-            this._levelId = this._plan!.levels[0].id;
-            this.fit();
+            const level = emptyLevel(`Level ${levels.length + 1}`);
+            this.change(() => this._plan!.levels.push(level));
+            this._levelId = level.id;
           }}
         >
-          Delete level
+          Add level
         </button>
       </div>
       <h3>Wall types</h3>
@@ -2941,15 +2958,6 @@ class FloorCastPanel extends LitElement {
         <button @click=${() => this.exportPlan()}>Export</button>
         <label class="button">Import<input type="file" accept="application/json,.json" hidden @change=${this.importPlan} /></label>
       </div>
-      <h3>How to</h3>
-      <ul class="muted">
-        <li>Drag with the mouse to pan, wheel to zoom, Fit to see the whole level.</li>
-        <li>Points snap to the grid of 5 cm and to corners; hold Alt to place freely.</li>
-        <li>Delete removes the selection, Ctrl+D copies it, Ctrl+Z undoes, Esc cancels.</li>
-        <li>While drawing a wall, type its length and press Enter: 3.5 goes towards the cursor, 3.5&lt;90 goes north.</li>
-        <li>Joined wall ends move together; hold Shift while dragging an end to detach it.</li>
-        <li>On a touch screen, two fingers zoom and move the plan.</li>
-      </ul>
     `;
   }
 
@@ -4738,7 +4746,8 @@ class FloorCastPanel extends LitElement {
         align-items: center;
         margin: 6px 0;
       }
-      .type-row input {
+      .type-row input,
+      .level-row input {
         width: 100%;
         box-sizing: border-box;
         padding: 5px 8px;
@@ -4865,18 +4874,33 @@ class FloorCastPanel extends LitElement {
         font-size: 11px;
         color: var(--secondary-text-color);
       }
-            .tools .add {
-        font-weight: 500;
+            .add-section {
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid var(--divider-color);
       }
-      .tool-now {
-        font-size: 13px;
-        color: var(--primary-color);
+      .add-section h4 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--secondary-text-color);
+      }
+      .palette button.on {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+      }
+      .palette button.on kbd {
+        color: inherit;
+        border-color: currentColor;
       }
       .palette {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 6px;
-        margin: 0 0 10px;
+        margin: 0;
       }
       .palette button {
         display: flex;
@@ -4899,6 +4923,22 @@ class FloorCastPanel extends LitElement {
         cursor: pointer;
         font-weight: 500;
         padding: 4px 0;
+      }
+      .level-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto;
+        gap: 6px;
+        align-items: center;
+        margin: 4px 0 0;
+      }
+      .level-row em {
+        grid-column: 1 / -1;
+        font-style: normal;
+        font-size: 11px;
+        margin: -2px 0 4px 2px;
+      }
+      .level-row.current input {
+        border-color: var(--primary-color);
       }
       .colour-row {
         display: grid;
