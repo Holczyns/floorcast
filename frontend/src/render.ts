@@ -154,6 +154,16 @@ export function renderOpening(opening: Opening, wall: Wall, level: Level, states
   const b = pointOnWall(wall, opening.at + half);
   const line = `M${n(a[0])} ${n(a[1])}L${n(b[0])} ${n(b[1])}`;
   const state = openingState(opening, states);
+  if (opening.type === "gate") {
+    // A gate or garage door: closed across the opening for the share its cover closes, the rest a dashed track.
+    const share = state.closure ?? (state.sensed === undefined ? (opening.drawn === "open" ? 0 : 1) : state.sensed ? 0 : 1);
+    const q = [a[0] + d[0] * opening.width * share, a[1] + d[1] * opening.width * share];
+    return svg`<g data-opening=${opening.id} class="${state.lost ? "fc-lost" : ""} ${state.moving ? "fc-moving" : ""}">
+      <path class="fc-gap" d=${line} stroke-width=${n(wall.t + 0.02)}></path>
+      <path class="fc-gate-track" d=${line}></path>
+      ${share > 0.01 ? svg`<path class="fc-gate" d="M${n(a[0])} ${n(a[1])}L${n(q[0])} ${n(q[1])}"></path>` : nothing}
+    </g>`;
+  }
   if (opening.type === "window") {
     // The blind runs down from the start of the window along its outer face, as long as it covers.
     let blind: unknown = nothing;
@@ -201,7 +211,7 @@ export function renderOpening(opening: Opening, wall: Wall, level: Level, states
 export function renderOpeningLabels(level: Level, states: States, size: number): SVGTemplateResult {
   const walls = new Map(level.walls.map((wall) => [wall.id, wall]));
   return svg`${level.openings
-    .filter((o) => o.type === "window" && (o.cover || o.contact) && walls.has(o.wall))
+    .filter((o) => o.type !== "door" && (o.cover || o.contact) && walls.has(o.wall))
     .map((opening) => {
       const wall = walls.get(opening.wall)!;
       const state = openingState(opening, states);
@@ -599,6 +609,31 @@ export function renderAlarm(at: Point, kind: string, active: boolean, unknown: b
   return svg`<g class="fc-alarm ${active ? "on" : ""} ${unknown ? "unknown" : ""}" transform="translate(${n(at[0])} ${n(at[1])})">
     ${symbol}
     ${unknown ? svg`<line x1=${n(-r)} y1=${n(r)} x2=${n(r)} y2=${n(-r)}></line>` : nothing}
+  </g>`;
+}
+
+/** Where the padlock of a door stands: beside its middle, on the face of the wall it opens to. */
+export function lockSpot(wall: Wall, opening: Opening, size: number): Point {
+  const d = wallDirection(wall);
+  const side = opening.swingRight ? -1 : 1;
+  const c = pointOnWall(wall, opening.at);
+  const off = wall.t / 2 + size * 0.9;
+  return [c[0] + d[1] * off * side, c[1] - d[0] * off * side];
+}
+
+/** A padlock at a door: closed and grey while locked, open and orange while unlocked, red when jammed. */
+export function renderLock(at: Point, state: string | undefined, size: number): SVGTemplateResult {
+  const s = size / 2;
+  const locked = state === "locked";
+  const cls = state === "jammed" || state === "unavailable" || !state ? "fc-lock fault" : locked ? "fc-lock" : "fc-lock open";
+  // The shackle stands on the body; an open lock lifts its right leg.
+  const shackle = locked
+    ? `M${n(-s * 0.45)} ${n(-s * 0.1)}V${n(-s * 0.55)}A${n(s * 0.45)} ${n(s * 0.45)} 0 0 1 ${n(s * 0.45)} ${n(-s * 0.55)}V${n(-s * 0.1)}`
+    : `M${n(-s * 0.45)} ${n(-s * 0.1)}V${n(-s * 0.55)}A${n(s * 0.45)} ${n(s * 0.45)} 0 0 1 ${n(s * 0.45)} ${n(-s * 0.55)}V${n(-s * 0.75)}`;
+  return svg`<g class=${cls} transform="translate(${n(at[0])} ${n(at[1])})">
+    <circle class="disc" r=${n(s * 1.25)}></circle>
+    <path class="shackle" d=${shackle}></path>
+    <rect class="body" x=${n(-s * 0.7)} y=${n(-s * 0.15)} width=${n(s * 1.4)} height=${n(s)} rx=${n(s * 0.15)}></rect>
   </g>`;
 }
 
@@ -1071,6 +1106,52 @@ export const planStyles = css`
   }
   .fc-door.shut {
     opacity: 0.8;
+  }
+  .fc-gate {
+    stroke: var(--fc-wall);
+    stroke-width: 0.1;
+    fill: none;
+  }
+  .fc-gate-track {
+    stroke: var(--fc-label);
+    stroke-width: 0.03;
+    stroke-dasharray: 0.1 0.08;
+    fill: none;
+  }
+  .fc-moving .fc-gate {
+    animation: fc-blink 1s ease-in-out infinite;
+  }
+  @keyframes fc-blink {
+    50% {
+      opacity: 0.4;
+    }
+  }
+  .fc-lock .disc {
+    fill: var(--fc-background);
+    stroke: var(--fc-label);
+    stroke-width: 0.02;
+  }
+  .fc-lock .shackle {
+    fill: none;
+    stroke: var(--fc-label);
+    stroke-width: 0.04;
+  }
+  .fc-lock .body {
+    fill: var(--fc-label);
+  }
+  .fc-lock.open .shackle {
+    stroke: var(--fc-alert);
+  }
+  .fc-lock.open .body {
+    fill: var(--fc-alert);
+  }
+  .fc-lock.fault .body,
+  .fc-lock.fault .shackle {
+    fill: #f44336;
+    stroke: #f44336;
+  }
+  .fc-lock.fault .shackle {
+    fill: none;
   }
   .fc-door {
     stroke: var(--fc-wall);

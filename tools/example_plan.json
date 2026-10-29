@@ -19,7 +19,7 @@
     { "id": "east", "a": [8, 0], "b": [8, 9], "t": 0.25, "type": "load" }
    ],
    "openings": [
-    { "id": "front_door", "wall": "n", "at": 1.5, "width": 1, "type": "door", "swingRight": true, "contact": "binary_sensor.front_door" },
+    { "id": "front_door", "wall": "n", "at": 1.5, "width": 1, "type": "door", "swingRight": true, "contact": "binary_sensor.front_door", "lock": "lock.front_door" },
     { "id": "kitchen_window", "wall": "n", "at": 5.5, "width": 1.6, "type": "window", "cover": "cover.kitchen_blind" },
     { "id": "bathroom_window", "wall": "n", "at": 10, "width": 0.8, "type": "window" },
     { "id": "bedroom_window", "wall": "s", "at": 2, "width": 1.4, "type": "window", "cover": "cover.bedroom_blind" },

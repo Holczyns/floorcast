@@ -44,6 +44,8 @@ import {
   NAME_PX,
   renderSensor,
   renderAlarm,
+  renderLock,
+  lockSpot,
   trackHeading,
   renderScreen,
   renderScreenGlows,
@@ -841,7 +843,7 @@ class FloorCastCard extends LitElement {
         <svg class=${this._config.crop?.[level.id] || zoomed ? "cropped" : ""} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">
           ${PLAN_DEFS} ${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}
           ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
-          ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)}
+          ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)} ${this.renderLocks(level, pxPerMetre)}
           ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)}
           ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}
         </svg>
@@ -860,16 +862,47 @@ class FloorCastCard extends LitElement {
         const a = pointOnWall(wall, opening.at - opening.width / 2);
         const b = pointOnWall(wall, opening.at + opening.width / 2);
         const entity = (opening.cover ?? opening.contact)!;
+        // A gate asks before it moves unless told not to; a blind only when told to.
+        const asks = opening.type === "gate" ? opening.confirm !== false : opening.confirm;
         return svg`<path class="opening-hit" stroke-width=${Math.max(wall.t + 0.2, 24 / pxPerMetre)}
           d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}"
           @pointerdown=${() => this.holdStart(() => this.openMoreInfo(entity))}
           @pointerup=${() =>
             this.holdEnd(() =>
               opening.cover
-                ? this.ask(opening.confirm, opening.cover, coverAction(this.hass.states[opening.cover]), () => this.press({ opening: opening.id }))
+                ? this.ask(asks, opening.cover, coverAction(this.hass.states[opening.cover]), () => this.press({ opening: opening.id }))
                 : this.openMoreInfo(entity),
             )}
           @pointerleave=${() => window.clearTimeout(this._holdTimer)}></path>`;
+      });
+  }
+
+  /**
+   * Locks of doors: a padlock beside the door on the side it opens to. A tap locks or unlocks after Yes, unless Ask
+   * before switching is off; holding opens the lock.
+   */
+  private renderLocks(level: Level, pxPerMetre: number) {
+    const size = Math.max(0.24, 16 / pxPerMetre);
+    const walls = new Map(level.walls.map((wall) => [wall.id, wall]));
+    return level.openings
+      .filter((opening) => opening.lock && walls.has(opening.wall))
+      .map((opening) => {
+        const wall = walls.get(opening.wall)!;
+        const at = lockSpot(wall, opening, size);
+        const state = this.hass.states[opening.lock!]?.state;
+        const locked = state === "locked";
+        return svg`<g class="mower-hit"
+            @pointerdown=${() => this.holdStart(() => this.openMoreInfo(opening.lock!))}
+            @pointerup=${() =>
+              this.holdEnd(() =>
+                this.ask(opening.confirm !== false, opening.lock, locked ? "Unlock" : "Lock", () =>
+                  this.hass.callService("lock", locked ? "unlock" : "lock", { entity_id: opening.lock }),
+                ),
+              )}
+            @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
+          <circle class="lamp-hit" cx=${at[0]} cy=${at[1]} r=${size}></circle>
+          ${renderLock(at, state, size)}
+        </g>`;
       });
   }
 

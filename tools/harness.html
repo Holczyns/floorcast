@@ -117,6 +117,12 @@
         ["bedroom", "binary_sensor.bedroom_window", "off", { device_class: "window" }],
       ];
       for (const [, id, state, attributes] of UNPLACED) set(id, state, attributes);
+      // Locks of doors: locked; gates: closed.
+      for (const level of plan.levels)
+        for (const o of level.openings) {
+          if (o.lock) set(o.lock, "locked", {});
+          if (o.type === "gate" && o.cover && !states[o.cover]) set(o.cover, "closed", { device_class: "garage", current_position: 0 });
+        }
       const areaOf = (p) => (ground.rooms ?? []).find((r) => !r.outdoor && inside(p, r.points))?.id;
       const registry = () => {
         const entities = [];
@@ -321,6 +327,10 @@
         for (const id of ids) {
           const current = states[id];
           if (!current) continue;
+          if (domain === "lock") {
+            states[id] = { ...current, state: service === "lock" ? "locked" : "unlocked" };
+            continue;
+          }
           if (id.startsWith("valve.")) {
             const open = service === "toggle" ? current.state !== "open" : service === "open_valve" || service === "turn_on";
             states[id] = { ...current, state: open ? "open" : "closed" };

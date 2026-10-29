@@ -41,6 +41,7 @@ import {
   type TrackedPerson,
   type TrackingSettings,
   centroid,
+  OPENING_NAMES,
   itemPoints,
   AREA_KIND_NAMES,
   areaKind,
@@ -101,6 +102,8 @@ import {
   readingSizes,
   renderSensor,
   renderAlarm,
+  renderLock,
+  lockSpot,
   renderScreen,
   renderScreenGlows,
   screenLight,
@@ -111,7 +114,7 @@ import {
   sprinklerArea,
 } from "./render";
 
-type Tool = "select" | "wall" | "door" | "window" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "mark" | "calibrate";
+type Tool = "select" | "wall" | "door" | "window" | "gate" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "mark" | "calibrate";
 type Selection =
   | { kind: "wall"; id: string }
   | { kind: "opening"; id: string }
@@ -130,11 +133,12 @@ const LOCK_KEY = "floorcast-editor-lock";
 const LAYERS_KEY = "floorcast-editor-hidden";
 type Layer = "devices" | "zones" | "names";
 /** Tools that draw the layout, off while it is locked. */
-const LAYOUT_TOOLS: Tool[] = ["wall", "door", "window", "room", "item"];
+const LAYOUT_TOOLS: Tool[] = ["wall", "door", "window", "gate", "room", "item"];
 const TOOL_NAMES: Partial<Record<Tool, string>> = {
   wall: "Wall",
   door: "Door",
   window: "Window",
+  gate: "Gate",
   room: "Room",
   zone: "Zone",
   item: "Object",
@@ -196,6 +200,7 @@ const MODE_TOOLS: Record<Mode, [Tool, string, string][]> = {
     ["wall", "Wall", "W"],
     ["door", "Door", "D"],
     ["window", "Window", "N"],
+    ["gate", "Gate", "G"],
     ["room", "Room", "R"],
     ["item", "Garden or furniture", "O"],
   ],
@@ -240,8 +245,11 @@ interface Registry {
   entityDevice: Record<string, string>;
 }
 
+/** Kinds of entities of an area that go on a door, window or gate instead of standing in the room. */
+const ON_OPENING: AreaKind[] = ["blind", "gate", "lock", "contact"];
+
 /** Order of the kinds in the area list of a room. */
-const AREA_KINDS: AreaKind[] = ["light", "sensor", "alarm", "presence", "blind", "contact", "camera"];
+const AREA_KINDS: AreaKind[] = ["light", "sensor", "alarm", "presence", "blind", "gate", "lock", "contact", "camera"];
 
 interface View {
   x: number;
@@ -1058,6 +1066,7 @@ class FloorCastPanel extends LitElement {
       }
       case "door":
       case "window":
+      case "gate":
         this.addOpening(p, this._tool);
         return;
       case "item": {
@@ -1597,14 +1606,14 @@ class FloorCastPanel extends LitElement {
     this._selection = { kind: "room", id: room.id };
   }
 
-  private addOpening(p: Point, type: "door" | "window"): void {
+  private addOpening(p: Point, type: Opening["type"]): void {
     const found = this.nearestWall(p);
     if (!found) {
       this._message = "Click on a wall to place it.";
       return;
     }
     const length = wallLength(found.wall);
-    const width = Math.min(type === "door" ? 0.9 : 1.2, length);
+    const width = Math.min(type === "door" ? 0.9 : type === "gate" ? 2.5 : 1.2, length);
     const at = Math.min(Math.max(round(found.at), width / 2), length - width / 2);
     const opening: Opening = { id: uid(type), wall: found.wall.id, at: fix(at), width, type };
     this.change(() => this.level.openings.push(opening));
@@ -1968,14 +1977,14 @@ class FloorCastPanel extends LitElement {
       for (const opening of level.openings) {
         const wall = level.walls.find((w) => w.id === opening.wall);
         if (!wall) continue;
-        const kind = opening.type === "door" ? "Door" : "Window";
+        const kind = OPENING_NAMES[opening.type];
         results.push({
-          label: name(opening.cover) || name(opening.contact) || kind,
-          detail: `${kind} · ${[opening.contact, opening.cover].filter(Boolean).join(", ") || "no sensor"} · ${level.name}`,
+          label: name(opening.cover) || name(opening.lock) || name(opening.contact) || kind,
+          detail: `${kind} · ${[opening.contact, opening.cover, opening.lock].filter(Boolean).join(", ") || "no sensor"} · ${level.name}`,
           level,
           s: { kind: "opening", id: opening.id },
           at: pointOnWall(wall, opening.at),
-          text: `${kind} ${opening.contact ?? ""} ${opening.cover ?? ""} ${name(opening.contact)} ${name(opening.cover)}`,
+          text: `${kind} ${opening.contact ?? ""} ${opening.cover ?? ""} ${opening.lock ?? ""} ${name(opening.contact)} ${name(opening.cover)} ${name(opening.lock)}`,
         });
       }
       for (const zone of level.zones ?? [])
@@ -2089,6 +2098,12 @@ class FloorCastPanel extends LitElement {
       ${this._live ? renderGlows(this.shown, this.hass.states, "editor") : nothing}
       ${this._live ? renderScreenGlows(this.shown, this.hass.states, "editor") : nothing}
       ${this._live ? renderOpeningLabels(this.shown, this.hass.states, px * 10) : nothing}
+      ${this.shown.openings
+        .filter((o) => o.lock)
+        .map((o) => {
+          const wall = this.shown.walls.find((w) => w.id === o.wall);
+          return wall ? renderLock(lockSpot(wall, o, px * 14), this._live ? this.hass.states[o.lock!]?.state : "locked", px * 14) : nothing;
+        })}
       ${this._hidden.has("names")
         ? nothing
         : this.shown.rooms.map((room) => {
@@ -2823,7 +2838,7 @@ class FloorCastPanel extends LitElement {
       const opening = this.findOpening(s.id);
       const wall = opening && this.findWall(opening.wall);
       at = opening && wall ? pointOnWall(wall, opening.at) : undefined;
-      what = opening?.type === "door" ? "Door" : "Window";
+      what = opening ? OPENING_NAMES[opening.type] : "";
     } else if (s.kind === "item") {
       const item = this.findItem(s.id);
       at = item ? (item.center ?? centroid(itemPoints(item))) : undefined;
@@ -3079,12 +3094,13 @@ class FloorCastPanel extends LitElement {
   private openingProperties(opening?: Opening) {
     if (!opening) return nothing;
     return html`
-      <h3>${opening.type === "door" ? "Door" : "Window"}</h3>
+      <h3>${OPENING_NAMES[opening.type]}</h3>
       <label class="field wide">
         <span>Type</span>
         <select @change=${(e: Event) => this.change(() => (opening.type = (e.target as HTMLSelectElement).value as Opening["type"]))}>
           <option value="door" ?selected=${opening.type === "door"}>Door</option>
           <option value="window" ?selected=${opening.type === "window"}>Window</option>
+          <option value="gate" ?selected=${opening.type === "gate"}>Gate or garage door</option>
         </select>
       </label>
       ${this.number("Width", opening.width * 100, (v) => (opening.width = Math.max(10, v) / 100), 5, "cm")}
@@ -3110,7 +3126,22 @@ class FloorCastPanel extends LitElement {
       </div>
       ${this.stateLine(opening.contact)}
       ${opening.type === "door"
-        ? html`<label class="field wide">
+        ? html`<div class="pick">
+              <span>Lock</span>
+              <floorcast-entity-picker
+                .hass=${this.hass}
+                .domains=${["lock"]}
+                .value=${opening.lock ?? null}
+                optional
+                @value-changed=${(e: CustomEvent) => this.change(() => (opening.lock = e.detail))}
+              ></floorcast-entity-picker>
+            </div>
+            ${this.stateLine(opening.lock)}
+            ${opening.lock
+              ? html`${this.confirmCheck(opening, true)}
+                  <p class="muted">A padlock beside the door: a tap on the card locks or unlocks it, holding opens it.</p>`
+              : nothing}
+            <label class="field wide">
               <span>Drawn as</span>
               <select @change=${(e: Event) => this.change(() => (opening.drawn = (e.target as HTMLSelectElement).value as "open" | "closed"))}>
                 <option value="open" ?selected=${opening.drawn !== "closed"}>Open</option>
@@ -3118,7 +3149,22 @@ class FloorCastPanel extends LitElement {
               </select>
             </label>
             <p class="muted">With a sensor the door follows it; this is how it is drawn without one or while the sensor is unavailable.</p>`
-        : html`<div class="pick">
+        : opening.type === "gate"
+          ? html`<div class="pick">
+                <span>Gate</span>
+                <floorcast-entity-picker
+                  .hass=${this.hass}
+                  .domains=${["cover"]}
+                  .value=${opening.cover ?? null}
+                  optional
+                  @value-changed=${(e: CustomEvent) => this.change(() => (opening.cover = e.detail))}
+                ></floorcast-entity-picker>
+              </div>
+              ${this.stateLine(opening.cover)} ${this.confirmCheck(opening, true)}
+              <p class="muted">
+                Drawn closed across the opening for as much as the cover closes it. A tap on the card opens, closes or stops it.
+              </p>`
+          : html`<div class="pick">
               <span>Blind</span>
               <floorcast-entity-picker
                 .hass=${this.hass}
@@ -3970,6 +4016,8 @@ class FloorCastPanel extends LitElement {
   private freeOpenings(room: Room, entity: string, kind: AreaKind): Opening[] {
     const openings = roomOpenings(this.level, room);
     if (kind === "blind") return openings.filter((o) => o.type === "window" && !o.cover);
+    if (kind === "gate") return openings.filter((o) => o.type === "gate" && !o.cover);
+    if (kind === "lock") return openings.filter((o) => o.type === "door" && !o.lock);
     const deviceClass = this.hass.states[entity]?.attributes.device_class;
     const type = deviceClass === "window" ? "window" : deviceClass === "opening" ? undefined : "door";
     return openings.filter((o) => !o.contact && (!type || o.type === type));
@@ -3987,7 +4035,8 @@ class FloorCastPanel extends LitElement {
       devices.push({ id: uid("camera"), kind: "camera", entity, at: spot, heading: 180, arc: DEFAULT_FIELD_OF_VIEW, radius: DEFAULT_CAMERA_RANGE });
     if (kind === "alarm") devices.push({ id: uid("sensor"), kind: "sensor", sensorType: "alarm", entity, at: spot });
     if (kind === "presence") room.occupancy = [...(room.occupancy ?? []), entity];
-    if (kind === "blind" && opening) opening.cover = entity;
+    if ((kind === "blind" || kind === "gate") && opening) opening.cover = entity;
+    if (kind === "lock" && opening) opening.lock = entity;
     if (kind === "contact" && opening) opening.contact = entity;
     if (kind === "sensor") {
       const used = planEntities(this._plan!);
@@ -4029,7 +4078,7 @@ class FloorCastPanel extends LitElement {
       const below = rows.filter((row) => row.kind === "alarm" || row.kind === "camera");
       spotsInRoom(room, below.length, 0.75).forEach((at, i) => this.placeEntity(room, below[i].entity, below[i].kind, registry, at));
       for (const row of rows.filter((row) => row.kind === "presence")) this.placeEntity(room, row.entity, "presence", registry);
-      for (const row of rows.filter((row) => row.kind === "blind" || row.kind === "contact")) {
+      for (const row of rows.filter((row) => ON_OPENING.includes(row.kind))) {
         const free = this.freeOpenings(room, row.entity, row.kind);
         if (free.length === 1) this.placeEntity(room, row.entity, row.kind, registry, undefined, free[0]);
       }
@@ -4051,7 +4100,7 @@ class FloorCastPanel extends LitElement {
     const rows = room.area ? this.areaEntities(room, registry) : [];
     // Place all leaves a blind or contact that fits more than one door or window for the list.
     const free = rows.filter(
-      (row) => !row.used && ((row.kind !== "blind" && row.kind !== "contact") || this.freeOpenings(room, row.entity, row.kind).length === 1),
+      (row) => !row.used && (!ON_OPENING.includes(row.kind) || this.freeOpenings(room, row.entity, row.kind).length === 1),
     );
     return html`
       <label class="field wide">
@@ -4076,10 +4125,10 @@ class FloorCastPanel extends LitElement {
               ? html`<div class="area-list">
                   ${rows.map((row) => {
                     const name = this.hass.states[row.entity]?.attributes.friendly_name ?? row.entity;
-                    const openings = row.kind === "blind" || row.kind === "contact" ? this.freeOpenings(room, row.entity, row.kind) : [];
+                    const openings = ON_OPENING.includes(row.kind) ? this.freeOpenings(room, row.entity, row.kind) : [];
                     const action = row.used
                       ? html`<span class="muted">placed</span>`
-                      : row.kind === "blind" || row.kind === "contact"
+                      : ON_OPENING.includes(row.kind)
                         ? openings.length
                           ? html`<select
                               @change=${(e: Event) => {
@@ -4090,7 +4139,7 @@ class FloorCastPanel extends LitElement {
                               <option value="">Put on…</option>
                               ${openings.map((o, i) => html`<option value=${i}>${openingName(this.level, room, o)}</option>`)}
                             </select>`
-                          : html`<span class="muted">no free ${row.kind === "blind" ? "window" : "door or window"}</span>`
+                          : html`<span class="muted">no free ${row.kind === "blind" ? "window" : row.kind === "gate" ? "gate" : row.kind === "lock" ? "door" : "door or window"}</span>`
                         : html`<button @click=${() => this.change(() => this.placeEntity(room, row.entity, row.kind, registry))}>Place</button>`;
                     return html`<div class="area-row">
                       <span class="area-name" title=${row.entity}>${name}</span>
@@ -5228,6 +5277,7 @@ const HINTS: Record<Tool, string> = {
   wall: "Click to start a wall and click again for each corner. Double click or Esc ends.",
   door: "Click on a wall to place a door.",
   window: "Click on a wall to place a window.",
+  gate: "Click on a wall to place a garage door or a driveway gate, then choose its cover.",
   room: "Drag for a rectangular room, or click its corners one by one and close it on the first corner or with Enter.",
   zone: "Drag or click corners like a room; then choose what the zone does for the radars.",
   calibrate: "Click the same spot on the plan.",

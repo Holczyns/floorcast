@@ -29,7 +29,8 @@ export interface Opening {
   /** Distance of the opening centre from the wall start. */
   at: number;
   width: number;
-  type: "door" | "window";
+  /** A gate is a garage door or a driveway gate: a cover across a wide opening. */
+  type: "door" | "window" | "gate";
   /** Door hinge at the end of the opening closer to the wall end instead of its start. */
   hingeEnd?: boolean;
   /** Door swings to the right side of the wall direction instead of the left. */
@@ -42,7 +43,9 @@ export interface Opening {
   cover?: string | null;
   /** Window: the blind is drawn on the other side of the wall than found by the rooms. */
   blindFlip?: boolean;
-  /** Window: the card asks before a tap moves its blind. */
+  /** Door: its lock (a lock entity), shown as a padlock; a tap locks or unlocks it. */
+  lock?: string | null;
+  /** The card asks before a tap moves the blind or gate or turns the lock; a gate and a lock ask unless this is false. */
   confirm?: boolean;
 }
 
@@ -828,7 +831,7 @@ export function roomAt(level: Level, p: Point): Room | undefined {
 }
 
 /** What an entity of an area becomes on the plan; undefined for entities the plan does not show. */
-export type AreaKind = "light" | "sensor" | "alarm" | "presence" | "contact" | "blind" | "camera";
+export type AreaKind = "light" | "sensor" | "alarm" | "presence" | "contact" | "blind" | "gate" | "lock" | "camera";
 
 export const AREA_KIND_NAMES: Record<AreaKind, string> = {
   light: "Light",
@@ -837,6 +840,8 @@ export const AREA_KIND_NAMES: Record<AreaKind, string> = {
   presence: "Presence",
   contact: "Door or window",
   blind: "Blind",
+  gate: "Gate",
+  lock: "Lock",
   camera: "Camera",
 };
 
@@ -848,7 +853,9 @@ export function areaKind(entityId: string, stateObj: Reading): AreaKind | undefi
   if (domain === "alarm_control_panel" || (domain === "binary_sensor" && deviceClass in ALARM_CLASSES)) return "alarm";
   if (domain === "binary_sensor" && ["motion", "occupancy", "presence"].includes(deviceClass)) return "presence";
   if (domain === "binary_sensor" && ["door", "window", "opening", "garage_door"].includes(deviceClass)) return "contact";
-  if (domain === "cover" && !["garage", "gate", "door"].includes(deviceClass)) return "blind";
+  if (domain === "cover" && ["garage", "gate", "door"].includes(deviceClass)) return "gate";
+  if (domain === "cover") return "blind";
+  if (domain === "lock") return "lock";
   if (domain === "camera") return "camera";
   return undefined;
 }
@@ -864,7 +871,7 @@ export function planEntities(plan: Plan): Set<string> {
       [device.entity, device.remote, device.map, device.camera, device.battery, device.roomSensor].forEach(add);
       device.secondary?.forEach((value) => add(value.entity));
     }
-    for (const opening of level.openings) [opening.contact, opening.cover].forEach(add);
+    for (const opening of level.openings) [opening.contact, opening.cover, opening.lock].forEach(add);
     for (const room of level.rooms) [...(room.occupancy ?? []), ...(room.lights ?? []), room.temperature, room.humidity].forEach(add);
   }
   return used;
@@ -883,6 +890,8 @@ export function roomOpenings(level: Level, room: Room): Opening[] {
   });
 }
 
+export const OPENING_NAMES: Record<Opening["type"], string> = { door: "Door", window: "Window", gate: "Gate" };
+
 /** A door or window named by the side of the room it is on, such as "Window, north". */
 export function openingName(level: Level, room: Room, opening: Opening): string {
   const wall = level.walls.find((w) => w.id === opening.wall);
@@ -891,7 +900,7 @@ export function openingName(level: Level, room: Room, opening: Opening): string 
   const dx = c[0] - m[0];
   const dy = c[1] - m[1];
   const side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "east" : "west") : dy > 0 ? "south" : "north";
-  return `${opening.type === "door" ? "Door" : "Window"}, ${side}`;
+  return `${OPENING_NAMES[opening.type]}, ${side}`;
 }
 
 /** Spots for new devices in a room: n in a row across it, at a share of its height (0 top, 1 bottom). */

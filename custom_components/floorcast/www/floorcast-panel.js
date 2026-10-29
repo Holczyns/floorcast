@@ -1,6 +1,6 @@
-function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o);let e=window.customElements,t=Date.now(),i=window.setInterval(()=>{window.customElements!==e&&(e=window.customElements,e.get(a)||e.define(a,class extends o{})),Date.now()-t>6e4&&window.clearInterval(i)},250)}var ke=globalThis,_e=ke.ShadowRoot&&(ke.ShadyCSS===void 0||ke.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,je=Symbol(),Ht=new WeakMap,le=class{constructor(o,e,t){if(this._$cssResult$=!0,t!==je)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=o,this.t=e}get styleSheet(){let o=this.o,e=this.t;if(_e&&o===void 0){let t=e!==void 0&&e.length===1;t&&(o=Ht.get(e)),o===void 0&&((this.o=o=new CSSStyleSheet).replaceSync(this.cssText),t&&Ht.set(e,o))}return o}toString(){return this.cssText}},Wt=a=>new le(typeof a=="string"?a:a+"",void 0,je),O=(a,...o)=>{let e=a.length===1?a[0]:o.reduce((t,i,n)=>t+(s=>{if(s._$cssResult$===!0)return s.cssText;if(typeof s=="number")return s;throw Error("Value passed to 'css' function must be a 'css' function result: "+s+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+a[n+1],a[0]);return new le(e,a,je)},zt=(a,o)=>{if(_e)a.adoptedStyleSheets=o.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let e of o){let t=document.createElement("style"),i=ke.litNonce;i!==void 0&&t.setAttribute("nonce",i),t.textContent=e.cssText,a.appendChild(t)}},Ge=_e?a=>a:a=>a instanceof CSSStyleSheet?(o=>{let e="";for(let t of o.cssRules)e+=t.cssText;return Wt(e)})(a):a;var{is:Vn,defineProperty:Kn,getOwnPropertyDescriptor:Bn,getOwnPropertyNames:Zn,getOwnPropertySymbols:qn,getPrototypeOf:Yn}=Object,xe=globalThis,Nt=xe.trustedTypes,Xn=Nt?Nt.emptyScript:"",Jn=xe.reactiveElementPolyfillSupport,ce=(a,o)=>a,Ve={toAttribute(a,o){switch(o){case Boolean:a=a?Xn:null;break;case Object:case Array:a=a==null?a:JSON.stringify(a)}return a},fromAttribute(a,o){let e=a;switch(o){case Boolean:e=a!==null;break;case Number:e=a===null?null:Number(a);break;case Object:case Array:try{e=JSON.parse(a)}catch{e=null}}return e}},Ft=(a,o)=>!Vn(a,o),Ut={attribute:!0,type:String,converter:Ve,reflect:!1,useDefault:!1,hasChanged:Ft};Symbol.metadata??=Symbol("metadata"),xe.litPropertyMetadata??=new WeakMap;var I=class extends HTMLElement{static addInitializer(o){this._$Ei(),(this.l??=[]).push(o)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(o,e=Ut){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(o)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(o,e),!e.noAccessor){let t=Symbol(),i=this.getPropertyDescriptor(o,t,e);i!==void 0&&Kn(this.prototype,o,i)}}static getPropertyDescriptor(o,e,t){let{get:i,set:n}=Bn(this.prototype,o)??{get(){return this[e]},set(s){this[e]=s}};return{get:i,set(s){let l=i?.call(this);n?.call(this,s),this.requestUpdate(o,l,t)},configurable:!0,enumerable:!0}}static getPropertyOptions(o){return this.elementProperties.get(o)??Ut}static _$Ei(){if(this.hasOwnProperty(ce("elementProperties")))return;let o=Yn(this);o.finalize(),o.l!==void 0&&(this.l=[...o.l]),this.elementProperties=new Map(o.elementProperties)}static finalize(){if(this.hasOwnProperty(ce("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(ce("properties"))){let e=this.properties,t=[...Zn(e),...qn(e)];for(let i of t)this.createProperty(i,e[i])}let o=this[Symbol.metadata];if(o!==null){let e=litPropertyMetadata.get(o);if(e!==void 0)for(let[t,i]of e)this.elementProperties.set(t,i)}this._$Eh=new Map;for(let[e,t]of this.elementProperties){let i=this._$Eu(e,t);i!==void 0&&this._$Eh.set(i,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(o){let e=[];if(Array.isArray(o)){let t=new Set(o.flat(1/0).reverse());for(let i of t)e.unshift(Ge(i))}else o!==void 0&&e.push(Ge(o));return e}static _$Eu(o,e){let t=e.attribute;return t===!1?void 0:typeof t=="string"?t:typeof o=="string"?o.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(o=>this.enableUpdating=o),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(o=>o(this))}addController(o){(this._$EO??=new Set).add(o),this.renderRoot!==void 0&&this.isConnected&&o.hostConnected?.()}removeController(o){this._$EO?.delete(o)}_$E_(){let o=new Map,e=this.constructor.elementProperties;for(let t of e.keys())this.hasOwnProperty(t)&&(o.set(t,this[t]),delete this[t]);o.size>0&&(this._$Ep=o)}createRenderRoot(){let o=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return zt(o,this.constructor.elementStyles),o}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(o=>o.hostConnected?.())}enableUpdating(o){}disconnectedCallback(){this._$EO?.forEach(o=>o.hostDisconnected?.())}attributeChangedCallback(o,e,t){this._$AK(o,t)}_$ET(o,e){let t=this.constructor.elementProperties.get(o),i=this.constructor._$Eu(o,t);if(i!==void 0&&t.reflect===!0){let n=(t.converter?.toAttribute!==void 0?t.converter:Ve).toAttribute(e,t.type);this._$Em=o,n==null?this.removeAttribute(i):this.setAttribute(i,n),this._$Em=null}}_$AK(o,e){let t=this.constructor,i=t._$Eh.get(o);if(i!==void 0&&this._$Em!==i){let n=t.getPropertyOptions(i),s=typeof n.converter=="function"?{fromAttribute:n.converter}:n.converter?.fromAttribute!==void 0?n.converter:Ve;this._$Em=i;let l=s.fromAttribute(e,n.type);this[i]=l??this._$Ej?.get(i)??l,this._$Em=null}}requestUpdate(o,e,t,i=!1,n){if(o!==void 0){let s=this.constructor;if(i===!1&&(n=this[o]),t??=s.getPropertyOptions(o),!((t.hasChanged??Ft)(n,e)||t.useDefault&&t.reflect&&n===this._$Ej?.get(o)&&!this.hasAttribute(s._$Eu(o,t))))return;this.C(o,e,t)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(o,e,{useDefault:t,reflect:i,wrapped:n},s){t&&!(this._$Ej??=new Map).has(o)&&(this._$Ej.set(o,s??e??this[o]),n!==!0||s!==void 0)||(this._$AL.has(o)||(this.hasUpdated||t||(e=void 0),this._$AL.set(o,e)),i===!0&&this._$Em!==o&&(this._$Eq??=new Set).add(o))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let o=this.scheduleUpdate();return o!=null&&await o,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[i,n]of this._$Ep)this[i]=n;this._$Ep=void 0}let t=this.constructor.elementProperties;if(t.size>0)for(let[i,n]of t){let{wrapped:s}=n,l=this[i];s!==!0||this._$AL.has(i)||l===void 0||this.C(i,void 0,n,l)}}let o=!1,e=this._$AL;try{o=this.shouldUpdate(e),o?(this.willUpdate(e),this._$EO?.forEach(t=>t.hostUpdate?.()),this.update(e)):this._$EM()}catch(t){throw o=!1,this._$EM(),t}o&&this._$AE(e)}willUpdate(o){}_$AE(o){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(o)),this.updated(o)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(o){return!0}update(o){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(o){}firstUpdated(o){}};I.elementStyles=[],I.shadowRootOptions={mode:"open"},I[ce("elementProperties")]=new Map,I[ce("finalized")]=new Map,Jn?.({ReactiveElement:I}),(xe.reactiveElementVersions??=[]).push("2.1.2");var Je=globalThis,jt=a=>a,Pe=Je.trustedTypes,Gt=Pe?Pe.createPolicy("lit-html",{createHTML:a=>a}):void 0,Yt="$lit$",W=`lit$${Math.random().toFixed(9).slice(2)}$`,Xt="?"+W,Qn=`<${Xt}>`,q=document,he=()=>q.createComment(""),pe=a=>a===null||typeof a!="object"&&typeof a!="function",Qe=Array.isArray,ei=a=>Qe(a)||typeof a?.[Symbol.iterator]=="function",Ke=`[ 	
-\f\r]`,de=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,Vt=/-->/g,Kt=/>/g,B=RegExp(`>|${Ke}(?:([^\\s"'>=/]+)(${Ke}*=${Ke}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`,"g"),Bt=/'/g,Zt=/"/g,Jt=/^(?:script|style|textarea|title)$/i,et=a=>(o,...e)=>({_$litType$:a,strings:o,values:e}),p=et(1),w=et(2),Ni=et(3),Y=Symbol.for("lit-noChange"),m=Symbol.for("lit-nothing"),qt=new WeakMap,Z=q.createTreeWalker(q,129);function Qt(a,o){if(!Qe(a)||!a.hasOwnProperty("raw"))throw Error("invalid template strings array");return Gt!==void 0?Gt.createHTML(o):o}var ti=(a,o)=>{let e=a.length-1,t=[],i,n=o===2?"<svg>":o===3?"<math>":"",s=de;for(let l=0;l<e;l++){let r=a[l],c,d,h=-1,f=0;for(;f<r.length&&(s.lastIndex=f,d=s.exec(r),d!==null);)f=s.lastIndex,s===de?d[1]==="!--"?s=Vt:d[1]!==void 0?s=Kt:d[2]!==void 0?(Jt.test(d[2])&&(i=RegExp("</"+d[2],"g")),s=B):d[3]!==void 0&&(s=B):s===B?d[0]===">"?(s=i??de,h=-1):d[1]===void 0?h=-2:(h=s.lastIndex-d[2].length,c=d[1],s=d[3]===void 0?B:d[3]==='"'?Zt:Bt):s===Zt||s===Bt?s=B:s===Vt||s===Kt?s=de:(s=B,i=void 0);let b=s===B&&a[l+1].startsWith("/>")?" ":"";n+=s===de?r+Qn:h>=0?(t.push(c),r.slice(0,h)+Yt+r.slice(h)+W+b):r+W+(h===-2?l:b)}return[Qt(a,n+(a[e]||"<?>")+(o===2?"</svg>":o===3?"</math>":"")),t]},ue=class a{constructor({strings:o,_$litType$:e},t){let i;this.parts=[];let n=0,s=0,l=o.length-1,r=this.parts,[c,d]=ti(o,e);if(this.el=a.createElement(c,t),Z.currentNode=this.el.content,e===2||e===3){let h=this.el.content.firstChild;h.replaceWith(...h.childNodes)}for(;(i=Z.nextNode())!==null&&r.length<l;){if(i.nodeType===1){if(i.hasAttributes())for(let h of i.getAttributeNames())if(h.endsWith(Yt)){let f=d[s++],b=i.getAttribute(h).split(W),g=/([.?@])?(.*)/.exec(f);r.push({type:1,index:n,name:g[2],strings:b,ctor:g[1]==="."?Ze:g[1]==="?"?qe:g[1]==="@"?Ye:se}),i.removeAttribute(h)}else h.startsWith(W)&&(r.push({type:6,index:n}),i.removeAttribute(h));if(Jt.test(i.tagName)){let h=i.textContent.split(W),f=h.length-1;if(f>0){i.textContent=Pe?Pe.emptyScript:"";for(let b=0;b<f;b++)i.append(h[b],he()),Z.nextNode(),r.push({type:2,index:++n});i.append(h[f],he())}}}else if(i.nodeType===8)if(i.data===Xt)r.push({type:2,index:n});else{let h=-1;for(;(h=i.data.indexOf(W,h+1))!==-1;)r.push({type:7,index:n}),h+=W.length-1}n++}}static createElement(o,e){let t=q.createElement("template");return t.innerHTML=o,t}};function ie(a,o,e=a,t){if(o===Y)return o;let i=t!==void 0?e._$Co?.[t]:e._$Cl,n=pe(o)?void 0:o._$litDirective$;return i?.constructor!==n&&(i?._$AO?.(!1),n===void 0?i=void 0:(i=new n(a),i._$AT(a,e,t)),t!==void 0?(e._$Co??=[])[t]=i:e._$Cl=i),i!==void 0&&(o=ie(a,i._$AS(a,o.values),i,t)),o}var Be=class{constructor(o,e){this._$AV=[],this._$AN=void 0,this._$AD=o,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(o){let{el:{content:e},parts:t}=this._$AD,i=(o?.creationScope??q).importNode(e,!0);Z.currentNode=i;let n=Z.nextNode(),s=0,l=0,r=t[0];for(;r!==void 0;){if(s===r.index){let c;r.type===2?c=new me(n,n.nextSibling,this,o):r.type===1?c=new r.ctor(n,r.name,r.strings,this,o):r.type===6&&(c=new Xe(n,this,o)),this._$AV.push(c),r=t[++l]}s!==r?.index&&(n=Z.nextNode(),s++)}return Z.currentNode=q,i}p(o){let e=0;for(let t of this._$AV)t!==void 0&&(t.strings!==void 0?(t._$AI(o,t,e),e+=t.strings.length-2):t._$AI(o[e])),e++}},me=class a{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(o,e,t,i){this.type=2,this._$AH=m,this._$AN=void 0,this._$AA=o,this._$AB=e,this._$AM=t,this.options=i,this._$Cv=i?.isConnected??!0}get parentNode(){let o=this._$AA.parentNode,e=this._$AM;return e!==void 0&&o?.nodeType===11&&(o=e.parentNode),o}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(o,e=this){o=ie(this,o,e),pe(o)?o===m||o==null||o===""?(this._$AH!==m&&this._$AR(),this._$AH=m):o!==this._$AH&&o!==Y&&this._(o):o._$litType$!==void 0?this.$(o):o.nodeType!==void 0?this.T(o):ei(o)?this.k(o):this._(o)}O(o){return this._$AA.parentNode.insertBefore(o,this._$AB)}T(o){this._$AH!==o&&(this._$AR(),this._$AH=this.O(o))}_(o){this._$AH!==m&&pe(this._$AH)?this._$AA.nextSibling.data=o:this.T(q.createTextNode(o)),this._$AH=o}$(o){let{values:e,_$litType$:t}=o,i=typeof t=="number"?this._$AC(o):(t.el===void 0&&(t.el=ue.createElement(Qt(t.h,t.h[0]),this.options)),t);if(this._$AH?._$AD===i)this._$AH.p(e);else{let n=new Be(i,this),s=n.u(this.options);n.p(e),this.T(s),this._$AH=n}}_$AC(o){let e=qt.get(o.strings);return e===void 0&&qt.set(o.strings,e=new ue(o)),e}k(o){Qe(this._$AH)||(this._$AH=[],this._$AR());let e=this._$AH,t,i=0;for(let n of o)i===e.length?e.push(t=new a(this.O(he()),this.O(he()),this,this.options)):t=e[i],t._$AI(n),i++;i<e.length&&(this._$AR(t&&t._$AB.nextSibling,i),e.length=i)}_$AR(o=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);o!==this._$AB;){let t=jt(o).nextSibling;jt(o).remove(),o=t}}setConnected(o){this._$AM===void 0&&(this._$Cv=o,this._$AP?.(o))}},se=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(o,e,t,i,n){this.type=1,this._$AH=m,this._$AN=void 0,this.element=o,this.name=e,this._$AM=i,this.options=n,t.length>2||t[0]!==""||t[1]!==""?(this._$AH=Array(t.length-1).fill(new String),this.strings=t):this._$AH=m}_$AI(o,e=this,t,i){let n=this.strings,s=!1;if(n===void 0)o=ie(this,o,e,0),s=!pe(o)||o!==this._$AH&&o!==Y,s&&(this._$AH=o);else{let l=o,r,c;for(o=n[0],r=0;r<n.length-1;r++)c=ie(this,l[t+r],e,r),c===Y&&(c=this._$AH[r]),s||=!pe(c)||c!==this._$AH[r],c===m?o=m:o!==m&&(o+=(c??"")+n[r+1]),this._$AH[r]=c}s&&!i&&this.j(o)}j(o){o===m?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,o??"")}},Ze=class extends se{constructor(){super(...arguments),this.type=3}j(o){this.element[this.name]=o===m?void 0:o}},qe=class extends se{constructor(){super(...arguments),this.type=4}j(o){this.element.toggleAttribute(this.name,!!o&&o!==m)}},Ye=class extends se{constructor(o,e,t,i,n){super(o,e,t,i,n),this.type=5}_$AI(o,e=this){if((o=ie(this,o,e,0)??m)===Y)return;let t=this._$AH,i=o===m&&t!==m||o.capture!==t.capture||o.once!==t.once||o.passive!==t.passive,n=o!==m&&(t===m||i);i&&this.element.removeEventListener(this.name,this,t),n&&this.element.addEventListener(this.name,this,o),this._$AH=o}handleEvent(o){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,o):this._$AH.handleEvent(o)}},Xe=class{constructor(o,e,t){this.element=o,this.type=6,this._$AN=void 0,this._$AM=e,this.options=t}get _$AU(){return this._$AM._$AU}_$AI(o){ie(this,o)}};var ni=Je.litHtmlPolyfillSupport;ni?.(ue,me),(Je.litHtmlVersions??=[]).push("3.3.3");var en=(a,o,e)=>{let t=e?.renderBefore??o,i=t._$litPart$;if(i===void 0){let n=e?.renderBefore??null;t._$litPart$=i=new me(o.insertBefore(he(),n),n,void 0,e??{})}return i._$AI(a),i};var tt=globalThis,S=class extends I{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let o=super.createRenderRoot();return this.renderOptions.renderBefore??=o.firstChild,o}update(o){let e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(o),this._$Do=en(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return Y}};S._$litElement$=!0,S.finalized=!0,tt.litElementHydrateSupport?.({LitElement:S});var ii=tt.litElementPolyfillSupport;ii?.({LitElement:S});(tt.litElementVersions??=[]).push("4.2.2");function tn(a,o,e){a.dispatchEvent(new CustomEvent(o,{detail:e,bubbles:!0,composed:!0}))}var nt=60,it=class extends S{constructor(){super(...arguments);this.domains=[];this.optional=!1;this._query="";this._open=!1}static{this.properties={hass:{attribute:!1},domains:{attribute:!1},deviceClass:{attribute:!1},value:{attribute:!1},optional:{type:Boolean},_query:{state:!0},_open:{state:!0}}}options(){return Object.values(this.hass.states).filter(t=>{let i=this.domains.includes(t.entity_id.split(".")[0]),n=typeof this.deviceClass=="string"?[this.deviceClass]:this.deviceClass,s=!n||n.includes(t.attributes.device_class)||!!n.length&&t.entity_id.startsWith("alarm_control_panel.");return i&&(s||t.entity_id===this.value)}).map(t=>({id:t.entity_id,name:String(t.attributes.friendly_name??t.entity_id)})).sort((t,i)=>t.name.localeCompare(i.name))}filtered(){let e=this._query.toLowerCase().split(/\s+/).filter(Boolean);return this.options().filter(t=>{let i=`${t.name} ${t.id}`.toLowerCase();return e.every(n=>i.includes(n))})}pick(e){this._open=!1,this._query="",tn(this,"value-changed",e)}render(){let e=this.value?this.hass.states[this.value]:void 0,t=this.value?`${e?.attributes.friendly_name??this.value} \xB7 ${this.value}`:"",i=this._open?this.filtered():[];return p`
+function ie(a,o){window.customElements.get(a)||window.customElements.define(a,o);let e=window.customElements,t=Date.now(),i=window.setInterval(()=>{window.customElements!==e&&(e=window.customElements,e.get(a)||e.define(a,class extends o{})),Date.now()-t>6e4&&window.clearInterval(i)},250)}var _e=globalThis,xe=_e.ShadowRoot&&(_e.ShadyCSS===void 0||_e.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,Ve=Symbol(),zt=new WeakMap,ce=class{constructor(o,e,t){if(this._$cssResult$=!0,t!==Ve)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=o,this.t=e}get styleSheet(){let o=this.o,e=this.t;if(xe&&o===void 0){let t=e!==void 0&&e.length===1;t&&(o=zt.get(e)),o===void 0&&((this.o=o=new CSSStyleSheet).replaceSync(this.cssText),t&&zt.set(e,o))}return o}toString(){return this.cssText}},Wt=a=>new ce(typeof a=="string"?a:a+"",void 0,Ve),I=(a,...o)=>{let e=a.length===1?a[0]:o.reduce((t,i,n)=>t+(s=>{if(s._$cssResult$===!0)return s.cssText;if(typeof s=="number")return s;throw Error("Value passed to 'css' function must be a 'css' function result: "+s+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+a[n+1],a[0]);return new ce(e,a,Ve)},Ut=(a,o)=>{if(xe)a.adoptedStyleSheets=o.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let e of o){let t=document.createElement("style"),i=_e.litNonce;i!==void 0&&t.setAttribute("nonce",i),t.textContent=e.cssText,a.appendChild(t)}},Ke=xe?a=>a:a=>a instanceof CSSStyleSheet?(o=>{let e="";for(let t of o.cssRules)e+=t.cssText;return Wt(e)})(a):a;var{is:qn,defineProperty:Yn,getOwnPropertyDescriptor:Xn,getOwnPropertyNames:Jn,getOwnPropertySymbols:Qn,getPrototypeOf:ei}=Object,Pe=globalThis,Ft=Pe.trustedTypes,ti=Ft?Ft.emptyScript:"",ni=Pe.reactiveElementPolyfillSupport,de=(a,o)=>a,Be={toAttribute(a,o){switch(o){case Boolean:a=a?ti:null;break;case Object:case Array:a=a==null?a:JSON.stringify(a)}return a},fromAttribute(a,o){let e=a;switch(o){case Boolean:e=a!==null;break;case Number:e=a===null?null:Number(a);break;case Object:case Array:try{e=JSON.parse(a)}catch{e=null}}return e}},Gt=(a,o)=>!qn(a,o),jt={attribute:!0,type:String,converter:Be,reflect:!1,useDefault:!1,hasChanged:Gt};Symbol.metadata??=Symbol("metadata"),Pe.litPropertyMetadata??=new WeakMap;var H=class extends HTMLElement{static addInitializer(o){this._$Ei(),(this.l??=[]).push(o)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(o,e=jt){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(o)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(o,e),!e.noAccessor){let t=Symbol(),i=this.getPropertyDescriptor(o,t,e);i!==void 0&&Yn(this.prototype,o,i)}}static getPropertyDescriptor(o,e,t){let{get:i,set:n}=Xn(this.prototype,o)??{get(){return this[e]},set(s){this[e]=s}};return{get:i,set(s){let l=i?.call(this);n?.call(this,s),this.requestUpdate(o,l,t)},configurable:!0,enumerable:!0}}static getPropertyOptions(o){return this.elementProperties.get(o)??jt}static _$Ei(){if(this.hasOwnProperty(de("elementProperties")))return;let o=ei(this);o.finalize(),o.l!==void 0&&(this.l=[...o.l]),this.elementProperties=new Map(o.elementProperties)}static finalize(){if(this.hasOwnProperty(de("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(de("properties"))){let e=this.properties,t=[...Jn(e),...Qn(e)];for(let i of t)this.createProperty(i,e[i])}let o=this[Symbol.metadata];if(o!==null){let e=litPropertyMetadata.get(o);if(e!==void 0)for(let[t,i]of e)this.elementProperties.set(t,i)}this._$Eh=new Map;for(let[e,t]of this.elementProperties){let i=this._$Eu(e,t);i!==void 0&&this._$Eh.set(i,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(o){let e=[];if(Array.isArray(o)){let t=new Set(o.flat(1/0).reverse());for(let i of t)e.unshift(Ke(i))}else o!==void 0&&e.push(Ke(o));return e}static _$Eu(o,e){let t=e.attribute;return t===!1?void 0:typeof t=="string"?t:typeof o=="string"?o.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(o=>this.enableUpdating=o),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(o=>o(this))}addController(o){(this._$EO??=new Set).add(o),this.renderRoot!==void 0&&this.isConnected&&o.hostConnected?.()}removeController(o){this._$EO?.delete(o)}_$E_(){let o=new Map,e=this.constructor.elementProperties;for(let t of e.keys())this.hasOwnProperty(t)&&(o.set(t,this[t]),delete this[t]);o.size>0&&(this._$Ep=o)}createRenderRoot(){let o=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return Ut(o,this.constructor.elementStyles),o}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(o=>o.hostConnected?.())}enableUpdating(o){}disconnectedCallback(){this._$EO?.forEach(o=>o.hostDisconnected?.())}attributeChangedCallback(o,e,t){this._$AK(o,t)}_$ET(o,e){let t=this.constructor.elementProperties.get(o),i=this.constructor._$Eu(o,t);if(i!==void 0&&t.reflect===!0){let n=(t.converter?.toAttribute!==void 0?t.converter:Be).toAttribute(e,t.type);this._$Em=o,n==null?this.removeAttribute(i):this.setAttribute(i,n),this._$Em=null}}_$AK(o,e){let t=this.constructor,i=t._$Eh.get(o);if(i!==void 0&&this._$Em!==i){let n=t.getPropertyOptions(i),s=typeof n.converter=="function"?{fromAttribute:n.converter}:n.converter?.fromAttribute!==void 0?n.converter:Be;this._$Em=i;let l=s.fromAttribute(e,n.type);this[i]=l??this._$Ej?.get(i)??l,this._$Em=null}}requestUpdate(o,e,t,i=!1,n){if(o!==void 0){let s=this.constructor;if(i===!1&&(n=this[o]),t??=s.getPropertyOptions(o),!((t.hasChanged??Gt)(n,e)||t.useDefault&&t.reflect&&n===this._$Ej?.get(o)&&!this.hasAttribute(s._$Eu(o,t))))return;this.C(o,e,t)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(o,e,{useDefault:t,reflect:i,wrapped:n},s){t&&!(this._$Ej??=new Map).has(o)&&(this._$Ej.set(o,s??e??this[o]),n!==!0||s!==void 0)||(this._$AL.has(o)||(this.hasUpdated||t||(e=void 0),this._$AL.set(o,e)),i===!0&&this._$Em!==o&&(this._$Eq??=new Set).add(o))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let o=this.scheduleUpdate();return o!=null&&await o,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[i,n]of this._$Ep)this[i]=n;this._$Ep=void 0}let t=this.constructor.elementProperties;if(t.size>0)for(let[i,n]of t){let{wrapped:s}=n,l=this[i];s!==!0||this._$AL.has(i)||l===void 0||this.C(i,void 0,n,l)}}let o=!1,e=this._$AL;try{o=this.shouldUpdate(e),o?(this.willUpdate(e),this._$EO?.forEach(t=>t.hostUpdate?.()),this.update(e)):this._$EM()}catch(t){throw o=!1,this._$EM(),t}o&&this._$AE(e)}willUpdate(o){}_$AE(o){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(o)),this.updated(o)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(o){return!0}update(o){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(o){}firstUpdated(o){}};H.elementStyles=[],H.shadowRootOptions={mode:"open"},H[de("elementProperties")]=new Map,H[de("finalized")]=new Map,ni?.({ReactiveElement:H}),(Pe.reactiveElementVersions??=[]).push("2.1.2");var et=globalThis,Vt=a=>a,Me=et.trustedTypes,Kt=Me?Me.createPolicy("lit-html",{createHTML:a=>a}):void 0,Jt="$lit$",z=`lit$${Math.random().toFixed(9).slice(2)}$`,Qt="?"+z,ii=`<${Qt}>`,Y=document,pe=()=>Y.createComment(""),ue=a=>a===null||typeof a!="object"&&typeof a!="function",tt=Array.isArray,si=a=>tt(a)||typeof a?.[Symbol.iterator]=="function",Ze=`[ 	
+\f\r]`,he=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,Bt=/-->/g,Zt=/>/g,Z=RegExp(`>|${Ze}(?:([^\\s"'>=/]+)(${Ze}*=${Ze}*(?:[^ 	
+\f\r"'\`<>=]|("|')|))|$)`,"g"),qt=/'/g,Yt=/"/g,en=/^(?:script|style|textarea|title)$/i,nt=a=>(o,...e)=>({_$litType$:a,strings:o,values:e}),u=nt(1),w=nt(2),Gi=nt(3),X=Symbol.for("lit-noChange"),m=Symbol.for("lit-nothing"),Xt=new WeakMap,q=Y.createTreeWalker(Y,129);function tn(a,o){if(!tt(a)||!a.hasOwnProperty("raw"))throw Error("invalid template strings array");return Kt!==void 0?Kt.createHTML(o):o}var oi=(a,o)=>{let e=a.length-1,t=[],i,n=o===2?"<svg>":o===3?"<math>":"",s=he;for(let l=0;l<e;l++){let r=a[l],c,d,h=-1,f=0;for(;f<r.length&&(s.lastIndex=f,d=s.exec(r),d!==null);)f=s.lastIndex,s===he?d[1]==="!--"?s=Bt:d[1]!==void 0?s=Zt:d[2]!==void 0?(en.test(d[2])&&(i=RegExp("</"+d[2],"g")),s=Z):d[3]!==void 0&&(s=Z):s===Z?d[0]===">"?(s=i??he,h=-1):d[1]===void 0?h=-2:(h=s.lastIndex-d[2].length,c=d[1],s=d[3]===void 0?Z:d[3]==='"'?Yt:qt):s===Yt||s===qt?s=Z:s===Bt||s===Zt?s=he:(s=Z,i=void 0);let b=s===Z&&a[l+1].startsWith("/>")?" ":"";n+=s===he?r+ii:h>=0?(t.push(c),r.slice(0,h)+Jt+r.slice(h)+z+b):r+z+(h===-2?l:b)}return[tn(a,n+(a[e]||"<?>")+(o===2?"</svg>":o===3?"</math>":"")),t]},me=class a{constructor({strings:o,_$litType$:e},t){let i;this.parts=[];let n=0,s=0,l=o.length-1,r=this.parts,[c,d]=oi(o,e);if(this.el=a.createElement(c,t),q.currentNode=this.el.content,e===2||e===3){let h=this.el.content.firstChild;h.replaceWith(...h.childNodes)}for(;(i=q.nextNode())!==null&&r.length<l;){if(i.nodeType===1){if(i.hasAttributes())for(let h of i.getAttributeNames())if(h.endsWith(Jt)){let f=d[s++],b=i.getAttribute(h).split(z),g=/([.?@])?(.*)/.exec(f);r.push({type:1,index:n,name:g[2],strings:b,ctor:g[1]==="."?Ye:g[1]==="?"?Xe:g[1]==="@"?Je:oe}),i.removeAttribute(h)}else h.startsWith(z)&&(r.push({type:6,index:n}),i.removeAttribute(h));if(en.test(i.tagName)){let h=i.textContent.split(z),f=h.length-1;if(f>0){i.textContent=Me?Me.emptyScript:"";for(let b=0;b<f;b++)i.append(h[b],pe()),q.nextNode(),r.push({type:2,index:++n});i.append(h[f],pe())}}}else if(i.nodeType===8)if(i.data===Qt)r.push({type:2,index:n});else{let h=-1;for(;(h=i.data.indexOf(z,h+1))!==-1;)r.push({type:7,index:n}),h+=z.length-1}n++}}static createElement(o,e){let t=Y.createElement("template");return t.innerHTML=o,t}};function se(a,o,e=a,t){if(o===X)return o;let i=t!==void 0?e._$Co?.[t]:e._$Cl,n=ue(o)?void 0:o._$litDirective$;return i?.constructor!==n&&(i?._$AO?.(!1),n===void 0?i=void 0:(i=new n(a),i._$AT(a,e,t)),t!==void 0?(e._$Co??=[])[t]=i:e._$Cl=i),i!==void 0&&(o=se(a,i._$AS(a,o.values),i,t)),o}var qe=class{constructor(o,e){this._$AV=[],this._$AN=void 0,this._$AD=o,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(o){let{el:{content:e},parts:t}=this._$AD,i=(o?.creationScope??Y).importNode(e,!0);q.currentNode=i;let n=q.nextNode(),s=0,l=0,r=t[0];for(;r!==void 0;){if(s===r.index){let c;r.type===2?c=new fe(n,n.nextSibling,this,o):r.type===1?c=new r.ctor(n,r.name,r.strings,this,o):r.type===6&&(c=new Qe(n,this,o)),this._$AV.push(c),r=t[++l]}s!==r?.index&&(n=q.nextNode(),s++)}return q.currentNode=Y,i}p(o){let e=0;for(let t of this._$AV)t!==void 0&&(t.strings!==void 0?(t._$AI(o,t,e),e+=t.strings.length-2):t._$AI(o[e])),e++}},fe=class a{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(o,e,t,i){this.type=2,this._$AH=m,this._$AN=void 0,this._$AA=o,this._$AB=e,this._$AM=t,this.options=i,this._$Cv=i?.isConnected??!0}get parentNode(){let o=this._$AA.parentNode,e=this._$AM;return e!==void 0&&o?.nodeType===11&&(o=e.parentNode),o}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(o,e=this){o=se(this,o,e),ue(o)?o===m||o==null||o===""?(this._$AH!==m&&this._$AR(),this._$AH=m):o!==this._$AH&&o!==X&&this._(o):o._$litType$!==void 0?this.$(o):o.nodeType!==void 0?this.T(o):si(o)?this.k(o):this._(o)}O(o){return this._$AA.parentNode.insertBefore(o,this._$AB)}T(o){this._$AH!==o&&(this._$AR(),this._$AH=this.O(o))}_(o){this._$AH!==m&&ue(this._$AH)?this._$AA.nextSibling.data=o:this.T(Y.createTextNode(o)),this._$AH=o}$(o){let{values:e,_$litType$:t}=o,i=typeof t=="number"?this._$AC(o):(t.el===void 0&&(t.el=me.createElement(tn(t.h,t.h[0]),this.options)),t);if(this._$AH?._$AD===i)this._$AH.p(e);else{let n=new qe(i,this),s=n.u(this.options);n.p(e),this.T(s),this._$AH=n}}_$AC(o){let e=Xt.get(o.strings);return e===void 0&&Xt.set(o.strings,e=new me(o)),e}k(o){tt(this._$AH)||(this._$AH=[],this._$AR());let e=this._$AH,t,i=0;for(let n of o)i===e.length?e.push(t=new a(this.O(pe()),this.O(pe()),this,this.options)):t=e[i],t._$AI(n),i++;i<e.length&&(this._$AR(t&&t._$AB.nextSibling,i),e.length=i)}_$AR(o=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);o!==this._$AB;){let t=Vt(o).nextSibling;Vt(o).remove(),o=t}}setConnected(o){this._$AM===void 0&&(this._$Cv=o,this._$AP?.(o))}},oe=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(o,e,t,i,n){this.type=1,this._$AH=m,this._$AN=void 0,this.element=o,this.name=e,this._$AM=i,this.options=n,t.length>2||t[0]!==""||t[1]!==""?(this._$AH=Array(t.length-1).fill(new String),this.strings=t):this._$AH=m}_$AI(o,e=this,t,i){let n=this.strings,s=!1;if(n===void 0)o=se(this,o,e,0),s=!ue(o)||o!==this._$AH&&o!==X,s&&(this._$AH=o);else{let l=o,r,c;for(o=n[0],r=0;r<n.length-1;r++)c=se(this,l[t+r],e,r),c===X&&(c=this._$AH[r]),s||=!ue(c)||c!==this._$AH[r],c===m?o=m:o!==m&&(o+=(c??"")+n[r+1]),this._$AH[r]=c}s&&!i&&this.j(o)}j(o){o===m?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,o??"")}},Ye=class extends oe{constructor(){super(...arguments),this.type=3}j(o){this.element[this.name]=o===m?void 0:o}},Xe=class extends oe{constructor(){super(...arguments),this.type=4}j(o){this.element.toggleAttribute(this.name,!!o&&o!==m)}},Je=class extends oe{constructor(o,e,t,i,n){super(o,e,t,i,n),this.type=5}_$AI(o,e=this){if((o=se(this,o,e,0)??m)===X)return;let t=this._$AH,i=o===m&&t!==m||o.capture!==t.capture||o.once!==t.once||o.passive!==t.passive,n=o!==m&&(t===m||i);i&&this.element.removeEventListener(this.name,this,t),n&&this.element.addEventListener(this.name,this,o),this._$AH=o}handleEvent(o){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,o):this._$AH.handleEvent(o)}},Qe=class{constructor(o,e,t){this.element=o,this.type=6,this._$AN=void 0,this._$AM=e,this.options=t}get _$AU(){return this._$AM._$AU}_$AI(o){se(this,o)}};var ai=et.litHtmlPolyfillSupport;ai?.(me,fe),(et.litHtmlVersions??=[]).push("3.3.3");var nn=(a,o,e)=>{let t=e?.renderBefore??o,i=t._$litPart$;if(i===void 0){let n=e?.renderBefore??null;t._$litPart$=i=new fe(o.insertBefore(pe(),n),n,void 0,e??{})}return i._$AI(a),i};var it=globalThis,S=class extends H{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let o=super.createRenderRoot();return this.renderOptions.renderBefore??=o.firstChild,o}update(o){let e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(o),this._$Do=nn(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return X}};S._$litElement$=!0,S.finalized=!0,it.litElementHydrateSupport?.({LitElement:S});var ri=it.litElementPolyfillSupport;ri?.({LitElement:S});(it.litElementVersions??=[]).push("4.2.2");function sn(a,o,e){a.dispatchEvent(new CustomEvent(o,{detail:e,bubbles:!0,composed:!0}))}var st=60,ot=class extends S{constructor(){super(...arguments);this.domains=[];this.optional=!1;this._query="";this._open=!1}static{this.properties={hass:{attribute:!1},domains:{attribute:!1},deviceClass:{attribute:!1},value:{attribute:!1},optional:{type:Boolean},_query:{state:!0},_open:{state:!0}}}options(){return Object.values(this.hass.states).filter(t=>{let i=this.domains.includes(t.entity_id.split(".")[0]),n=typeof this.deviceClass=="string"?[this.deviceClass]:this.deviceClass,s=!n||n.includes(t.attributes.device_class)||!!n.length&&t.entity_id.startsWith("alarm_control_panel.");return i&&(s||t.entity_id===this.value)}).map(t=>({id:t.entity_id,name:String(t.attributes.friendly_name??t.entity_id)})).sort((t,i)=>t.name.localeCompare(i.name))}filtered(){let e=this._query.toLowerCase().split(/\s+/).filter(Boolean);return this.options().filter(t=>{let i=`${t.name} ${t.id}`.toLowerCase();return e.every(n=>i.includes(n))})}pick(e){this._open=!1,this._query="",sn(this,"value-changed",e)}render(){let e=this.value?this.hass.states[this.value]:void 0,t=this.value?`${e?.attributes.friendly_name??this.value} \xB7 ${this.value}`:"",i=this._open?this.filtered():[];return u`
       <div class="field">
         <input
           type="text"
@@ -11,20 +11,20 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
           @keydown=${n=>{n.key==="Escape"&&n.target.blur(),n.key==="Enter"&&i.length&&this.pick(i[0].id)}}
           @blur=${()=>{window.setTimeout(()=>this._open=!1,150)}}
         />
-        ${this.optional&&this.value?p`<button class="clear" title="Remove" @mousedown=${n=>n.preventDefault()} @click=${()=>this.pick(null)}>×</button>`:m}
+        ${this.optional&&this.value?u`<button class="clear" title="Remove" @mousedown=${n=>n.preventDefault()} @click=${()=>this.pick(null)}>×</button>`:m}
       </div>
-      ${this._open?p`<div class="list">
-            ${i.slice(0,nt).map(n=>p`<button
+      ${this._open?u`<div class="list">
+            ${i.slice(0,st).map(n=>u`<button
                 class="option ${n.id===this.value?"on":""}"
                 @mousedown=${s=>s.preventDefault()}
                 @click=${()=>this.pick(n.id)}
               >
                 <span>${n.name}</span><em>${n.id}</em>
               </button>`)}
-            ${i.length>nt?p`<p>${i.length-nt} more; type more of the name.</p>`:m}
-            ${i.length?m:p`<p>Nothing matches.</p>`}
+            ${i.length>st?u`<p>${i.length-st} more; type more of the name.</p>`:m}
+            ${i.length?m:u`<p>Nothing matches.</p>`}
           </div>`:m}
-    `}static{this.styles=O`
+    `}static{this.styles=I`
     :host {
       display: block;
       position: relative;
@@ -101,13 +101,13 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
       margin: 6px 8px;
       color: var(--secondary-text-color);
     }
-  `}};ne("floorcast-entity-picker",it);var si=a=>p`<div class="steps">${a.map(o=>p`<span class="chip">${o}</span>`)}</div>`,oi=[{icon:"mdi:information-outline",title:"What FloorCast does",body:p`
+  `}};ie("floorcast-entity-picker",ot);var li=a=>u`<div class="steps">${a.map(o=>u`<span class="chip">${o}</span>`)}</div>`,ci=[{icon:"mdi:information-outline",title:"What FloorCast does",body:u`
       <p>
         FloorCast draws the plan of the home with what happens in it: lights and their glow, open windows and blinds,
         temperatures and other readings, people seen by radars and cameras, the mower and the vacuum with their tracks,
         sprinklers while they water and camera stills.
       </p>
-      ${si(["Draw the plan here","Save","Add the card to a dashboard","Tap to control, hold for details"])}
+      ${li(["Draw the plan here","Save","Add the card to a dashboard","Tap to control, hold for details"])}
       <ul>
         <li><b>This editor</b> draws and changes the plan. Only administrators can save it.</li>
         <li>
@@ -116,7 +116,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         </li>
         <li><b>The card</b> shows the saved plan with live states on any dashboard. Every card follows a save at once.</li>
       </ul>
-    `},{icon:"mdi:rocket-launch-outline",title:"First steps",body:p`
+    `},{icon:"mdi:rocket-launch-outline",title:"First steps",body:u`
       <ol>
         <li>In <b>Plan</b>, under <b>Levels</b>, name the level (for example <i>Ground floor</i>); in <b>⚙ Settings</b> set the wall types you build with.</li>
         <li>
@@ -138,7 +138,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         </li>
       </ol>
       <p>Another level comes from the <b>+</b> chip at the top. The switches next to it show or hide the garden and live states.</p>
-    `},{icon:"mdi:cursor-default-click-outline",title:"Working in the editor",body:p`
+    `},{icon:"mdi:cursor-default-click-outline",title:"Working in the editor",body:u`
       <ul>
         <li>
           A click selects whatever is there and opens the tab that edits it; a click again at the same spot selects what
@@ -171,7 +171,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
           changes.
         </li>
       </ul>
-    `},{icon:"mdi:wall",title:"Walls, doors, windows and rooms",body:p`
+    `},{icon:"mdi:wall",title:"Walls, doors, windows and rooms",body:u`
       <ul>
         <li>
           <b>Wall types</b> (⚙ Settings) give the thickness of every wall of the type, for example <i>Outer wall 27.5 cm</i>,
@@ -200,7 +200,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         </li>
         <li>A room takes the lights and the temperature sensors standing in it. A tap on the room switches its lights.</li>
       </ul>
-    `},{icon:"mdi:tree-outline",title:"Garden and objects",body:p`
+    `},{icon:"mdi:tree-outline",title:"Garden and objects",body:u`
       <p>
         Objects are drawn in <b>Plan</b> with <b>+ Add → Garden or furniture</b>: choose a kind, then drag. Garden kinds are lawn, paving, terrace, flower bed,
         hedge, vegetable garden, greenhouse, shelter, garden house, trampoline and manhole. Furniture is drawn as an
@@ -215,7 +215,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         <li><i>Corners</i> chooses rounded or square corners for the object, or as the plan sets them.</li>
         <li>Garden objects hide with the <b>Garden</b> switch, on the card too (option <code>garden</code>).</li>
       </ul>
-    `},{icon:"mdi:lightbulb-outline",title:"Lights",body:p`
+    `},{icon:"mdi:lightbulb-outline",title:"Lights",body:u`
       <ul>
         <li><b>Point</b>: click where the light hangs. <b>Line</b>: drag along a light strip.</li>
         <li>
@@ -230,7 +230,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         <i>Ask before switching</i> (lights, screens, windows with a blind, and sprinklers, which ask by default) makes the card ask <b>Yes</b> or <b>No</b> before
         a tap switches it, for a pump, a server or a gate. A tap on its room leaves such a light out.
       </p>
-    `},{icon:"mdi:thermometer",title:"Sensors",body:p`
+    `},{icon:"mdi:thermometer",title:"Sensors",body:u`
       <p>A sensor writes values on the plan where it stands: a header, a main value and up to two secondary values under it.</p>
       <ul>
         <li>
@@ -277,7 +277,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         while all is well. While it alarms its room pulses red and a bar at the top of the card names the room and the alarm;
         a tap on the bar opens the sensor.
       </p>
-    `},{icon:"mdi:projector-screen-outline",title:"Screens",body:p`
+    `},{icon:"mdi:projector-screen-outline",title:"Screens",body:u`
       <p>
         A screen is a projector screen, a TV or a monitor, drawn as a line: drag along it. Choose its power entity (a switch,
         a media player or a remote) and optionally a remote entity. <i>Light reach</i> and <i>Light spread</i> set the light
@@ -287,7 +287,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         On the card a tap switches it on or off. Holding opens a remote with arrows, OK, back, home, volume and play, sent to
         the remote entity.
       </p>
-    `},{icon:"mdi:sprinkler-variant",title:"Sprinklers",body:p`
+    `},{icon:"mdi:sprinkler-variant",title:"Sprinklers",body:u`
       <p>
         Click where a sprinkler head stands and choose its valve (a valve or switch entity) and nozzle. <i>Throw</i> is the
         radius, <i>Start</i> the compass bearing where the arc begins (0 north, 90 east) and <i>Arc</i> its width. Drag the
@@ -297,7 +297,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
         On the card a tap opens or closes the valve after <b>Yes</b>, holding opens its details. Untick <i>Ask before
         switching</i> to switch it with one tap.
       </p>
-    `},{icon:"mdi:robot-mower-outline",title:"Mower and vacuum",body:p`
+    `},{icon:"mdi:robot-mower-outline",title:"Mower and vacuum",body:u`
       <ul>
         <li>
           <b>Mower</b> (Dreame mowers through their map camera): click on the lawn, choose the mower and its map camera. Its
@@ -316,7 +316,7 @@ function ne(a,o){window.customElements.get(a)||window.customElements.define(a,o)
           the dock.
         </li>
       </ul>
-    `},{icon:"mdi:radar",title:"Radars",body:p`
+    `},{icon:"mdi:radar",title:"Radars",body:u`
       <p>
         FloorCast reads HLK-LD2450 radars through ESPHome: the sensors <code>sensor.&lt;radar&gt;_target_1_x</code>,
         <code>_y</code> and so on for up to three targets, and the target count.
@@ -341,7 +341,7 @@ filters:
       value:
         - nan</pre
       >
-    `},{icon:"mdi:cctv",title:"Cameras",body:p`
+    `},{icon:"mdi:cctv",title:"Cameras",body:u`
       <ul>
         <li>
           In <b>Devices</b>, <b>+ Add → Camera</b> (key C): click where the camera hangs, aim it with the handle and choose its camera entity. On the card a
@@ -361,7 +361,7 @@ filters:
           <i>Preview</i> chooses what opens: the <i>Window</i> with the still, the <i>Ground</i> view, or both.
         </li>
       </ul>
-    `},{icon:"mdi:account-multiple-outline",title:"Zones and counting people",body:p`
+    `},{icon:"mdi:account-multiple-outline",title:"Zones and counting people",body:u`
       <p>Every room a radar or a calibrated camera sees, and every counting zone, gets two entities:</p>
       <pre>
 sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_count          people counted there
@@ -427,7 +427,7 @@ actions:
       entity_id: light.kitchen_counter</pre
       >
       <p><i>Where people walked</i> shows the paths of the last hours; the card shows them with the option <code>history</code>.</p>
-    `},{icon:"mdi:image-filter-hdr",title:"Ground view (experimental)",body:p`
+    `},{icon:"mdi:image-filter-hdr",title:"Ground view (experimental)",body:u`
       <p>The camera image laid on the plan like the top view of a car. Only flat ground lies true; walls and people stretch.</p>
       <ul>
         <li>
@@ -446,7 +446,7 @@ actions:
         </li>
         <li>The spot list shows every calibration spot; remove a bad one with its × button.</li>
       </ul>
-    `},{icon:"mdi:view-dashboard-outline",title:"The card",body:p`
+    `},{icon:"mdi:view-dashboard-outline",title:"The card",body:u`
       <p>All options are set in the card editor or in YAML:</p>
       <table>
         <tr>
@@ -548,14 +548,14 @@ crop:
         Taps: a room switches its lights, a light switches itself, a window moves its blind, a screen switches its device, a
         camera or mower opens its preview. Holding opens the details.
       </p>
-    `},{icon:"mdi:gesture-tap-button",title:"Service floorcast.press",body:p`
+    `},{icon:"mdi:gesture-tap-button",title:"Service floorcast.press",body:u`
       <p>Does what a tap on the plan does, from an automation, a script or a button. Give one of <code>room</code>, <code>opening</code> or <code>device</code>, by its id in the plan (exported plan file).</p>
       <pre>
 action: floorcast.press
 data:
   room: room_k2x7m4p</pre
       >
-    `},{icon:"mdi:help-circle-outline",title:"When something looks wrong",body:p`
+    `},{icon:"mdi:help-circle-outline",title:"When something looks wrong",body:u`
       <ul>
         <li><b>The card does not change after editing</b>: the card draws the saved plan; press Save.</li>
         <li>
@@ -570,8 +570,8 @@ data:
           not on walls.
         </li>
       </ul>
-    `}],st=class extends S{render(){return p`<div class="guide">
-      ${oi.map((o,e)=>p`<details class="card" ?open=${e===0}>
+    `}],at=class extends S{render(){return u`<div class="guide">
+      ${ci.map((o,e)=>u`<details class="card" ?open=${e===0}>
           <summary><ha-icon icon=${o.icon}></ha-icon><span>${o.title}</span></summary>
           <div class="body">${o.body}</div>
         </details>`)}
@@ -579,7 +579,7 @@ data:
         <a href="https://github.com/Holczyns/floorcast" target="_blank" rel="noreferrer">FloorCast</a> by Michal Holowko ·
         <a href="https://github.com/Holczyns/floorcast/blob/main/LICENSE" target="_blank" rel="noreferrer">GPL-3.0</a>
       </footer>
-    </div>`}static{this.styles=O`
+    </div>`}static{this.styles=I`
     :host {
       display: block;
       height: 100%;
@@ -700,10 +700,10 @@ data:
         padding-left: 16px;
       }
     }
-  `}};ne("floorcast-guide",st);var Me=class{constructor(o){this.onChange=o;this.views=new Map}get running(){return!!this.unsubscribe}start(o,e,t=!1){this.unsubscribe||(this.unsubscribe=o.connection.subscribeMessage(i=>{for(let n of i.views??[])this.show(n);i.view&&this.show(i.view)},{type:"floorcast/ground/subscribe",devices:e,preview:t}),this.unsubscribe.catch(()=>{}))}stop(){this.unsubscribe?.then(o=>o()).catch(()=>{}),this.unsubscribe=void 0,this.views.clear()}render(o,e=.85,t){let i=[...this.views.values()].filter(n=>n.level===o&&(!t||t.has(n.id)));return i.length?w`<g class="fc-ground" opacity=${Math.min(Math.max(e,0),1)} pointer-events="none">
+  `}};ie("floorcast-guide",at);var Ee=class{constructor(o){this.onChange=o;this.views=new Map}get running(){return!!this.unsubscribe}start(o,e,t=!1){this.unsubscribe||(this.unsubscribe=o.connection.subscribeMessage(i=>{for(let n of i.views??[])this.show(n);i.view&&this.show(i.view)},{type:"floorcast/ground/subscribe",devices:e,preview:t}),this.unsubscribe.catch(()=>{}))}stop(){this.unsubscribe?.then(o=>o()).catch(()=>{}),this.unsubscribe=void 0,this.views.clear()}render(o,e=.85,t){let i=[...this.views.values()].filter(n=>n.level===o&&(!t||t.has(n.id)));return i.length?w`<g class="fc-ground" opacity=${Math.min(Math.max(e,0),1)} pointer-events="none">
       ${i.map(n=>w`<image href=${n.data} x=${n.box[0]} y=${n.box[1]} width=${n.box[2]} height=${n.box[3]}
           preserveAspectRatio="none"></image>`)}
-    </g>`:m}show(o){if(!o.data){this.views.delete(o.id),this.onChange();return}let e=()=>{this.views.set(o.id,o),this.onChange()},t=new Image;t.src=o.data,t.decode().then(e,e)}};var Ee=[{id:"outer",name:"Outer wall",t:.275},{id:"load",name:"Load-bearing wall",t:.25},{id:"partition",name:"Partition",t:.12}],ot=30,Se=300,Te={smoke:"Smoke",gas:"Gas",carbon_monoxide:"Carbon monoxide",moisture:"Water leak",safety:"Alarm"};function rn(a,o){let e=!!a?.startsWith("alarm_control_panel."),t=e?"alarm":String(o?.attributes.device_class??"safety"),i=o?.state;return{kind:t,name:e?"Alarm":Te[t]??"Alarm",active:e?i==="triggered":i==="on",unknown:!o||i==="unavailable"||i==="unknown"}}var at=2;function ln(a){let o=!1;for(let e of a.devices??[])e.kind==="thermometer"&&(e.kind="sensor",e.sensorType="temperature",o=!0),e.kind==="sensor"&&e.extra!==void 0&&(e.secondary??=e.extra?[{entity:e.extra}]:[],delete e.extra,o=!0);return o}var Ae=5;function rt(a,o={}){if(!a||a.state==="unavailable"||a.state==="unknown")return;let e=Number.parseFloat(a.state),t=a.attributes.unit_of_measurement??"",i=a.attributes.device_class;if(!Number.isFinite(e))return a.state;let n=Number.isInteger(e)?0:1,s=t;i==="temperature"||t==="\xB0C"||t==="\xB0F"?(n=1,s="\xB0"):(i==="humidity"||i==="battery"||t==="%")&&(n=0,s="%");let l=e.toFixed(o.decimals??n);if(o.showUnit===!1)return l;let r=o.unit==="custom"?o.unitText??"":o.unit==="entity"?t:s;return r?r==="\xB0"||r==="%"?`${l}${r}`:`${l} ${r}`:l}function Le(a){return!!a&&!["off","standby","unavailable","unknown"].includes(a)}function nn(a){let o=a.reduce((n,s)=>n+s[0],0)/a.length,e=a.reduce((n,s)=>n+s[1],0)/a.length,t=a.reduce((n,s)=>n+Math.hypot(s[0]-o,s[1]-e),0)/a.length,i=t>1e-12?Math.SQRT2/t:1;return[[i,0,-i*o],[0,i,-i*e],[0,0,1]]}function sn(a,o){return[0,1,2].map(e=>[0,1,2].map(t=>a[e][0]*o[0][t]+a[e][1]*o[1][t]+a[e][2]*o[2][t]))}function on(a,[o,e]){let t=a[2][0]*o+a[2][1]*e+a[2][2];return[(a[0][0]*o+a[0][1]*e+a[0][2])/t,(a[1][0]*o+a[1][1]*e+a[1][2])/t]}function Re(a){if(a.length<4)return;let o=nn(a.map(g=>g.image)),e=nn(a.map(g=>g.plan)),t=[],i=[];for(let g of a){let[y,v]=on(o,g.image),[x,E]=on(e,g.plan);t.push([y,v,1,0,0,0,-y*x,-v*x]),i.push(x),t.push([0,0,0,y,v,1,-y*E,-v*E]),i.push(E)}let n=[...Array(8).keys()].map(g=>[...Array(8).keys()].map(y=>t.reduce((v,x)=>v+x[g]*x[y],0))),s=[...Array(8).keys()].map(g=>t.reduce((y,v,x)=>y+v[g]*i[x],0)),l=n.map((g,y)=>[...g,s[y]]);for(let g=0;g<8;g++){let y=g;for(let v=g+1;v<8;v++)Math.abs(l[v][g])>Math.abs(l[y][g])&&(y=v);if(Math.abs(l[y][g])<1e-12)return;[l[g],l[y]]=[l[y],l[g]];for(let v=0;v<8;v++){if(v===g)continue;let x=l[v][g]/l[g][g];for(let E=g;E<=8;E++)l[v][E]-=x*l[g][E]}}let r=l.map((g,y)=>g[8]/g[y]),c=1/e[0][0],d=[[c,0,-e[0][2]*c],[0,c,-e[1][2]*c],[0,0,1]],h=sn(d,sn([r.slice(0,3),r.slice(3,6),[r[6],r[7],1]],o));if(Math.abs(h[2][2])<1e-12)return;let f=h.map(g=>g.map(y=>y/h[2][2]));return a.reduce((g,{image:[y,v]})=>g+f[2][0]*y+f[2][1]*v+f[2][2],0)<0?f.map(g=>g.map(y=>-y)):f}function cn(a,[o,e]){let t=a[2][0]*o+a[2][1]*e+a[2][2];if(!(t<=1e-9))return[(a[0][0]*o+a[0][1]*e+a[0][2])/t,(a[1][0]*o+a[1][1]*e+a[1][2])/t]}function lt(a){let o=a.pairs??[];if(o.length<2)return;let e=_(o[0].robot,o[1].robot)/1e3;return e?_(o[0].plan,o[1].plan)/e:void 0}function Ce(a,o,e){return[a.padding+(a.maxX-o)*a.scale,a.padding+(e-a.minY)*a.scale]}function X(a,o){let e=a.projection,t=1/(e.scale*1e3),i=(a.mirror?e.width-o[0]:o[0])*t,n=o[1]*t;return pn(a.at,ge([i,n],[0,0],a.rotation??0))}function dn(a){let o=a.projection,e=1/(o.scale*1e3),t=a.mirror?` translate(${o.width*e} 0) scale(-1 1)`:"";return`translate(${a.at[0]} ${a.at[1]}) rotate(${a.rotation??0})${t} scale(${e})`}var J=4,z=8,Q=100,ee=6,fe=120,ai=3;function ct(a){return Object.keys(a).map(o=>/^sensor\.(.+)_target_1_x$/.exec(o)?.[1]).filter(o=>!!o)}function an(a){let o=Number.parseFloat(a?.state??"");if(!Number.isFinite(o))return;let e=a.attributes.unit_of_measurement;return e==="m"?o*1e3:e==="cm"?o*10:o}function De(a,o){if(!a.source)return[];let e=(a.heading??0)*Math.PI/180,t=[Math.sin(e),-Math.cos(e)],i=[Math.cos(e),Math.sin(e)],n=(a.radius??ee)*1e3,s=[];for(let l=1;l<=ai;l++){let r=an(o[`sensor.${a.source}_target_${l}_x`]),c=an(o[`sensor.${a.source}_target_${l}_y`]);if(r===void 0||c===void 0||Math.abs(r)<100&&Math.abs(c)<100||Math.hypot(r,c)>n)continue;let d=(a.mirror?-r:r)/1e3,h=c/1e3;s.push([a.at[0]+i[0]*d+t[0]*h,a.at[1]+i[1]*d+t[1]*h])}return s}function N(a,o,e){let t=o*Math.PI/180;return[a[0]+Math.sin(t)*e,a[1]-Math.cos(t)*e]}function Oe(a,o){return(Math.atan2(o[0]-a[0],a[1]-o[1])*180/Math.PI+360)%360}function U(a){return a.to?[(a.at[0]+a.to[0])/2,(a.at[1]+a.to[1])/2]:a.at}var A=2,dt=["lawn","paving","bed","hedge","vegetable","greenhouse","shelter","garden_house","trampoline","manhole"],ri=["sprinkler","mower"];function hn(a){return{...a,items:a.items.filter(o=>!dt.includes(o.type)),rooms:a.rooms.filter(o=>!o.garden),devices:(a.devices??[]).filter(o=>!ri.includes(o.kind))}}var oe=["trampoline","manhole","round_obstacle"],ht=["obstacle","round_obstacle"];var pt=["lawn","paving","terrace","bed","vegetable","hedge","manhole","greenhouse","shelter","garden_house","trampoline","obstacle","round_obstacle"];function k(a){return`${a}_${Math.random().toString(36).slice(2,9)}`}function ut(a){return{id:k("level"),name:a,walls:[],openings:[],rooms:[],items:[]}}var pn=(a,o)=>[a[0]+o[0],a[1]+o[1]];var li=(a,o)=>[a[0]*o,a[1]*o],_=(a,o)=>Math.hypot(a[0]-o[0],a[1]-o[1]);function L(a){return _(a.a,a.b)}function D(a){let o=L(a)||1;return[(a.b[0]-a.a[0])/o,(a.b[1]-a.a[1])/o]}function M(a,o){return pn(a.a,li(D(a),o))}function F(a,o){let e=D(a),t=L(a),i=Math.min(t,Math.max(0,(o[0]-a.a[0])*e[0]+(o[1]-a.a[1])*e[1]));return{at:i,distance:_(o,M(a,i))}}function ge(a,o,e){let t=e*Math.PI/180,i=a[0]-o[0],n=a[1]-o[1];return[o[0]+i*Math.cos(t)-n*Math.sin(t),o[1]+i*Math.sin(t)+n*Math.cos(t)]}function be(a){let[o,e,t,i]=a.rect,n=[o+t/2,e+i/2];return[[o,e],[o+t,e],[o+t,e+i],[o,e+i]].map(l=>ge(l,n,a.rotation??0))}function Ie(a){if(a.points)return a.points;if(a.rect)return be(a);let[o,e]=a.center,t=(a.diameter??1)/2;return[[o-t,e-t],[o+t,e+t]]}function P(a){let o=a.map(t=>t[0]),e=a.map(t=>t[1]);return[(Math.min(...o)+Math.max(...o))/2,(Math.min(...e)+Math.max(...e))/2]}function te(a,o){let e=!1;for(let t=0,i=o.length-1;t<o.length;i=t++){let[n,s]=o[t],[l,r]=o[i];s>a[1]!=r>a[1]&&a[0]<(l-n)*(a[1]-s)/(r-s)+n&&(e=!e)}return e}function mt(a,o=.4){let e=[];for(let l of a.walls)e.push(l.a,l.b);for(let l of a.rooms)e.push(...l.points);for(let l of a.items)e.push(...Ie(l));if(!e.length)return{x:-5,y:-5,w:10,h:10};let t=e.map(l=>l[0]),i=e.map(l=>l[1]),n=Math.min(...t)-o,s=Math.min(...i)-o;return{x:n,y:s,w:Math.max(...t)+o-n,h:Math.max(...i)+o-s}}var we=.1;function un(a){return a?.roundCorners?a.cornerRadius??we:0}function ft(a,o,e){let t=[(a[0]+o[0])/2,(a[1]+o[1])/2];return e.some(i=>{let{at:n,distance:s}=F(i,t);return n>0&&n<L(i)&&s<=i.t/2+.03})}function R(a,o){let e=a.rooms.filter(t=>te(o,t.points));return e.find(t=>!t.outdoor)??e[0]}var mn={light:"Light",sensor:"Sensor",alarm:"Alarm",presence:"Presence",contact:"Door or window",blind:"Blind",camera:"Camera"};function gt(a,o){let e=a.split(".")[0],t=o?.attributes.device_class;if(e==="light")return"light";if(e==="sensor"&&["temperature","humidity","carbon_dioxide"].includes(t))return"sensor";if(e==="alarm_control_panel"||e==="binary_sensor"&&t in Te)return"alarm";if(e==="binary_sensor"&&["motion","occupancy","presence"].includes(t))return"presence";if(e==="binary_sensor"&&["door","window","opening","garage_door"].includes(t))return"contact";if(e==="cover"&&!["garage","gate","door"].includes(t))return"blind";if(e==="camera")return"camera"}function He(a){let o=new Set,e=t=>{t&&o.add(t)};for(let t of a.levels){for(let i of t.devices??[])[i.entity,i.remote,i.map,i.camera,i.battery,i.roomSensor].forEach(e),i.secondary?.forEach(n=>e(n.entity));for(let i of t.openings)[i.contact,i.cover].forEach(e);for(let i of t.rooms)[...i.occupancy??[],...i.lights??[],i.temperature,i.humidity].forEach(e)}return o}function fn(a,o){let e=new Map(a.walls.map(t=>[t.id,t]));return a.openings.filter(t=>{let i=e.get(t.wall);if(!i)return!1;let n=M(i,t.at),s=D(i),l=i.t/2+.15;return[1,-1].some(r=>te([n[0]-s[1]*l*r,n[1]+s[0]*l*r],o.points))})}function gn(a,o,e){let t=a.walls.find(c=>c.id===e.wall),i=t?M(t,e.at):P(o.points),n=P(o.points),s=i[0]-n[0],l=i[1]-n[1],r=Math.abs(s)>Math.abs(l)?s>0?"east":"west":l>0?"south":"north";return`${e.type==="door"?"Door":"Window"}, ${r}`}function $e(a,o,e){let t=a.points.map(c=>c[0]),i=a.points.map(c=>c[1]),[n,s,l,r]=[Math.min(...t),Math.max(...t),Math.min(...i),Math.max(...i)];return[...Array(o).keys()].map(c=>{let d=f=>Math.round(f*100)/100,h=[d(n+(s-n)*(c+1)/(o+1)),d(l+(r-l)*e)];return te(h,a.points)?h:P(a.points)})}function ci(a,o,e,t){let i=Math.abs(a[1]-o[1])<.001&&Math.abs(e[1]-t[1])<.001&&Math.abs(a[1]-e[1])<.001,n=Math.abs(a[0]-o[0])<.001&&Math.abs(e[0]-t[0])<.001&&Math.abs(a[0]-e[0])<.001;if(!i&&!n)return;let s=i?0:1,l=Math.max(Math.min(a[s],o[s]),Math.min(e[s],t[s])),r=Math.min(Math.max(a[s],o[s]),Math.max(e[s],t[s]));if(r-l<.1)return;let c=s===0?[l,a[1]]:[a[0],l],d=s===0?[r,a[1]]:[a[0],r];return{from:c,to:d}}function bt(a){let o=a.rooms.filter(n=>!n.outdoor),e=new Map(o.map(n=>[n.id,n.id])),t=n=>{let s=n;for(;e.get(s)!==s;)s=e.get(s);return s};for(let n=0;n<o.length;n++)for(let s=n+1;s<o.length;s++){let l=o[n].points,r=o[s].points,c=!1;for(let d=0;d<l.length&&!c;d++)for(let h=0;h<r.length&&!c;h++){let f=ci(l[d],l[(d+1)%l.length],r[h],r[(h+1)%r.length]);f&&!ft(f.from,f.to,a.walls)&&(c=!0)}c&&e.set(t(o[n].id),t(o[s].id))}let i=new Map;for(let n of o){let s=t(n.id),l=o.filter(r=>t(r.id)===s);i.set(n.id,l)}return i}function We(a,o){return(a.devices??[]).filter(e=>(e.kind==="thermometer"||e.kind==="sensor"&&e.sensorType==="temperature")&&e.entity&&te(e.at,o.points))}function bn(a,o){let e=(a.devices??[]).filter(t=>t.kind==="light"&&t.entity&&!t.confirm&&te(U(t),o.points)).map(t=>t.entity);return[...new Set([...e,...o.lights??[]])]}function j(a,o=0){let e=s=>s.toFixed(3),t=Array.isArray(o)?o:a.map(()=>o),i=new Map(wt(a,t).map(s=>[s.index,s]));return a.map((s,l)=>{let r=i.get(l),c=l?"L":"M";return r?`${c}${e(r.a[0])} ${e(r.a[1])}Q${e(s[0])} ${e(s[1])} ${e(r.b[0])} ${e(r.b[1])}`:`${c}${e(s[0])} ${e(s[1])}`}).join("")+"Z"}function wt(a,o){let e=[];return a.forEach((t,i)=>{let n=a[(i+a.length-1)%a.length],s=a[(i+1)%a.length],l=Math.min(o[i]??0,_(t,n)/2,_(t,s)/2);if(l<=0)return;let r=c=>{let d=_(t,c)||1;return[t[0]+(c[0]-t[0])/d*l,t[1]+(c[1]-t[1])/d*l]};e.push({index:i,a:r(n),v:t,b:r(s)})}),e}var u=a=>a.toFixed(3),$n=w`
+    </g>`:m}show(o){if(!o.data){this.views.delete(o.id),this.onChange();return}let e=()=>{this.views.set(o.id,o),this.onChange()},t=new Image;t.src=o.data,t.decode().then(e,e)}};var Se=[{id:"outer",name:"Outer wall",t:.275},{id:"load",name:"Load-bearing wall",t:.25},{id:"partition",name:"Partition",t:.12}],rt=30,Te=300,Ae={smoke:"Smoke",gas:"Gas",carbon_monoxide:"Carbon monoxide",moisture:"Water leak",safety:"Alarm"};function cn(a,o){let e=!!a?.startsWith("alarm_control_panel."),t=e?"alarm":String(o?.attributes.device_class??"safety"),i=o?.state;return{kind:t,name:e?"Alarm":Ae[t]??"Alarm",active:e?i==="triggered":i==="on",unknown:!o||i==="unavailable"||i==="unknown"}}var lt=2;function dn(a){let o=!1;for(let e of a.devices??[])e.kind==="thermometer"&&(e.kind="sensor",e.sensorType="temperature",o=!0),e.kind==="sensor"&&e.extra!==void 0&&(e.secondary??=e.extra?[{entity:e.extra}]:[],delete e.extra,o=!0);return o}var Le=5;function ct(a,o={}){if(!a||a.state==="unavailable"||a.state==="unknown")return;let e=Number.parseFloat(a.state),t=a.attributes.unit_of_measurement??"",i=a.attributes.device_class;if(!Number.isFinite(e))return a.state;let n=Number.isInteger(e)?0:1,s=t;i==="temperature"||t==="\xB0C"||t==="\xB0F"?(n=1,s="\xB0"):(i==="humidity"||i==="battery"||t==="%")&&(n=0,s="%");let l=e.toFixed(o.decimals??n);if(o.showUnit===!1)return l;let r=o.unit==="custom"?o.unitText??"":o.unit==="entity"?t:s;return r?r==="\xB0"||r==="%"?`${l}${r}`:`${l} ${r}`:l}function Re(a){return!!a&&!["off","standby","unavailable","unknown"].includes(a)}function on(a){let o=a.reduce((n,s)=>n+s[0],0)/a.length,e=a.reduce((n,s)=>n+s[1],0)/a.length,t=a.reduce((n,s)=>n+Math.hypot(s[0]-o,s[1]-e),0)/a.length,i=t>1e-12?Math.SQRT2/t:1;return[[i,0,-i*o],[0,i,-i*e],[0,0,1]]}function an(a,o){return[0,1,2].map(e=>[0,1,2].map(t=>a[e][0]*o[0][t]+a[e][1]*o[1][t]+a[e][2]*o[2][t]))}function rn(a,[o,e]){let t=a[2][0]*o+a[2][1]*e+a[2][2];return[(a[0][0]*o+a[0][1]*e+a[0][2])/t,(a[1][0]*o+a[1][1]*e+a[1][2])/t]}function Ce(a){if(a.length<4)return;let o=on(a.map(g=>g.image)),e=on(a.map(g=>g.plan)),t=[],i=[];for(let g of a){let[y,v]=rn(o,g.image),[x,E]=rn(e,g.plan);t.push([y,v,1,0,0,0,-y*x,-v*x]),i.push(x),t.push([0,0,0,y,v,1,-y*E,-v*E]),i.push(E)}let n=[...Array(8).keys()].map(g=>[...Array(8).keys()].map(y=>t.reduce((v,x)=>v+x[g]*x[y],0))),s=[...Array(8).keys()].map(g=>t.reduce((y,v,x)=>y+v[g]*i[x],0)),l=n.map((g,y)=>[...g,s[y]]);for(let g=0;g<8;g++){let y=g;for(let v=g+1;v<8;v++)Math.abs(l[v][g])>Math.abs(l[y][g])&&(y=v);if(Math.abs(l[y][g])<1e-12)return;[l[g],l[y]]=[l[y],l[g]];for(let v=0;v<8;v++){if(v===g)continue;let x=l[v][g]/l[g][g];for(let E=g;E<=8;E++)l[v][E]-=x*l[g][E]}}let r=l.map((g,y)=>g[8]/g[y]),c=1/e[0][0],d=[[c,0,-e[0][2]*c],[0,c,-e[1][2]*c],[0,0,1]],h=an(d,an([r.slice(0,3),r.slice(3,6),[r[6],r[7],1]],o));if(Math.abs(h[2][2])<1e-12)return;let f=h.map(g=>g.map(y=>y/h[2][2]));return a.reduce((g,{image:[y,v]})=>g+f[2][0]*y+f[2][1]*v+f[2][2],0)<0?f.map(g=>g.map(y=>-y)):f}function hn(a,[o,e]){let t=a[2][0]*o+a[2][1]*e+a[2][2];if(!(t<=1e-9))return[(a[0][0]*o+a[0][1]*e+a[0][2])/t,(a[1][0]*o+a[1][1]*e+a[1][2])/t]}function dt(a){let o=a.pairs??[];if(o.length<2)return;let e=_(o[0].robot,o[1].robot)/1e3;return e?_(o[0].plan,o[1].plan)/e:void 0}function De(a,o,e){return[a.padding+(a.maxX-o)*a.scale,a.padding+(e-a.minY)*a.scale]}function J(a,o){let e=a.projection,t=1/(e.scale*1e3),i=(a.mirror?e.width-o[0]:o[0])*t,n=o[1]*t;return mn(a.at,be([i,n],[0,0],a.rotation??0))}function pn(a){let o=a.projection,e=1/(o.scale*1e3),t=a.mirror?` translate(${o.width*e} 0) scale(-1 1)`:"";return`translate(${a.at[0]} ${a.at[1]}) rotate(${a.rotation??0})${t} scale(${e})`}var Q=4,W=8,ee=100,te=6,ge=120,di=3;function ht(a){return Object.keys(a).map(o=>/^sensor\.(.+)_target_1_x$/.exec(o)?.[1]).filter(o=>!!o)}function ln(a){let o=Number.parseFloat(a?.state??"");if(!Number.isFinite(o))return;let e=a.attributes.unit_of_measurement;return e==="m"?o*1e3:e==="cm"?o*10:o}function Oe(a,o){if(!a.source)return[];let e=(a.heading??0)*Math.PI/180,t=[Math.sin(e),-Math.cos(e)],i=[Math.cos(e),Math.sin(e)],n=(a.radius??te)*1e3,s=[];for(let l=1;l<=di;l++){let r=ln(o[`sensor.${a.source}_target_${l}_x`]),c=ln(o[`sensor.${a.source}_target_${l}_y`]);if(r===void 0||c===void 0||Math.abs(r)<100&&Math.abs(c)<100||Math.hypot(r,c)>n)continue;let d=(a.mirror?-r:r)/1e3,h=c/1e3;s.push([a.at[0]+i[0]*d+t[0]*h,a.at[1]+i[1]*d+t[1]*h])}return s}function U(a,o,e){let t=o*Math.PI/180;return[a[0]+Math.sin(t)*e,a[1]-Math.cos(t)*e]}function Ie(a,o){return(Math.atan2(o[0]-a[0],a[1]-o[1])*180/Math.PI+360)%360}function F(a){return a.to?[(a.at[0]+a.to[0])/2,(a.at[1]+a.to[1])/2]:a.at}var L=2,pt=["lawn","paving","bed","hedge","vegetable","greenhouse","shelter","garden_house","trampoline","manhole"],hi=["sprinkler","mower"];function un(a){return{...a,items:a.items.filter(o=>!pt.includes(o.type)),rooms:a.rooms.filter(o=>!o.garden),devices:(a.devices??[]).filter(o=>!hi.includes(o.kind))}}var ae=["trampoline","manhole","round_obstacle"],ut=["obstacle","round_obstacle"];var mt=["lawn","paving","terrace","bed","vegetable","hedge","manhole","greenhouse","shelter","garden_house","trampoline","obstacle","round_obstacle"];function k(a){return`${a}_${Math.random().toString(36).slice(2,9)}`}function ft(a){return{id:k("level"),name:a,walls:[],openings:[],rooms:[],items:[]}}var mn=(a,o)=>[a[0]+o[0],a[1]+o[1]];var pi=(a,o)=>[a[0]*o,a[1]*o],_=(a,o)=>Math.hypot(a[0]-o[0],a[1]-o[1]);function R(a){return _(a.a,a.b)}function C(a){let o=R(a)||1;return[(a.b[0]-a.a[0])/o,(a.b[1]-a.a[1])/o]}function M(a,o){return mn(a.a,pi(C(a),o))}function j(a,o){let e=C(a),t=R(a),i=Math.min(t,Math.max(0,(o[0]-a.a[0])*e[0]+(o[1]-a.a[1])*e[1]));return{at:i,distance:_(o,M(a,i))}}function be(a,o,e){let t=e*Math.PI/180,i=a[0]-o[0],n=a[1]-o[1];return[o[0]+i*Math.cos(t)-n*Math.sin(t),o[1]+i*Math.sin(t)+n*Math.cos(t)]}function we(a){let[o,e,t,i]=a.rect,n=[o+t/2,e+i/2];return[[o,e],[o+t,e],[o+t,e+i],[o,e+i]].map(l=>be(l,n,a.rotation??0))}function He(a){if(a.points)return a.points;if(a.rect)return we(a);let[o,e]=a.center,t=(a.diameter??1)/2;return[[o-t,e-t],[o+t,e+t]]}function P(a){let o=a.map(t=>t[0]),e=a.map(t=>t[1]);return[(Math.min(...o)+Math.max(...o))/2,(Math.min(...e)+Math.max(...e))/2]}function ne(a,o){let e=!1;for(let t=0,i=o.length-1;t<o.length;i=t++){let[n,s]=o[t],[l,r]=o[i];s>a[1]!=r>a[1]&&a[0]<(l-n)*(a[1]-s)/(r-s)+n&&(e=!e)}return e}function gt(a,o=.4){let e=[];for(let l of a.walls)e.push(l.a,l.b);for(let l of a.rooms)e.push(...l.points);for(let l of a.items)e.push(...He(l));if(!e.length)return{x:-5,y:-5,w:10,h:10};let t=e.map(l=>l[0]),i=e.map(l=>l[1]),n=Math.min(...t)-o,s=Math.min(...i)-o;return{x:n,y:s,w:Math.max(...t)+o-n,h:Math.max(...i)+o-s}}var $e=.1;function fn(a){return a?.roundCorners?a.cornerRadius??$e:0}function bt(a,o,e){let t=[(a[0]+o[0])/2,(a[1]+o[1])/2];return e.some(i=>{let{at:n,distance:s}=j(i,t);return n>0&&n<R(i)&&s<=i.t/2+.03})}function D(a,o){let e=a.rooms.filter(t=>ne(o,t.points));return e.find(t=>!t.outdoor)??e[0]}var gn={light:"Light",sensor:"Sensor",alarm:"Alarm",presence:"Presence",contact:"Door or window",blind:"Blind",gate:"Gate",lock:"Lock",camera:"Camera"};function wt(a,o){let e=a.split(".")[0],t=o?.attributes.device_class;if(e==="light")return"light";if(e==="sensor"&&["temperature","humidity","carbon_dioxide"].includes(t))return"sensor";if(e==="alarm_control_panel"||e==="binary_sensor"&&t in Ae)return"alarm";if(e==="binary_sensor"&&["motion","occupancy","presence"].includes(t))return"presence";if(e==="binary_sensor"&&["door","window","opening","garage_door"].includes(t))return"contact";if(e==="cover"&&["garage","gate","door"].includes(t))return"gate";if(e==="cover")return"blind";if(e==="lock")return"lock";if(e==="camera")return"camera"}function Ne(a){let o=new Set,e=t=>{t&&o.add(t)};for(let t of a.levels){for(let i of t.devices??[])[i.entity,i.remote,i.map,i.camera,i.battery,i.roomSensor].forEach(e),i.secondary?.forEach(n=>e(n.entity));for(let i of t.openings)[i.contact,i.cover,i.lock].forEach(e);for(let i of t.rooms)[...i.occupancy??[],...i.lights??[],i.temperature,i.humidity].forEach(e)}return o}function bn(a,o){let e=new Map(a.walls.map(t=>[t.id,t]));return a.openings.filter(t=>{let i=e.get(t.wall);if(!i)return!1;let n=M(i,t.at),s=C(i),l=i.t/2+.15;return[1,-1].some(r=>ne([n[0]-s[1]*l*r,n[1]+s[0]*l*r],o.points))})}var ye={door:"Door",window:"Window",gate:"Gate"};function wn(a,o,e){let t=a.walls.find(c=>c.id===e.wall),i=t?M(t,e.at):P(o.points),n=P(o.points),s=i[0]-n[0],l=i[1]-n[1],r=Math.abs(s)>Math.abs(l)?s>0?"east":"west":l>0?"south":"north";return`${ye[e.type]}, ${r}`}function ve(a,o,e){let t=a.points.map(c=>c[0]),i=a.points.map(c=>c[1]),[n,s,l,r]=[Math.min(...t),Math.max(...t),Math.min(...i),Math.max(...i)];return[...Array(o).keys()].map(c=>{let d=f=>Math.round(f*100)/100,h=[d(n+(s-n)*(c+1)/(o+1)),d(l+(r-l)*e)];return ne(h,a.points)?h:P(a.points)})}function ui(a,o,e,t){let i=Math.abs(a[1]-o[1])<.001&&Math.abs(e[1]-t[1])<.001&&Math.abs(a[1]-e[1])<.001,n=Math.abs(a[0]-o[0])<.001&&Math.abs(e[0]-t[0])<.001&&Math.abs(a[0]-e[0])<.001;if(!i&&!n)return;let s=i?0:1,l=Math.max(Math.min(a[s],o[s]),Math.min(e[s],t[s])),r=Math.min(Math.max(a[s],o[s]),Math.max(e[s],t[s]));if(r-l<.1)return;let c=s===0?[l,a[1]]:[a[0],l],d=s===0?[r,a[1]]:[a[0],r];return{from:c,to:d}}function $t(a){let o=a.rooms.filter(n=>!n.outdoor),e=new Map(o.map(n=>[n.id,n.id])),t=n=>{let s=n;for(;e.get(s)!==s;)s=e.get(s);return s};for(let n=0;n<o.length;n++)for(let s=n+1;s<o.length;s++){let l=o[n].points,r=o[s].points,c=!1;for(let d=0;d<l.length&&!c;d++)for(let h=0;h<r.length&&!c;h++){let f=ui(l[d],l[(d+1)%l.length],r[h],r[(h+1)%r.length]);f&&!bt(f.from,f.to,a.walls)&&(c=!0)}c&&e.set(t(o[n].id),t(o[s].id))}let i=new Map;for(let n of o){let s=t(n.id),l=o.filter(r=>t(r.id)===s);i.set(n.id,l)}return i}function ze(a,o){return(a.devices??[]).filter(e=>(e.kind==="thermometer"||e.kind==="sensor"&&e.sensorType==="temperature")&&e.entity&&ne(e.at,o.points))}function $n(a,o){let e=(a.devices??[]).filter(t=>t.kind==="light"&&t.entity&&!t.confirm&&ne(F(t),o.points)).map(t=>t.entity);return[...new Set([...e,...o.lights??[]])]}function G(a,o=0){let e=s=>s.toFixed(3),t=Array.isArray(o)?o:a.map(()=>o),i=new Map(yt(a,t).map(s=>[s.index,s]));return a.map((s,l)=>{let r=i.get(l),c=l?"L":"M";return r?`${c}${e(r.a[0])} ${e(r.a[1])}Q${e(s[0])} ${e(s[1])} ${e(r.b[0])} ${e(r.b[1])}`:`${c}${e(s[0])} ${e(s[1])}`}).join("")+"Z"}function yt(a,o){let e=[];return a.forEach((t,i)=>{let n=a[(i+a.length-1)%a.length],s=a[(i+1)%a.length],l=Math.min(o[i]??0,_(t,n)/2,_(t,s)/2);if(l<=0)return;let r=c=>{let d=_(t,c)||1;return[t[0]+(c[0]-t[0])/d*l,t[1]+(c[1]-t[1])/d*l]};e.push({index:i,a:r(n),v:t,b:r(s)})}),e}var p=a=>a.toFixed(3),vn=w`
   <defs>
     <pattern id="fc-lawn" patternUnits="userSpaceOnUse" width="1.6" height="1.6">
       <rect class="fc-lawn-a" width="0.8" height="1.6"></rect>
@@ -714,54 +714,58 @@ data:
       <path class="fc-veg-row" d="M0.05 0.2H0.35"></path>
     </pattern>
   </defs>
-`,di={lawn:"url(#fc-lawn)",vegetable:"url(#fc-veg)"};function $t(a,o="",e=0){let i=`fc-item fc-${a.type==="round_obstacle"?"obstacle":a.type}${o}`,n=di[a.type]??null;if(oe.includes(a.type)&&a.center){let[g,y]=a.center,v=(a.diameter??1)/2;return a.type==="trampoline"?w`<g data-item=${a.id}>
-        <circle class="fc-trampoline-ring" cx=${u(g)} cy=${u(y)} r=${u(v)}></circle>
-        <circle class="fc-trampoline-mat" cx=${u(g)} cy=${u(y)} r=${u(v*.8)}></circle>
-      </g>`:w`<circle data-item=${a.id} class=${i} cx=${u(g)} cy=${u(y)} r=${u(v)}></circle>`}let s=a.corners==="square"?0:a.corners==="round"?e||we:void 0;if(a.points){let g=s??(e||(a.type==="hedge"?.2:.05));return w`<path data-item=${a.id} class=${i} fill=${n??m} d=${j(a.points,g)}></path>`}let[l,r,c,d]=a.rect??[0,0,1,1],h=a.rotation??0,f=h?`rotate(${h} ${u(l+c/2)} ${u(r+d/2)})`:"",b=s!==void 0?Math.min(s,c/2,d/2):e?Math.min(e,c/2,d/2):a.type==="hedge"?Math.min(.2,Math.min(c,d)*.15):.05;return w`<g data-item=${a.id} transform=${f}>
-    <rect class=${i} fill=${n??m} x=${u(l)} y=${u(r)} width=${u(c)} height=${u(d)} rx=${u(b)}></rect>
-  </g>`}function hi(a){let o=a.points.map(d=>d[0]),e=a.points.map(d=>d[1]),[t,i,n,s]=[Math.min(...o),Math.max(...o),Math.min(...e),Math.max(...e)],l=s-n>=i-t,r=Math.max(3,Math.round((l?s-n:i-t)/.25)),c=Array.from({length:r-1},(d,h)=>{let f=(h+1)/r;return l?w`<path class="fc-stairs" d="M${u(t)} ${u(n+f*(s-n))}H${u(i)}"></path>`:w`<path class="fc-stairs" d="M${u(t+f*(i-t))} ${u(n)}V${u(s)}"></path>`});return w`${c}`}function yn(a,o){let e=a.contact?o?.[a.contact]?.state:void 0,t=e==="on"?!0:e==="off"?!1:void 0,i=a.cover?o?.[a.cover]:void 0,n=Number.parseFloat(i?.attributes.current_position),s=Number.isFinite(n)?1-Math.min(100,Math.max(0,n))/100:i?.state==="closed"?1:i?.state==="open"?0:void 0;return{open:t??a.drawn!=="closed",sensed:t,position:Number.isFinite(n)?Math.round(n):void 0,closure:s,moving:i?.state==="opening"||i?.state==="closing",lost:!!a.contact&&!!o&&t===void 0}}function vn(a,o,e){let t=D(e),i=[t[1],-t[0]],n=M(e,o.at),s=e.t/2+.3,l=c=>{let d=R(a,[n[0]+i[0]*s*c,n[1]+i[1]*s*c]);return!!d&&!d.outdoor},r=l(1)&&!l(-1)?-1:1;return o.blindFlip&&(r=-r),[i[0]*r,i[1]*r]}function pi(a,o,e,t){let i=D(o),n=a.width/2,s=M(o,a.at-n),l=M(o,a.at+n),r=`M${u(s[0])} ${u(s[1])}L${u(l[0])} ${u(l[1])}`,c=yn(a,t);if(a.type==="window"){let V=m;if(a.cover&&c.closure!==void 0&&c.closure>.01){let ye=vn(e,a,o),ve=Math.min(.08,o.t*.35),ae=o.t/2-ve/2-.005,K=[s[0]+ye[0]*ae,s[1]+ye[1]*ae],re=[K[0]+i[0]*a.width*c.closure,K[1]+i[1]*a.width*c.closure];V=w`<path class="fc-blind ${c.moving?"moving":""}" stroke-width=${u(ve)} d="M${u(K[0])} ${u(K[1])}L${u(re[0])} ${u(re[1])}"></path>`}return w`<g data-opening=${a.id} class="${c.sensed?"fc-open":""} ${c.lost?"fc-lost":""}">
-      <path class="fc-gap" d=${r} stroke-width=${u(o.t+.02)}></path>
+`,mi={lawn:"url(#fc-lawn)",vegetable:"url(#fc-veg)"};function vt(a,o="",e=0){let i=`fc-item fc-${a.type==="round_obstacle"?"obstacle":a.type}${o}`,n=mi[a.type]??null;if(ae.includes(a.type)&&a.center){let[g,y]=a.center,v=(a.diameter??1)/2;return a.type==="trampoline"?w`<g data-item=${a.id}>
+        <circle class="fc-trampoline-ring" cx=${p(g)} cy=${p(y)} r=${p(v)}></circle>
+        <circle class="fc-trampoline-mat" cx=${p(g)} cy=${p(y)} r=${p(v*.8)}></circle>
+      </g>`:w`<circle data-item=${a.id} class=${i} cx=${p(g)} cy=${p(y)} r=${p(v)}></circle>`}let s=a.corners==="square"?0:a.corners==="round"?e||$e:void 0;if(a.points){let g=s??(e||(a.type==="hedge"?.2:.05));return w`<path data-item=${a.id} class=${i} fill=${n??m} d=${G(a.points,g)}></path>`}let[l,r,c,d]=a.rect??[0,0,1,1],h=a.rotation??0,f=h?`rotate(${h} ${p(l+c/2)} ${p(r+d/2)})`:"",b=s!==void 0?Math.min(s,c/2,d/2):e?Math.min(e,c/2,d/2):a.type==="hedge"?Math.min(.2,Math.min(c,d)*.15):.05;return w`<g data-item=${a.id} transform=${f}>
+    <rect class=${i} fill=${n??m} x=${p(l)} y=${p(r)} width=${p(c)} height=${p(d)} rx=${p(b)}></rect>
+  </g>`}function fi(a){let o=a.points.map(d=>d[0]),e=a.points.map(d=>d[1]),[t,i,n,s]=[Math.min(...o),Math.max(...o),Math.min(...e),Math.max(...e)],l=s-n>=i-t,r=Math.max(3,Math.round((l?s-n:i-t)/.25)),c=Array.from({length:r-1},(d,h)=>{let f=(h+1)/r;return l?w`<path class="fc-stairs" d="M${p(t)} ${p(n+f*(s-n))}H${p(i)}"></path>`:w`<path class="fc-stairs" d="M${p(t+f*(i-t))} ${p(n)}V${p(s)}"></path>`});return w`${c}`}function kn(a,o){let e=a.contact?o?.[a.contact]?.state:void 0,t=e==="on"?!0:e==="off"?!1:void 0,i=a.cover?o?.[a.cover]:void 0,n=Number.parseFloat(i?.attributes.current_position),s=Number.isFinite(n)?1-Math.min(100,Math.max(0,n))/100:i?.state==="closed"?1:i?.state==="open"?0:void 0;return{open:t??a.drawn!=="closed",sensed:t,position:Number.isFinite(n)?Math.round(n):void 0,closure:s,moving:i?.state==="opening"||i?.state==="closing",lost:!!a.contact&&!!o&&t===void 0}}function _n(a,o,e){let t=C(e),i=[t[1],-t[0]],n=M(e,o.at),s=e.t/2+.3,l=c=>{let d=D(a,[n[0]+i[0]*s*c,n[1]+i[1]*s*c]);return!!d&&!d.outdoor},r=l(1)&&!l(-1)?-1:1;return o.blindFlip&&(r=-r),[i[0]*r,i[1]*r]}function gi(a,o,e,t){let i=C(o),n=a.width/2,s=M(o,a.at-n),l=M(o,a.at+n),r=`M${p(s[0])} ${p(s[1])}L${p(l[0])} ${p(l[1])}`,c=kn(a,t);if(a.type==="gate"){let A=c.closure??(c.sensed===void 0?a.drawn==="open"?0:1:c.sensed?0:1),K=[s[0]+i[0]*a.width*A,s[1]+i[1]*a.width*A];return w`<g data-opening=${a.id} class="${c.lost?"fc-lost":""} ${c.moving?"fc-moving":""}">
+      <path class="fc-gap" d=${r} stroke-width=${p(o.t+.02)}></path>
+      <path class="fc-gate-track" d=${r}></path>
+      ${A>.01?w`<path class="fc-gate" d="M${p(s[0])} ${p(s[1])}L${p(K[0])} ${p(K[1])}"></path>`:m}
+    </g>`}if(a.type==="window"){let A=m;if(a.cover&&c.closure!==void 0&&c.closure>.01){let K=_n(e,a,o),ke=Math.min(.08,o.t*.35),re=o.t/2-ke/2-.005,B=[s[0]+K[0]*re,s[1]+K[1]*re],le=[B[0]+i[0]*a.width*c.closure,B[1]+i[1]*a.width*c.closure];A=w`<path class="fc-blind ${c.moving?"moving":""}" stroke-width=${p(ke)} d="M${p(B[0])} ${p(B[1])}L${p(le[0])} ${p(le[1])}"></path>`}return w`<g data-opening=${a.id} class="${c.sensed?"fc-open":""} ${c.lost?"fc-lost":""}">
+      <path class="fc-gap" d=${r} stroke-width=${p(o.t+.02)}></path>
       <path class="fc-window" d=${r}></path>
-      ${V}
-    </g>`}let d=a.swingRight?-1:1,h=[-d*i[1],d*i[0]],f=V=>[V[0]+h[0]*o.t/2,V[1]+h[1]*o.t/2],b=f(a.hingeEnd?l:s),g=f(a.hingeEnd?s:l),y=[b[0]+h[0]*a.width,b[1]+h[1]*a.width],v=[y[0]-b[0],y[1]-b[1]],x=[g[0]-b[0],g[1]-b[1]],E=v[0]*x[1]-v[1]*x[0]>0?1:0;return c.open?w`<g data-opening=${a.id} class=${c.lost?"fc-lost":""}>
-    <path class="fc-gap" d=${r} stroke-width=${u(o.t+.02)}></path>
-    <path class="fc-door" d="M${u(b[0])} ${u(b[1])}L${u(y[0])} ${u(y[1])}"></path>
-    <path class="fc-door-arc" d="M${u(y[0])} ${u(y[1])}A${u(a.width)} ${u(a.width)} 0 0 ${E} ${u(g[0])} ${u(g[1])}"></path>
+      ${A}
+    </g>`}let d=a.swingRight?-1:1,h=[-d*i[1],d*i[0]],f=A=>[A[0]+h[0]*o.t/2,A[1]+h[1]*o.t/2],b=f(a.hingeEnd?l:s),g=f(a.hingeEnd?s:l),y=[b[0]+h[0]*a.width,b[1]+h[1]*a.width],v=[y[0]-b[0],y[1]-b[1]],x=[g[0]-b[0],g[1]-b[1]],E=v[0]*x[1]-v[1]*x[0]>0?1:0;return c.open?w`<g data-opening=${a.id} class=${c.lost?"fc-lost":""}>
+    <path class="fc-gap" d=${r} stroke-width=${p(o.t+.02)}></path>
+    <path class="fc-door" d="M${p(b[0])} ${p(b[1])}L${p(y[0])} ${p(y[1])}"></path>
+    <path class="fc-door-arc" d="M${p(y[0])} ${p(y[1])}A${p(a.width)} ${p(a.width)} 0 0 ${E} ${p(g[0])} ${p(g[1])}"></path>
   </g>`:w`<g data-opening=${a.id} class=${c.lost?"fc-lost":""}>
-      <path class="fc-gap" d=${r} stroke-width=${u(o.t+.02)}></path>
-      <path class="fc-door shut" d="M${u(b[0])} ${u(b[1])}L${u(g[0])} ${u(g[1])}"></path>
-    </g>`}function kn(a,o,e){let t=new Map(a.walls.map(i=>[i.id,i]));return w`${a.openings.filter(i=>i.type==="window"&&(i.cover||i.contact)&&t.has(i.wall)).map(i=>{let n=t.get(i.wall),s=yn(i,o),l=[i.cover&&s.position!==void 0?`${s.position}%`:void 0,i.cover&&s.position===void 0&&s.closure!==void 0?s.closure?"closed":"open":void 0,s.sensed===void 0?void 0:s.sensed?"open":"closed"].filter(Boolean);if(!l.length)return m;let r=vn(a,i,n),c=M(n,i.at),d=n.t/2+.12+e*.7;return w`<text class="fc-opening-label ${s.sensed?"alert":""}" x=${u(c[0]+r[0]*d)} y=${u(c[1]+r[1]*d)}
-        font-size=${u(e)}>${l.join(" \xB7 ")}</text>`})}`}function ui(a,o=0){let e=new Map;for(let i of a)for(let n of[i.a,i.b]){let s=`${Math.round(n[0]*1e3)},${Math.round(n[1]*1e3)}`,l=e.get(s)??{p:n,walls:[]};l.walls.push(i),e.set(s,l)}let t=[];for(let{p:i,walls:n}of e.values()){if(n.length<2)continue;let s=n.filter(c=>Math.abs(c.a[1]-c.b[1])<1e-6),l=n.filter(c=>Math.abs(c.a[0]-c.b[0])<1e-6&&!s.includes(c)),r=n.filter(c=>!s.includes(c)&&!l.includes(c));if(s.length&&l.length){let c=Math.max(...l.map(b=>b.t)),d=Math.max(...s.map(b=>b.t)),h=i[0]-c/2,f=i[1]-d/2;if(o&&s.length===1&&l.length===1){let b=s[0],g=l[0],y=Math.sign((Math.abs(b.a[0]-i[0])<.001?b.b[0]:b.a[0])-i[0])||1,v=Math.sign((Math.abs(g.a[1]-i[1])<.001?g.b[1]:g.a[1])-i[1])||1;t.push(w`<path class="fc-joint" d=${bi(h,f,c,d,-y,-v,Math.min(o,c,d))}></path>`)}else t.push(w`<rect class="fc-joint" x=${u(h)} y=${u(f)} width=${u(c)} height=${u(d)}></rect>`)}if(r.length){let c=Math.max(...r.map(d=>d.t))/2;t.push(w`<circle class="fc-joint" cx=${u(i[0])} cy=${u(i[1])} r=${u(c)}></circle>`)}}return t}function mi(a,o,e){if(!e)return a.points.map(()=>0);let t=a.points,i=t.map((n,s)=>ft(n,t[(s+1)%t.length],o));return t.map((n,s)=>i[s]&&i[(s+t.length-1)%t.length]?e:0)}function fi(a,o){let e=a.reduce((i,n,s)=>{let l=a[(s+1)%a.length];return i+n[0]*l[1]-l[0]*n[1]},0),t=i=>{let n=a[(i+a.length-1)%a.length],s=a[i],l=a[(i+1)%a.length];return((s[0]-n[0])*(l[1]-s[1])-(s[1]-n[1])*(l[0]-s[0]))*e>0};return wt(a,o).filter(({index:i})=>t(i)).map(({a:i,v:n,b:s})=>w`<path class="fc-fillet" d="M${u(i[0])} ${u(i[1])}L${u(n[0])} ${u(n[1])}L${u(s[0])} ${u(s[1])}Q${u(n[0])} ${u(n[1])} ${u(i[0])} ${u(i[1])}Z"></path>`)}function wn(a,o,e){for(let t of e){if(t===o)continue;if(Math.hypot(t.a[0]-a[0],t.a[1]-a[1])<.001||Math.hypot(t.b[0]-a[0],t.b[1]-a[1])<.001)return!1;let{at:i,distance:n}=F(t,a);if(n<=t.t/2+.001&&i>0&&i<L(t))return!1}return!0}function gi(a,o,e){let t=D(a),i=a.t/2,n=[-t[1]*i,t[0]*i],s=[[a.a[0]+n[0],a.a[1]+n[1]],[a.b[0]+n[0],a.b[1]+n[1]],[a.b[0]-n[0],a.b[1]-n[1]],[a.a[0]-n[0],a.a[1]-n[1]]],l=Math.min(e,i),r=e&&wn(a.a,a,o)?l:0,c=e&&wn(a.b,a,o)?l:0;return w`<path data-wall=${a.id} class="fc-wall" d=${j(s,[r,c,c,r])}></path>`}function bi(a,o,e,t,i,n,s){let l=[[a,o],[a+e,o],[a+e,o+t],[a,o+t]],r=l.findIndex(([d,h])=>(i<0?d===a:d===a+e)&&(n<0?h===o:h===o+t)),c=[];return l.forEach(([d,h],f)=>{if(f!==r){c.push(`${c.length?"L":"M"}${u(d)} ${u(h)}`);return}let[b,g]=l[(f+3)%4],[y,v]=l[(f+1)%4],x=(ae,K)=>{let re=Math.hypot(ae-d,K-h)||1;return[d+(ae-d)/re*s,h+(K-h)/re*s]},[E,V]=x(b,g),[ye,ve]=x(y,v);c.push(`${c.length?"L":"M"}${u(E)} ${u(V)}`),c.push(`A${u(s)} ${u(s)} 0 0 1 ${u(ye)} ${u(ve)}`)}),c.join("")+"Z"}function ze(a){return Ne(a.at,a.heading??0,a.arc??360,a.radius??J)}function Ne(a,o,e,t){let[i,n]=a,s=Math.min(360,Math.max(1,e));if(s>=359.9)return`M${u(i-t)} ${u(n)}A${u(t)} ${u(t)} 0 1 1 ${u(i+t)} ${u(n)}A${u(t)} ${u(t)} 0 1 1 ${u(i-t)} ${u(n)}Z`;let l=N(a,o,t),r=N(a,o+s,t);return`M${u(i)} ${u(n)}L${u(l[0])} ${u(l[1])}A${u(t)} ${u(t)} 0 ${s>180?1:0} 1 ${u(r[0])} ${u(r[1])}Z`}var wi=1.6;function yt(a){let o=a.arc??Q;return Ne(a.at,(a.heading??0)-o/2,o,a.radius??z)}function _n(a,o){let[e,t]=a.at,i=wi,n=a.arc??Q,s=Ne(a.at,(a.heading??0)-n/2,n,i);return w`
+      <path class="fc-gap" d=${r} stroke-width=${p(o.t+.02)}></path>
+      <path class="fc-door shut" d="M${p(b[0])} ${p(b[1])}L${p(g[0])} ${p(g[1])}"></path>
+    </g>`}function xn(a,o,e){let t=new Map(a.walls.map(i=>[i.id,i]));return w`${a.openings.filter(i=>i.type!=="door"&&(i.cover||i.contact)&&t.has(i.wall)).map(i=>{let n=t.get(i.wall),s=kn(i,o),l=[i.cover&&s.position!==void 0?`${s.position}%`:void 0,i.cover&&s.position===void 0&&s.closure!==void 0?s.closure?"closed":"open":void 0,s.sensed===void 0?void 0:s.sensed?"open":"closed"].filter(Boolean);if(!l.length)return m;let r=_n(a,i,n),c=M(n,i.at),d=n.t/2+.12+e*.7;return w`<text class="fc-opening-label ${s.sensed?"alert":""}" x=${p(c[0]+r[0]*d)} y=${p(c[1]+r[1]*d)}
+        font-size=${p(e)}>${l.join(" \xB7 ")}</text>`})}`}function bi(a,o=0){let e=new Map;for(let i of a)for(let n of[i.a,i.b]){let s=`${Math.round(n[0]*1e3)},${Math.round(n[1]*1e3)}`,l=e.get(s)??{p:n,walls:[]};l.walls.push(i),e.set(s,l)}let t=[];for(let{p:i,walls:n}of e.values()){if(n.length<2)continue;let s=n.filter(c=>Math.abs(c.a[1]-c.b[1])<1e-6),l=n.filter(c=>Math.abs(c.a[0]-c.b[0])<1e-6&&!s.includes(c)),r=n.filter(c=>!s.includes(c)&&!l.includes(c));if(s.length&&l.length){let c=Math.max(...l.map(b=>b.t)),d=Math.max(...s.map(b=>b.t)),h=i[0]-c/2,f=i[1]-d/2;if(o&&s.length===1&&l.length===1){let b=s[0],g=l[0],y=Math.sign((Math.abs(b.a[0]-i[0])<.001?b.b[0]:b.a[0])-i[0])||1,v=Math.sign((Math.abs(g.a[1]-i[1])<.001?g.b[1]:g.a[1])-i[1])||1;t.push(w`<path class="fc-joint" d=${vi(h,f,c,d,-y,-v,Math.min(o,c,d))}></path>`)}else t.push(w`<rect class="fc-joint" x=${p(h)} y=${p(f)} width=${p(c)} height=${p(d)}></rect>`)}if(r.length){let c=Math.max(...r.map(d=>d.t))/2;t.push(w`<circle class="fc-joint" cx=${p(i[0])} cy=${p(i[1])} r=${p(c)}></circle>`)}}return t}function wi(a,o,e){if(!e)return a.points.map(()=>0);let t=a.points,i=t.map((n,s)=>bt(n,t[(s+1)%t.length],o));return t.map((n,s)=>i[s]&&i[(s+t.length-1)%t.length]?e:0)}function $i(a,o){let e=a.reduce((i,n,s)=>{let l=a[(s+1)%a.length];return i+n[0]*l[1]-l[0]*n[1]},0),t=i=>{let n=a[(i+a.length-1)%a.length],s=a[i],l=a[(i+1)%a.length];return((s[0]-n[0])*(l[1]-s[1])-(s[1]-n[1])*(l[0]-s[0]))*e>0};return yt(a,o).filter(({index:i})=>t(i)).map(({a:i,v:n,b:s})=>w`<path class="fc-fillet" d="M${p(i[0])} ${p(i[1])}L${p(n[0])} ${p(n[1])}L${p(s[0])} ${p(s[1])}Q${p(n[0])} ${p(n[1])} ${p(i[0])} ${p(i[1])}Z"></path>`)}function yn(a,o,e){for(let t of e){if(t===o)continue;if(Math.hypot(t.a[0]-a[0],t.a[1]-a[1])<.001||Math.hypot(t.b[0]-a[0],t.b[1]-a[1])<.001)return!1;let{at:i,distance:n}=j(t,a);if(n<=t.t/2+.001&&i>0&&i<R(t))return!1}return!0}function yi(a,o,e){let t=C(a),i=a.t/2,n=[-t[1]*i,t[0]*i],s=[[a.a[0]+n[0],a.a[1]+n[1]],[a.b[0]+n[0],a.b[1]+n[1]],[a.b[0]-n[0],a.b[1]-n[1]],[a.a[0]-n[0],a.a[1]-n[1]]],l=Math.min(e,i),r=e&&yn(a.a,a,o)?l:0,c=e&&yn(a.b,a,o)?l:0;return w`<path data-wall=${a.id} class="fc-wall" d=${G(s,[r,c,c,r])}></path>`}function vi(a,o,e,t,i,n,s){let l=[[a,o],[a+e,o],[a+e,o+t],[a,o+t]],r=l.findIndex(([d,h])=>(i<0?d===a:d===a+e)&&(n<0?h===o:h===o+t)),c=[];return l.forEach(([d,h],f)=>{if(f!==r){c.push(`${c.length?"L":"M"}${p(d)} ${p(h)}`);return}let[b,g]=l[(f+3)%4],[y,v]=l[(f+1)%4],x=(re,B)=>{let le=Math.hypot(re-d,B-h)||1;return[d+(re-d)/le*s,h+(B-h)/le*s]},[E,A]=x(b,g),[K,ke]=x(y,v);c.push(`${c.length?"L":"M"}${p(E)} ${p(A)}`),c.push(`A${p(s)} ${p(s)} 0 0 1 ${p(K)} ${p(ke)}`)}),c.join("")+"Z"}function We(a){return Ue(a.at,a.heading??0,a.arc??360,a.radius??Q)}function Ue(a,o,e,t){let[i,n]=a,s=Math.min(360,Math.max(1,e));if(s>=359.9)return`M${p(i-t)} ${p(n)}A${p(t)} ${p(t)} 0 1 1 ${p(i+t)} ${p(n)}A${p(t)} ${p(t)} 0 1 1 ${p(i-t)} ${p(n)}Z`;let l=U(a,o,t),r=U(a,o+s,t);return`M${p(i)} ${p(n)}L${p(l[0])} ${p(l[1])}A${p(t)} ${p(t)} 0 ${s>180?1:0} 1 ${p(r[0])} ${p(r[1])}Z`}var ki=1.6;function kt(a){let o=a.arc??ee;return Ue(a.at,(a.heading??0)-o/2,o,a.radius??W)}function Pn(a,o){let[e,t]=a.at,i=ki,n=a.arc??ee,s=Ue(a.at,(a.heading??0)-n/2,n,i);return w`
     <defs>
-      <radialGradient id=${o} gradientUnits="userSpaceOnUse" cx=${u(e)} cy=${u(t)} r=${u(i)}>
+      <radialGradient id=${o} gradientUnits="userSpaceOnUse" cx=${p(e)} cy=${p(t)} r=${p(i)}>
         <stop offset="0" class="fc-camera-glow-start"></stop>
         <stop offset="1" class="fc-camera-glow-end"></stop>
       </radialGradient>
     </defs>
     <path class="fc-camera-view" fill="url(#${o})" d=${s}></path>
-  `}function vt(a){let o=a.arc??fe;return Ne(a.at,(a.heading??0)-o/2,o,a.radius??ee)}function xn(a,o){let[e,t]=a.at;return w`<g class="fc-radar" transform="translate(${u(e)} ${u(t)}) rotate(${u((a.heading??0)-90)}) scale(${u(o)})">
+  `}function _t(a){let o=a.arc??ge;return Ue(a.at,(a.heading??0)-o/2,o,a.radius??te)}function Mn(a,o){let[e,t]=a.at;return w`<g class="fc-radar" transform="translate(${p(e)} ${p(t)}) rotate(${p((a.heading??0)-90)}) scale(${p(o)})">
     <rect x="-0.9" y="-0.7" width="0.8" height="1.4" rx="0.25"></rect>
     <path d="M0.2 -0.55A0.75 0.75 0 0 1 0.2 0.55M0.55 -0.85A1.2 1.2 0 0 1 0.55 0.85"></path>
-  </g>`}function Ue(a,o="seen"){return w`<g class="fc-person ${o}" style="transform:translate(${u(a[0])}px,${u(a[1])}px)">
+  </g>`}function Fe(a,o="seen"){return w`<g class="fc-person ${o}" style="transform:translate(${p(a[0])}px,${p(a[1])}px)">
     <circle class="halo" r="0.45"></circle>
     <circle r="0.2"></circle>
-  </g>`}function Pn(a,o){let[e,t]=a.at;return w`<g class="fc-camera" transform="translate(${u(e)} ${u(t)}) rotate(${u((a.heading??0)-90)}) scale(${u(o)})">
+  </g>`}function En(a,o){let[e,t]=a.at;return w`<g class="fc-camera" transform="translate(${p(e)} ${p(t)}) rotate(${p((a.heading??0)-90)}) scale(${p(o)})">
     <rect x="-1" y="-0.65" width="1.4" height="1.3" rx="0.3"></rect>
     <path d="M0.4 -0.35L1 -0.7V0.7L0.4 0.35Z"></path>
-  </g>`}function Mn(a,o){let e=a.radius??J,[t,i]=a.at,n=Math.min(360,a.arc??360),s=a.heading??0;if(!o)return w``;let l=n>=359.9,r=l?`${s};${s+360}`:`${s};${s+n};${s}`,c=(a.nozzle??"rotor")==="rotor"?w`<g>
-          <path class="fc-stream" d="M${u(t)} ${u(i)}L${u(t)} ${u(i-e)}"></path>
-          <animateTransform attributeName="transform" type="rotate" values=${r.split(";").map(d=>`${d} ${u(t)} ${u(i)}`).join(";")}
+  </g>`}function Sn(a,o){let e=a.radius??Q,[t,i]=a.at,n=Math.min(360,a.arc??360),s=a.heading??0;if(!o)return w``;let l=n>=359.9,r=l?`${s};${s+360}`:`${s};${s+n};${s}`,c=(a.nozzle??"rotor")==="rotor"?w`<g>
+          <path class="fc-stream" d="M${p(t)} ${p(i)}L${p(t)} ${p(i-e)}"></path>
+          <animateTransform attributeName="transform" type="rotate" values=${r.split(";").map(d=>`${d} ${p(t)} ${p(i)}`).join(";")}
             dur=${l?"20s":`${Math.max(6,n/15).toFixed(1)}s`} repeatCount="indefinite" calcMode="linear"></animateTransform>
-        </g>`:m;return w`<path class="fc-water ${a.nozzle==="spray"?"spray":""}" d=${ze(a)}></path>${c}`}function kt(a,o){if(!a.projection||!o)return;let e=(...d)=>d.every(h=>h!=null&&Number.isFinite(Number(h))),t=e(o.runtime_pose_x,o.runtime_pose_y),i=Number(t?o.runtime_pose_x:o.position_x),n=Number(t?o.runtime_pose_y:o.position_y);if(!Number.isFinite(i)||!Number.isFinite(n))return;let s=X(a,Ce(a.projection,i,n)),l={at:s},r=Number(t?o.runtime_heading_deg:o.position_heading);if(e(t?o.runtime_heading_deg:o.position_heading)){let d=r*Math.PI/180,h=X(a,Ce(a.projection,i+Math.cos(d)*300,n+Math.sin(d)*300));l.heading=Math.atan2(h[1]-s[1],h[0]-s[0])*180/Math.PI}let c=e(o.charger_x,o.charger_y)?[Number(o.charger_x),Number(o.charger_y)]:a.dock;return c&&(l.dock=X(a,Ce(a.projection,c[0],c[1]))),l}function En(a,o,e=[]){let[t,i]=a.at,n=o==="mowing"?"mowing":o==="error"?"error":o==="returning"||o==="paused"?"busy":"idle";return w`
-    ${a.dock?w`<g class="fc-dock" transform="translate(${u(a.dock[0])} ${u(a.dock[1])})">
+        </g>`:m;return w`<path class="fc-water ${a.nozzle==="spray"?"spray":""}" d=${We(a)}></path>${c}`}function xt(a,o){if(!a.projection||!o)return;let e=(...d)=>d.every(h=>h!=null&&Number.isFinite(Number(h))),t=e(o.runtime_pose_x,o.runtime_pose_y),i=Number(t?o.runtime_pose_x:o.position_x),n=Number(t?o.runtime_pose_y:o.position_y);if(!Number.isFinite(i)||!Number.isFinite(n))return;let s=J(a,De(a.projection,i,n)),l={at:s},r=Number(t?o.runtime_heading_deg:o.position_heading);if(e(t?o.runtime_heading_deg:o.position_heading)){let d=r*Math.PI/180,h=J(a,De(a.projection,i+Math.cos(d)*300,n+Math.sin(d)*300));l.heading=Math.atan2(h[1]-s[1],h[0]-s[0])*180/Math.PI}let c=e(o.charger_x,o.charger_y)?[Number(o.charger_x),Number(o.charger_y)]:a.dock;return c&&(l.dock=J(a,De(a.projection,c[0],c[1]))),l}function Tn(a,o,e=[]){let[t,i]=a.at,n=o==="mowing"?"mowing":o==="error"?"error":o==="returning"||o==="paused"?"busy":"idle";return w`
+    ${a.dock?w`<g class="fc-dock" transform="translate(${p(a.dock[0])} ${p(a.dock[1])})">
           <rect x="-0.25" y="-0.18" width="0.5" height="0.36" rx="0.08"></rect>
           <path d="M0.02 -0.11L-0.06 0.02H0.02L-0.02 0.11L0.07 -0.02H-0.01Z"></path>
         </g>`:m}
-    ${e.length>1?w`<polyline class="fc-trail" points=${e.map(s=>`${u(s[0])},${u(s[1])}`).join(" ")}></polyline>`:m}
-    <g class="fc-mower ${n}" transform="translate(${u(t)} ${u(i)}) rotate(${u(a.heading??0)})">
-      ${$i(a.heading!==void 0)}
+    ${e.length>1?w`<polyline class="fc-trail" points=${e.map(s=>`${p(s[0])},${p(s[1])}`).join(" ")}></polyline>`:m}
+    <g class="fc-mower ${n}" transform="translate(${p(t)} ${p(i)}) rotate(${p(a.heading??0)})">
+      ${_i(a.heading!==void 0)}
     </g>
-  `}function $i(a){return w`
+  `}function _i(a){return w`
     <rect class="wheel" x="-0.31" y="-0.27" width="0.17" height="0.07" rx="0.025"></rect>
     <rect class="wheel" x="-0.31" y="0.2" width="0.17" height="0.07" rx="0.025"></rect>
     <rect class="wheel" x="0.13" y="-0.25" width="0.12" height="0.06" rx="0.02"></rect>
@@ -769,29 +773,33 @@ data:
     <path class="shell" d="M-0.3 -0.21H0.17Q0.35 -0.21 0.35 0Q0.35 0.21 0.17 0.21H-0.3Q-0.35 0.21 -0.35 0.16V-0.16Q-0.35 -0.21 -0.3 -0.21Z"></path>
     <circle class="blade" r="0.11"></circle>
     ${a?w`<circle class="lidar" cx="0.2" r="0.05"></circle>`:m}
-  `}function Sn(a,o,e,t,i,n,s=!1){let l=[...o?[{cls:"header",text:o,size:n,height:n*1.15}]:[],{cls:"value",text:e??"\u2013",size:i,height:i*1.05},...t.map(c=>({cls:"sub",text:c,size:n,height:n*1.15}))],r=-l.reduce((c,d)=>c+d.height,0)/2;return w`<g class="fc-thermometer ${s?"unset":""}" transform="translate(${u(a[0])} ${u(a[1])})">
-    ${l.map(c=>{let d=r+c.height/2;return r+=c.height,w`<text class=${c.cls} y=${u(d)} font-size=${u(c.size)}>${c.text}</text>`})}
-  </g>`}function Tn(a,o,e,t,i){let n=i/2,s=o==="moisture"?w`<path d="M0 ${u(-n)}C${u(n*.7)} ${u(-n*.1)} ${u(n*.75)} ${u(n*.25)} ${u(n*.75)} ${u(n*.35)}A${u(n*.75)} ${u(n*.75)} 0 0 1 ${u(-n*.75)} ${u(n*.35)}C${u(-n*.75)} ${u(n*.25)} ${u(-n*.7)} ${u(-n*.1)} 0 ${u(-n)}Z"></path>`:w`<circle r=${u(n)}></circle><circle class="inner" r=${u(n*.45)}></circle>`;return w`<g class="fc-alarm ${e?"on":""} ${t?"unknown":""}" transform="translate(${u(a[0])} ${u(a[1])})">
+  `}function An(a,o,e,t,i,n,s=!1){let l=[...o?[{cls:"header",text:o,size:n,height:n*1.15}]:[],{cls:"value",text:e??"\u2013",size:i,height:i*1.05},...t.map(c=>({cls:"sub",text:c,size:n,height:n*1.15}))],r=-l.reduce((c,d)=>c+d.height,0)/2;return w`<g class="fc-thermometer ${s?"unset":""}" transform="translate(${p(a[0])} ${p(a[1])})">
+    ${l.map(c=>{let d=r+c.height/2;return r+=c.height,w`<text class=${c.cls} y=${p(d)} font-size=${p(c.size)}>${c.text}</text>`})}
+  </g>`}function Ln(a,o,e,t,i){let n=i/2,s=o==="moisture"?w`<path d="M0 ${p(-n)}C${p(n*.7)} ${p(-n*.1)} ${p(n*.75)} ${p(n*.25)} ${p(n*.75)} ${p(n*.35)}A${p(n*.75)} ${p(n*.75)} 0 0 1 ${p(-n*.75)} ${p(n*.35)}C${p(-n*.75)} ${p(n*.25)} ${p(-n*.7)} ${p(-n*.1)} 0 ${p(-n)}Z"></path>`:w`<circle r=${p(n)}></circle><circle class="inner" r=${p(n*.45)}></circle>`;return w`<g class="fc-alarm ${e?"on":""} ${t?"unknown":""}" transform="translate(${p(a[0])} ${p(a[1])})">
     ${s}
-    ${t?w`<line x1=${u(-n)} y1=${u(n)} x2=${u(n)} y2=${u(-n)}></line>`:m}
-  </g>`}var yi=15,vi=10;function _t(a){return{value:Math.max(.4,yi/a),sub:Math.max(.26,vi/a)}}function An(a,o){let e=a.to??[a.at[0]+2,a.at[1]],t=`M${u(a.at[0])} ${u(a.at[1])}L${u(e[0])} ${u(e[1])}`;return w`<g class="fc-screen ${o?"on":""}"><path class="cloth" d=${t}></path></g>`}var xt=3,Pt=50;function Mt(a,o){let e=o.at,t=o.to??[e[0]+2,e[1]],i=Math.hypot(t[0]-e[0],t[1]-e[1])||1,n=[(t[1]-e[1])/i,-(t[0]-e[0])/i],s=[(e[0]+t[0])/2,(e[1]+t[1])/2],l=b=>{let g=R(a,[s[0]+n[0]*.5*b,s[1]+n[1]*.5*b]);return!!g&&!g.outdoor},r=!l(1)&&l(-1)?-1:1;o.flip&&(r=-r);let c=o.radius??xt,d=[n[0]*r*c,n[1]*r*c],h=Math.tan((o.arc??Pt)/2*Math.PI/180)*c,f=[(t[0]-e[0])/i,(t[1]-e[1])/i];return[e,t,[t[0]+d[0]+f[0]*h,t[1]+d[1]+f[1]*h],[e[0]+d[0]-f[0]*h,e[1]+d[1]-f[1]*h]]}function Ln(a,o,e){let t=(a.devices??[]).filter(s=>s.kind==="screen"&&s.entity&&Le(o[s.entity]?.state));if(!t.length)return m;let i=bt(a),n=s=>`${e}-${a.id}-${s}`.replace(/[^a-zA-Z0-9_-]/g,"_");return w`${t.map(s=>{let l=Mt(a,s),r=[(l[0][0]+l[1][0])/2,(l[0][1]+l[1][1])/2],c=[(l[2][0]+l[3][0])/2,(l[2][1]+l[3][1])/2],d=R(a,[(r[0]+c[0])/2,(r[1]+c[1])/2]),h=d?i.get(d.id)??[d]:[];return w`
+    ${t?w`<line x1=${p(-n)} y1=${p(n)} x2=${p(n)} y2=${p(-n)}></line>`:m}
+  </g>`}function Rn(a,o,e){let t=C(a),i=o.swingRight?-1:1,n=M(a,o.at),s=a.t/2+e*.9;return[n[0]+t[1]*s*i,n[1]-t[0]*s*i]}function Cn(a,o,e){let t=e/2,i=o==="locked",n=o==="jammed"||o==="unavailable"||!o?"fc-lock fault":i?"fc-lock":"fc-lock open",s=i?`M${p(-t*.45)} ${p(-t*.1)}V${p(-t*.55)}A${p(t*.45)} ${p(t*.45)} 0 0 1 ${p(t*.45)} ${p(-t*.55)}V${p(-t*.1)}`:`M${p(-t*.45)} ${p(-t*.1)}V${p(-t*.55)}A${p(t*.45)} ${p(t*.45)} 0 0 1 ${p(t*.45)} ${p(-t*.55)}V${p(-t*.75)}`;return w`<g class=${n} transform="translate(${p(a[0])} ${p(a[1])})">
+    <circle class="disc" r=${p(t*1.25)}></circle>
+    <path class="shackle" d=${s}></path>
+    <rect class="body" x=${p(-t*.7)} y=${p(-t*.15)} width=${p(t*1.4)} height=${p(t)} rx=${p(t*.15)}></rect>
+  </g>`}var xi=15,Pi=10;function Pt(a){return{value:Math.max(.4,xi/a),sub:Math.max(.26,Pi/a)}}function Dn(a,o){let e=a.to??[a.at[0]+2,a.at[1]],t=`M${p(a.at[0])} ${p(a.at[1])}L${p(e[0])} ${p(e[1])}`;return w`<g class="fc-screen ${o?"on":""}"><path class="cloth" d=${t}></path></g>`}var Mt=3,Et=50;function St(a,o){let e=o.at,t=o.to??[e[0]+2,e[1]],i=Math.hypot(t[0]-e[0],t[1]-e[1])||1,n=[(t[1]-e[1])/i,-(t[0]-e[0])/i],s=[(e[0]+t[0])/2,(e[1]+t[1])/2],l=b=>{let g=D(a,[s[0]+n[0]*.5*b,s[1]+n[1]*.5*b]);return!!g&&!g.outdoor},r=!l(1)&&l(-1)?-1:1;o.flip&&(r=-r);let c=o.radius??Mt,d=[n[0]*r*c,n[1]*r*c],h=Math.tan((o.arc??Et)/2*Math.PI/180)*c,f=[(t[0]-e[0])/i,(t[1]-e[1])/i];return[e,t,[t[0]+d[0]+f[0]*h,t[1]+d[1]+f[1]*h],[e[0]+d[0]-f[0]*h,e[1]+d[1]-f[1]*h]]}function On(a,o,e){let t=(a.devices??[]).filter(s=>s.kind==="screen"&&s.entity&&Re(o[s.entity]?.state));if(!t.length)return m;let i=$t(a),n=s=>`${e}-${a.id}-${s}`.replace(/[^a-zA-Z0-9_-]/g,"_");return w`${t.map(s=>{let l=St(a,s),r=[(l[0][0]+l[1][0])/2,(l[0][1]+l[1][1])/2],c=[(l[2][0]+l[3][0])/2,(l[2][1]+l[3][1])/2],d=D(a,[(r[0]+c[0])/2,(r[1]+c[1])/2]),h=d?i.get(d.id)??[d]:[];return w`
       <defs>
-        <linearGradient id=${n(`screen-${s.id}`)} gradientUnits="userSpaceOnUse" x1=${u(r[0])} y1=${u(r[1])} x2=${u(c[0])} y2=${u(c[1])}>
+        <linearGradient id=${n(`screen-${s.id}`)} gradientUnits="userSpaceOnUse" x1=${p(r[0])} y1=${p(r[1])} x2=${p(c[0])} y2=${p(c[1])}>
           <stop offset="0" style="stop-color:var(--fc-screen-light);stop-opacity:0.45"></stop>
           <stop offset="1" style="stop-color:var(--fc-screen-light);stop-opacity:0"></stop>
         </linearGradient>
-        ${h.length?w`<clipPath id=${n(`screen-clip-${s.id}`)}>${h.map(f=>w`<path d=${j(f.points)}></path>`)}</clipPath>`:m}
+        ${h.length?w`<clipPath id=${n(`screen-clip-${s.id}`)}>${h.map(f=>w`<path d=${G(f.points)}></path>`)}</clipPath>`:m}
       </defs>
-      <path class="glow" d=${j(l)} fill="url(#${n(`screen-${s.id}`)})"
-        clip-path=${h.length?`url(#${n(`screen-clip-${s.id}`)})`:m}></path>`})}`}function ki(){return w`
+      <path class="glow" d=${G(l)} fill="url(#${n(`screen-${s.id}`)})"
+        clip-path=${h.length?`url(#${n(`screen-clip-${s.id}`)})`:m}></path>`})}`}function Mi(){return w`
     <circle class="body" r="0.175"></circle>
     <path class="bumper" d="M-0.155 -0.06H0.155"></path>
     <rect class="turret" x="-0.05" y="0.0" width="0.1" height="0.08" rx="0.02"></rect>
-  `}function Rn(a,o){return w`<g class="fc-vacuum idle" transform="translate(${u(a[0])} ${u(a[1])}) scale(${u(o)})">${ki()}</g>`}function Cn(a,o,e){let t=(a.devices??[]).filter(r=>r.kind==="light"&&r.entity&&o[r.entity]?.state==="on");if(!t.length)return m;let i=bt(a),n=new Map,s=t.map(r=>{let c=R(a,U(r)),d=c?i.get(c.id)??[c]:[],h=d.map(v=>v.id).sort().join("+");h&&n.set(h,d);let f=o[r.entity],b=f?.attributes.rgb_color,g=b?`rgb(${b.join(",")})`:"var(--fc-light)",y=Number(f?.attributes.brightness??255)/255;return{light:r,key:h,colour:g,opacity:.25+.4*y}}),l=r=>`${e}-${a.id}-${r}`.replace(/[^a-zA-Z0-9_-]/g,"_");return w`
+  `}function In(a,o){return w`<g class="fc-vacuum idle" transform="translate(${p(a[0])} ${p(a[1])}) scale(${p(o)})">${Mi()}</g>`}function Hn(a,o,e){let t=(a.devices??[]).filter(r=>r.kind==="light"&&r.entity&&o[r.entity]?.state==="on");if(!t.length)return m;let i=$t(a),n=new Map,s=t.map(r=>{let c=D(a,F(r)),d=c?i.get(c.id)??[c]:[],h=d.map(v=>v.id).sort().join("+");h&&n.set(h,d);let f=o[r.entity],b=f?.attributes.rgb_color,g=b?`rgb(${b.join(",")})`:"var(--fc-light)",y=Number(f?.attributes.brightness??255)/255;return{light:r,key:h,colour:g,opacity:.25+.4*y}}),l=r=>`${e}-${a.id}-${r}`.replace(/[^a-zA-Z0-9_-]/g,"_");return w`
     <defs>
-      ${[...n].map(([r,c])=>w`<clipPath id=${l(`clip-${r}`)}>${c.map(d=>w`<path d=${j(d.points)}></path>`)}</clipPath>`)}
+      ${[...n].map(([r,c])=>w`<clipPath id=${l(`clip-${r}`)}>${c.map(d=>w`<path d=${G(d.points)}></path>`)}</clipPath>`)}
       ${s.filter(({light:r})=>r.to).map(({light:r})=>w`<filter id=${l(`blur-${r.id}`)} filterUnits="userSpaceOnUse" x="-1000" y="-1000" width="2000" height="2000">
-            <feGaussianBlur stdDeviation=${((r.radius??A)*.3).toFixed(3)}></feGaussianBlur>
+            <feGaussianBlur stdDeviation=${((r.radius??L)*.3).toFixed(3)}></feGaussianBlur>
           </filter>`)}
       ${s.map(({light:r,colour:c,opacity:d})=>w`<radialGradient id=${l(`glow-${r.id}`)}>
           <stop offset="0" style="stop-color:${c};stop-opacity:${d.toFixed(2)}"></stop>
@@ -800,21 +808,21 @@ data:
     </defs>
     ${s.map(({light:r,key:c,colour:d,opacity:h})=>{let f=c?`url(#${l(`clip-${c}`)})`:m;return r.to?w`<g clip-path=${f}>
           <path class="glow" d="M${r.at[0]} ${r.at[1]}L${r.to[0]} ${r.to[1]}"
-            style="stroke:${d};stroke-opacity:${h.toFixed(2)};stroke-width:${((r.radius??A)*.9).toFixed(3)}px;stroke-linecap:round;fill:none"
+            style="stroke:${d};stroke-opacity:${h.toFixed(2)};stroke-width:${((r.radius??L)*.9).toFixed(3)}px;stroke-linecap:round;fill:none"
             filter="url(#${l(`blur-${r.id}`)})"></path>
-        </g>`:w`<circle class="glow" cx=${r.at[0]} cy=${r.at[1]} r=${r.radius??A}
+        </g>`:w`<circle class="glow" cx=${r.at[0]} cy=${r.at[1]} r=${r.radius??L}
         fill="url(#${l(`glow-${r.id}`)})" clip-path=${f}></circle>`})}
-  `}function Dn(a,o,e=0,t=m,i={}){let n=[...a.items].sort((c,d)=>pt.indexOf(c.type)-pt.indexOf(d.type)),s=new Map(a.walls.map(c=>[c.id,c])),l=n.filter(c=>!ht.includes(c.type)),r=n.filter(c=>ht.includes(c.type));return w`
-    ${l.map(c=>$t(c,"",e))}
-    ${a.rooms.map(c=>{let d=mi(c,a.walls,c.outdoor?0:e),h=i[c.id];return w`<path data-room=${c.id} class=${c.outdoor?"fc-zone":"fc-floor"} d=${j(c.points,d)}></path>
-        ${c.outdoor?m:fi(c.points,d)}
-        ${h?w`<path class="fc-heat" style="fill:${h}" d=${j(c.points,d)}></path>`:m}`})}
-    ${a.rooms.filter(c=>c.stairs).map(hi)}
-    ${r.map(c=>$t(c,"-edge",e))} ${r.map(c=>$t(c,"",e))}
-    ${t} ${a.walls.map(c=>gi(c,a.walls,e))}
-    ${ui(a.walls,e)}
-    ${a.openings.filter(c=>s.has(c.wall)).map(c=>pi(c,s.get(c.wall),a,o))}
-  `}var On=[{name:"Building",keys:[["background","Background"],["floor","Floor"],["wall","Walls"],["window","Windows"],["label","Names and labels"],["value","Readings"],["obstacle","Furniture"],["obstacle-edge","Furniture edge"]]},{name:"Garden",keys:[["lawn-a","Lawn"],["lawn-b","Lawn stripes"],["hedge","Hedge"],["soil","Soil"],["paving","Paving"],["terrace","Terrace"],["wood","Wood"],["glass","Glass"],["trampoline","Trampoline"],["trampoline-mat","Trampoline mat"]]},{name:"Devices and people",keys:[["light","Light"],["water","Water"],["screen-light","Screen light"],["presence","People"],["alert","Open window"],["mower","Mower"],["camera-glow","Camera view"]]}],Et={background:"#10151b",floor:"#1b2129",wall:"#b8bfc7",window:"#4f8fea",label:"#8b95a1",value:"#e6ebf0",obstacle:"#353e4a","obstacle-edge":"#4f5a67","lawn-a":"#1b2d21","lawn-b":"#1e3224",hedge:"#234a2d",soil:"#33291f",paving:"#262c33",terrace:"#2f353d",wood:"#5d4631",glass:"#7fb3d5",trampoline:"#2563b8","trampoline-mat":"#0b0e12",light:"#ffc94d",water:"#4fc3f7",mower:"#66bb6a","screen-light":"#bbdefb","camera-glow":"#c9d1da",alert:"#ff9f43",presence:"#4fc3f7"},St={background:"#eef1f4",floor:"#ffffff",wall:"#3d4651",window:"#2f7de1",label:"#5b6672",value:"#1f2933",obstacle:"#dde2e8","obstacle-edge":"#b9c1ca","lawn-a":"#dcefd8","lawn-b":"#d2e9cd",hedge:"#9ccf95",soil:"#e6d6c1",paving:"#e3e6ea",terrace:"#d6dade",wood:"#b48a62",glass:"#9cc7e6",trampoline:"#2563b8","trampoline-mat":"#2b313a",light:"#f59e0b",water:"#1e88e5",mower:"#43a047","screen-light":"#64b5f6","camera-glow":"#7b8794",alert:"#f57c00",presence:"#0288d1"};function Fe(a,o,e){let t=e??a?.theme??"auto",i=t==="auto"?o===!1?"light":"dark":t;return{mode:i,colours:{...i==="dark"?Et:St,...a?.[i]}}}function In(a,o){for(let[e,t]of Object.entries(o))a.style.setProperty(`--fc-${e}`,t)}var Hn=O`
+  `}function Nn(a,o,e=0,t=m,i={}){let n=[...a.items].sort((c,d)=>mt.indexOf(c.type)-mt.indexOf(d.type)),s=new Map(a.walls.map(c=>[c.id,c])),l=n.filter(c=>!ut.includes(c.type)),r=n.filter(c=>ut.includes(c.type));return w`
+    ${l.map(c=>vt(c,"",e))}
+    ${a.rooms.map(c=>{let d=wi(c,a.walls,c.outdoor?0:e),h=i[c.id];return w`<path data-room=${c.id} class=${c.outdoor?"fc-zone":"fc-floor"} d=${G(c.points,d)}></path>
+        ${c.outdoor?m:$i(c.points,d)}
+        ${h?w`<path class="fc-heat" style="fill:${h}" d=${G(c.points,d)}></path>`:m}`})}
+    ${a.rooms.filter(c=>c.stairs).map(fi)}
+    ${r.map(c=>vt(c,"-edge",e))} ${r.map(c=>vt(c,"",e))}
+    ${t} ${a.walls.map(c=>yi(c,a.walls,e))}
+    ${bi(a.walls,e)}
+    ${a.openings.filter(c=>s.has(c.wall)).map(c=>gi(c,s.get(c.wall),a,o))}
+  `}var zn=[{name:"Building",keys:[["background","Background"],["floor","Floor"],["wall","Walls"],["window","Windows"],["label","Names and labels"],["value","Readings"],["obstacle","Furniture"],["obstacle-edge","Furniture edge"]]},{name:"Garden",keys:[["lawn-a","Lawn"],["lawn-b","Lawn stripes"],["hedge","Hedge"],["soil","Soil"],["paving","Paving"],["terrace","Terrace"],["wood","Wood"],["glass","Glass"],["trampoline","Trampoline"],["trampoline-mat","Trampoline mat"]]},{name:"Devices and people",keys:[["light","Light"],["water","Water"],["screen-light","Screen light"],["presence","People"],["alert","Open window"],["mower","Mower"],["camera-glow","Camera view"]]}],Tt={background:"#10151b",floor:"#1b2129",wall:"#b8bfc7",window:"#4f8fea",label:"#8b95a1",value:"#e6ebf0",obstacle:"#353e4a","obstacle-edge":"#4f5a67","lawn-a":"#1b2d21","lawn-b":"#1e3224",hedge:"#234a2d",soil:"#33291f",paving:"#262c33",terrace:"#2f353d",wood:"#5d4631",glass:"#7fb3d5",trampoline:"#2563b8","trampoline-mat":"#0b0e12",light:"#ffc94d",water:"#4fc3f7",mower:"#66bb6a","screen-light":"#bbdefb","camera-glow":"#c9d1da",alert:"#ff9f43",presence:"#4fc3f7"},At={background:"#eef1f4",floor:"#ffffff",wall:"#3d4651",window:"#2f7de1",label:"#5b6672",value:"#1f2933",obstacle:"#dde2e8","obstacle-edge":"#b9c1ca","lawn-a":"#dcefd8","lawn-b":"#d2e9cd",hedge:"#9ccf95",soil:"#e6d6c1",paving:"#e3e6ea",terrace:"#d6dade",wood:"#b48a62",glass:"#9cc7e6",trampoline:"#2563b8","trampoline-mat":"#2b313a",light:"#f59e0b",water:"#1e88e5",mower:"#43a047","screen-light":"#64b5f6","camera-glow":"#7b8794",alert:"#f57c00",presence:"#0288d1"};function je(a,o,e){let t=e??a?.theme??"auto",i=t==="auto"?o===!1?"light":"dark":t;return{mode:i,colours:{...i==="dark"?Tt:At,...a?.[i]}}}function Wn(a,o){for(let[e,t]of Object.entries(o))a.style.setProperty(`--fc-${e}`,t)}var Un=I`
   :host {
     --fc-background: #10151b;
     --fc-floor: #1b2129;
@@ -946,6 +954,52 @@ data:
   }
   .fc-door.shut {
     opacity: 0.8;
+  }
+  .fc-gate {
+    stroke: var(--fc-wall);
+    stroke-width: 0.1;
+    fill: none;
+  }
+  .fc-gate-track {
+    stroke: var(--fc-label);
+    stroke-width: 0.03;
+    stroke-dasharray: 0.1 0.08;
+    fill: none;
+  }
+  .fc-moving .fc-gate {
+    animation: fc-blink 1s ease-in-out infinite;
+  }
+  @keyframes fc-blink {
+    50% {
+      opacity: 0.4;
+    }
+  }
+  .fc-lock .disc {
+    fill: var(--fc-background);
+    stroke: var(--fc-label);
+    stroke-width: 0.02;
+  }
+  .fc-lock .shackle {
+    fill: none;
+    stroke: var(--fc-label);
+    stroke-width: 0.04;
+  }
+  .fc-lock .body {
+    fill: var(--fc-label);
+  }
+  .fc-lock.open .shackle {
+    stroke: var(--fc-alert);
+  }
+  .fc-lock.open .body {
+    fill: var(--fc-alert);
+  }
+  .fc-lock.fault .body,
+  .fc-lock.fault .shackle {
+    fill: #f44336;
+    stroke: #f44336;
+  }
+  .fc-lock.fault .shackle {
+    fill: none;
   }
   .fc-door {
     stroke: var(--fc-wall);
@@ -1252,11 +1306,11 @@ data:
     text-anchor: middle;
     font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif);
   }
-`;var Tt=8,Wn="floorcast-editor-lock",zn="floorcast-editor-hidden",At=["wall","door","window","room","item"],Lt={wall:"Wall",door:"Door",window:"Window",room:"Room",zone:"Zone",item:"Object",light:"Light",sprinkler:"Sprinkler",mower:"Mower",vacuum:"Vacuum",sensor:"Sensor",screen:"Screen",camera:"Camera",radar:"Radar",mark:"Mark the vacuum",calibrate:"Calibrate"};function _i(a){try{return localStorage.getItem(a)==="1"}catch{return!1}}function xi(a,o){try{localStorage.setItem(a,o?"1":"0")}catch{}}function Pi(a){try{return JSON.parse(localStorage.getItem(a)??"[]")}catch{return[]}}function Mi(a,o){try{localStorage.setItem(a,JSON.stringify(o))}catch{}}var Nn=[{mode:"plan",label:"Plan"},{mode:"devices",label:"Devices"},{mode:"people",label:"People"},{mode:"settings",label:"\u2699 Settings"}],It={plan:[["wall","Wall","W"],["door","Door","D"],["window","Window","N"],["room","Room","R"],["item","Garden or furniture","O"]],devices:[["light","Light or strip","L"],["sensor","Sensor or alarm","S"],["screen","Screen","T"],["sprinkler","Sprinkler","P"],["camera","Camera","C"],["mower","Mower","M"],["vacuum","Vacuum","V"]],people:[["radar","Radar","A"],["zone","Zone","Z"]],settings:[]},Ei=new Map(Object.entries(It).flatMap(([a,o])=>o.map(([e])=>[e,a]))),Un=new Map(Object.values(It).flatMap(a=>a.map(([o,,e])=>[e.toLowerCase(),o]))),Rt={light:"Light",sprinkler:"Sprinkler",camera:"Camera",mower:"Mower",vacuum:"Vacuum",radar:"Radar",sensor:"Sensor",thermometer:"Thermometer",screen:"Screen"},Fn=["light","sensor","alarm","presence","blind","contact","camera"],H={lawn:"Lawn",paving:"Paving",terrace:"Terrace",bed:"Flower bed",hedge:"Hedge or shrubs",vegetable:"Vegetable garden",greenhouse:"Greenhouse",shelter:"Shelter",garden_house:"Garden house",trampoline:"Trampoline",manhole:"Manhole",obstacle:"Obstacle (furniture)",round_obstacle:"Round obstacle (table, pouf)"},Ct={count:"Count people here",entrance:"Entrance (people count at once)",exclude:"Ignore (fan, curtain, reflections)",stationary:"Resting place (sofa, bed)"},Si=.05,C=.2,Ti=.05,Ai=60,T=(a,o=Si)=>Math.round(a/o)*o,$=a=>Math.round(a*1e3)/1e3,G=a=>JSON.parse(JSON.stringify(a)),Ot=class extends S{constructor(){super(...arguments);this.narrow=!1;this._saved="";this._levelId="";this._tool="select";this._mode="plan";this._confirmDelete=!1;this._filter="";this._bigImage=!1;this._imageZoom={scale:1,origin:[50,50]};this._imageAspect=16/9;this._calibrationTarget="frigate";this._groundPreview=new Set;this._groundFeed=new Me(()=>this.requestUpdate());this._paths=new Map;this._itemType="obstacle";this._wallType="outer";this._view={x:-5,y:-5,w:10,h:10};this._draft=[];this._message="";this._saving=!1;this._typed="";this._lightShape="point";this._mapImages=new Map;this._endsAlone=!1;this._pointers=new Map;this._garden=!0;this._live=!0;this._guide=!1;this._locked=_i(Wn);this._find="";this._hidden=new Set(Pi(zn));this._layersOpen=!1;this._history=[];this._loaded=!1;this._walkHours=24;this._raw={};this.onWheel=e=>{e.preventDefault();let t=this.toPlan(e),i=e.deltaY>0?1.15:1/1.15,n=this._view;this._view={x:t[0]-(t[0]-n.x)*i,y:t[1]-(t[1]-n.y)*i,w:n.w*i,h:n.h*i}};this.onDown=e=>{if(this._pointers.set(e.pointerId,[e.clientX,e.clientY]),this._pointers.size===2){this.startPinch();return}if(this._pointers.size>2)return;let t=e.composedPath()[0],i=t.dataset?.handle;if(i&&e.button===0){e.currentTarget.setPointerCapture(e.pointerId),this.startHandle(i,t.dataset.index,this.toPlan(e),e.shiftKey);return}if(e.button===1||e.button===0&&e.shiftKey&&this._tool==="select"){this.startPan(e);return}if(e.button!==0)return;e.currentTarget.setPointerCapture(e.pointerId);let n=this.toPlan(e),s=["select","mark","calibrate"].includes(this._tool)?void 0:this._tool,l=this._history.length;switch(queueMicrotask(()=>{s&&this._history.length>l&&this.notify(`${Lt[s]??"Item"} placed`)}),this._tool){case"select":{let r=this.hitAll(e),c=this._selection,d=!!c&&r.some(f=>f.kind===c.kind&&f.id===c.id),h=[e.clientX,e.clientY];if(d&&!this.lockedKind(c)){this._drag={kind:"move",start:n,before:this.snapshot(),moved:!1,screen:h,armed:!1,candidates:r};return}this._drag={kind:"press",screen:h,view:{...this._view},candidates:r};return}case"wall":this.addWallPoint(this.snapWall(n,e,this._draft.at(-1),new Set));return;case"room":case"zone":{let r=this.snap(n,e,void 0,void 0,!0);this._draft.length?this.addRoomPoint(r):this._drag={kind:"create-room",start:r,current:r};return}case"light":{let r=this.snap(n,e);if(this._lightShape==="line"){this._drag={kind:"create-light",start:r,current:r};return}this.addLight(r);return}case"screen":{let r=this.snap(n,e);this._drag={kind:"create-light",start:r,current:r};return}case"mower":this.addMower(this.snap(n,e));return;case"radar":{let r={id:k("radar"),kind:"radar",source:ct(this.hass.states)[0]??null,at:this.snap(n,e),heading:180,arc:fe,radius:ee,mirror:!1};this.change(()=>(this.level.devices??=[]).push(r)),this._selection={kind:"device",id:r.id},this._tool="select";return}case"camera":{let r=Object.keys(this.hass.states).find(d=>d.startsWith("camera."))??null,c={id:k("camera"),kind:"camera",entity:r,at:this.snap(n,e),heading:180,arc:Q,radius:z};this.change(()=>(this.level.devices??=[]).push(c)),this._selection={kind:"device",id:c.id},this._tool="select";return}case"vacuum":this.addVacuum(this.snap(n,e));return;case"sensor":{let r={id:k("sensor"),kind:"sensor",sensorType:"generic",entity:null,at:this.snap(n,e)};this.change(()=>(this.level.devices??=[]).push(r)),this._selection={kind:"device",id:r.id},this._tool="select";return}case"mark":this.markVacuum(this.snap(n,e));return;case"calibrate":{let r=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!r||!this._imagePoint)return;if(this._calibrationTarget==="mower"&&!this.mowerPose(r)){this._message="The mower reports no heading now; the spot is not kept.";return}let c={image:this._imagePoint,plan:this.snap(n,e)};this.change(()=>this.setPairs(r,[...this.pairsOf(r),c])),this._imagePoint=void 0,this._tool="select";let d=this.pairsOf(r).length;this._message=d<4?`${d} of at least 4 spots. Click the next one in the image.`:`${d} spots; add more or press Done.`;return}case"sprinkler":{let r={id:k("sprinkler"),kind:"sprinkler",entity:null,at:this.snap(n,e),radius:J,heading:0,arc:360,nozzle:"rotor"};this.change(()=>(this.level.devices??=[]).push(r)),this._selection={kind:"device",id:r.id},this._tool="select";return}case"door":case"window":this.addOpening(n,this._tool);return;case"item":{let r=this.snap(n,e);this._drag={kind:"create-item",start:r,current:r};return}}};this.onMove=e=>{if(this._pointers.has(e.pointerId)&&this._pointers.set(e.pointerId,[e.clientX,e.clientY]),this._pinch){this._pointers.size===2&&this.movePinch();return}let t=this.toPlan(e);this._cursor=this._tool==="wall"?this.snapWall(t,e,this._draft.at(-1),new Set):this.snap(t,e,void 0,void 0,this._tool==="room"||this._tool==="zone");let i=this._drag;if(i)switch(i.kind){case"press":{if(Math.hypot(e.clientX-i.screen[0],e.clientY-i.screen[1])<Tt)return;this._drag={kind:"pan",start:i.screen,view:i.view};let n=this.pixel();this._view={...i.view,x:i.view.x-(e.clientX-i.screen[0])*n,y:i.view.y-(e.clientY-i.screen[1])*n};return}case"pan":{let n=this.pixel();this._view={...i.view,x:i.view.x-(e.clientX-i.start[0])*n,y:i.view.y-(e.clientY-i.start[1])*n};return}case"move":{if(!i.armed){if(Math.hypot(e.clientX-i.screen[0],e.clientY-i.screen[1])<Tt)return;i.armed=!0}let n=e.altKey?[t[0]-i.start[0],t[1]-i.start[1]]:[T(t[0]-i.start[0]),T(t[1]-i.start[1])];if(!n[0]&&!n[1])return;i.moved=!0,this.moveSelection(n,t),i.start=[i.start[0]+n[0],i.start[1]+n[1]],this.requestUpdate();return}case"wall-end":this.dragWallEnd(i.end,t,e,i.origin,i.alone);return;case"vertex":{let n=this.selectedPoints();if(!n)return;let s=n[i.index],l=this._selection?.kind==="room"||this._selection?.kind==="zone";n[i.index]=this.snap(t,e,void 0,r=>r===s,l),this.requestUpdate();return}case"corner":this.dragCorner(i.index,t,e);return;case"radius":{let n=this.selectedItem();n?.center&&(n.diameter=Math.max(.2,$(T(2*_(n.center,t))))),this.requestUpdate();return}case"device-end":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;i.index===0?n.at=this.snap(t,e):n.to=this.snap(t,e),this.requestUpdate();return}case"aim":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;let s=Oe(n.at,t);n.heading=e.altKey?$(s):Math.round(s/5)*5,n.radius=Math.max(1,$(T(_(n.at,t),.5))),this.requestUpdate();return}case"map-rotate":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;let s=Math.atan2(t[1]-n.at[1],t[0]-n.at[0])*180/Math.PI;n.rotation=e.altKey?$(s):Math.round(s*2)/2,this.requestUpdate();return}case"arc-end":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;let s=e.altKey?Oe(n.at,t):Math.round(Oe(n.at,t)/5)*5;n.radius=Math.max(.5,$(T(_(n.at,t),.1)));let l=n.heading??0,r=n.arc??360;if(r>=360)n.heading=s%360;else if(i.index===0){let c=l+r;n.heading=s%360,n.arc=((c-s)%360+360)%360||360}else n.arc=((s-l)%360+360)%360||360;this.requestUpdate();return}case"create-light":i.current=this.snap(t,e,i.start),this.requestUpdate();return;case"opening-end":{let n=this._selection?.kind==="opening"?this.findOpening(this._selection.id):void 0,s=n&&this.findWall(n.wall);if(!n||!s)return;let{at:l}=F(s,t);n.width=Math.max(.3,$(T(2*Math.abs(l-n.at)))),this.requestUpdate();return}case"create-item":i.current=this.snap(t,e),this.requestUpdate();return;case"create-room":i.current=this.snap(t,e,void 0,void 0,!0),this.requestUpdate();return}};this.onUp=e=>{if(this._pointers.delete(e.pointerId),this._pinch){this._pointers.size<2&&(this._pinch=void 0);return}let t=this._drag;if(this._drag=void 0,!!t){if(t.kind==="press"){this.select(this.pickFrom(t.candidates,t.screen));return}if(t.kind==="move"&&!t.armed&&t.candidates){this.select(this.pickFrom(t.candidates,t.screen));return}if(t.kind==="move"&&t.moved&&this.notify("Moved"),t.kind==="create-item"||t.kind==="create-light"||t.kind==="create-room"){let i=this._tool,n=this._history.length;queueMicrotask(()=>{this._history.length>n&&this.notify(`${Lt[i]??"Item"} placed`)})}if(t.kind==="create-item"){this.createItem(t.start,t.current);return}if(t.kind==="create-light"&&this._tool==="screen"){this.addScreen(t.start,t.current);return}if(t.kind==="create-light"){this.addLight(t.start,_(t.start,t.current)>.2?t.current:void 0);return}if(t.kind==="create-room"){let[i,n]=[t.start,t.current];Math.abs(n[0]-i[0])>.2&&Math.abs(n[1]-i[1])>.2?(this._draft=[i,[n[0],i[1]],n,[i[0],n[1]]],this.closeRoom()):this.addRoomPoint(i);return}"before"in t&&this.remember(t.before),this.requestUpdate()}};this.onDouble=()=>{this._tool==="wall"&&(this._draft=[]),(this._tool==="room"||this._tool==="zone")&&this.closeRoom()};this.onKey=e=>{let t=e.composedPath()[0]?.tagName;if(!(t==="INPUT"||t==="SELECT"||t==="TEXTAREA")&&!this._guide){if(this._tool==="wall"&&this._draft.length){if(/^[0-9.,<-]$/.test(e.key)){this._typed+=e.key===","?".":e.key,e.preventDefault();return}if(this._typed&&e.key==="Backspace"){this._typed=this._typed.slice(0,-1),e.preventDefault();return}if(this._typed&&e.key==="Enter"){this.applyTyped();return}if(this._typed&&e.key==="Escape"){this._typed="";return}}if(e.key.toLowerCase()==="d"&&(e.ctrlKey||e.metaKey)&&this._selection){e.preventDefault(),this.duplicateSelection();return}if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&Un.has(e.key.toLowerCase())&&!this._draft.length){e.preventDefault(),this.startTool(Un.get(e.key.toLowerCase()));return}if(e.key==="/"){e.preventDefault(),this.renderRoot.querySelector("input.find")?.focus();return}e.key==="Escape"?this._draft.length?this._draft=[]:this._tool!=="select"?this.cancelTool():this._selection=void 0:e.key==="Enter"&&(this._tool==="room"||this._tool==="zone")?this.closeRoom():(e.key==="Delete"||e.key==="Backspace")&&this._selection?this.deleteSelection():e.key.toLowerCase()==="z"&&(e.ctrlKey||e.metaKey)&&(e.preventDefault(),this.undo())}}}static{this.properties={hass:{attribute:!1},narrow:{attribute:!1},_plan:{state:!0},_saved:{state:!0},_levelId:{state:!0},_registry:{state:!0},_tool:{state:!0},_itemType:{state:!0},_wallType:{state:!0},_selection:{state:!0},_view:{state:!0},_draft:{state:!0},_cursor:{state:!0},_confirmDelete:{state:!0},_paletteMode:{state:!0},_deleteLevel:{state:!0},_locked:{state:!0},_toast:{state:!0},_find:{state:!0},_hidden:{state:!0},_layersOpen:{state:!0},_message:{state:!0},_saving:{state:!0},_garden:{state:!0},_live:{state:!0},_typed:{state:!0},_lightShape:{state:!0},_endsAlone:{state:!0},_mode:{state:!0},_filter:{state:!0},_imagePoint:{state:!0},_people:{state:!0},_raw:{state:!0},_walks:{state:!0},_walkHours:{state:!0},_bigImage:{state:!0},_imageZoom:{state:!0},_frigateCameras:{state:!0},_paths:{state:!0},_groundPreview:{state:!0},_guide:{state:!0}}}updated(e){let t=Fe(this._plan?.appearance,this.hass?.themes?.darkMode),i=this._mode==="settings"&&this._paletteMode?this._paletteMode:t.mode;In(this,Fe(this._plan?.appearance,void 0,i).colours),e.has("hass")&&this.hass&&!this._loaded&&(this._loaded=!0,this.load()),e.has("hass")&&this.hass&&!this._unsubscribePeople&&this.isConnected&&(this._unsubscribePeople=this.hass.connection.subscribeMessage(n=>{this._people=n.people,this._raw=n.raw??{}},{type:"floorcast/people/subscribe"}),this._unsubscribePeople.catch(()=>this._people=void 0))}connectedCallback(){super.connectedCallback(),window.addEventListener("keydown",this.onKey)}disconnectedCallback(){super.disconnectedCallback(),window.removeEventListener("keydown",this.onKey),this._unsubscribePeople?.then(e=>e()).catch(()=>{}),this._unsubscribePeople=void 0,this._groundFeed.stop(),this._groundPreview=new Set}async load(){let e=await this.hass.callWS({type:"floorcast/plan/get"});this.setPlan(e.plan,!0)}setPlan(e,t){let i=JSON.stringify(e),n=!1;if(!e.wallTypes){n=!0,e.wallTypes=G(Ee);for(let s of e.levels)for(let l of s.walls??[])l.type??=e.wallTypes.find(r=>Math.abs(r.t-l.t)<1e-6)?.id}for(let s of e.levels){s.walls??=[],s.openings??=[],s.rooms??=[],s.items??=[],s.devices??=[];for(let l of s.rooms){let r=l.lights??[];if(!r.length){delete l.lights;continue}n=!0;let[c]=P(l.points),d=Math.min(...l.points.map(h=>h[1]))+.45;r.forEach((h,f)=>{let b=(f-(r.length-1)/2)*.6;s.devices.push({id:k("light"),kind:"light",entity:h,at:[$(c+b),$(d)],radius:A})}),delete l.lights}for(let l of s.rooms){if(!l.temperature&&!l.humidity&&!l.sensors?.length&&!l.presence?.length)continue;n=!0;let[r,c]=P(l.points);(l.temperature||l.humidity)&&s.devices.push({id:k("sensor"),kind:"sensor",sensorType:"temperature",entity:l.temperature??null,secondary:l.humidity?[{entity:l.humidity}]:[],at:[$(r),$(c+.55)]}),(l.sensors??[]).forEach((d,h)=>{s.devices.push({id:k("sensor"),kind:"sensor",entity:d,at:[$(r),$(c+1.3+h*.5)]})}),delete l.temperature,delete l.humidity,delete l.sensors,delete l.presence}}for(let s of e.levels)ln(s)&&(n=!0);this._plan=e,t&&(this._saved=i),n&&(this._message="The plan was brought to the new format (wall types, lights and sensors placed in the rooms). Save to keep it."),e.levels.some(s=>s.id===this._levelId)||(this._levelId=e.levels[0].id),this._selection=void 0,this.fit(),this.updateComplete.then(()=>this.fit())}get wallTypes(){return this._plan.wallTypes??=G(Ee),this._plan.wallTypes}wallType(e){return this.wallTypes.find(t=>t.id===e)??this.wallTypes[0]??Ee[0]}applyWallType(e){for(let t of this._plan.levels)for(let i of t.walls)i.type===e.id&&(i.t=e.t)}get level(){return this._plan.levels.find(e=>e.id===this._levelId)??this._plan.levels[0]}get shown(){return this._garden?this.level:hn(this.level)}get dirty(){return!!this._plan&&JSON.stringify(this._plan)!==this._saved}snapshot(){return JSON.stringify(this._plan)}remember(e){e!==this.snapshot()&&(this._history.push(e),this._history.length>Ai&&this._history.shift())}notify(e){window.clearTimeout(this._toastTimer),this._toast=e,this._toastTimer=window.setTimeout(()=>this._toast=void 0,5e3)}lockedKind(e){return this._locked&&!!e&&["wall","opening","room","item"].includes(e.kind)}modeFor(e){return e.kind==="wall"||e.kind==="opening"||e.kind==="room"||e.kind==="item"?"plan":e.kind==="zone"||this.findDevice(e.id)?.kind==="radar"?"people":"devices"}select(e){this._confirmDelete=!1;let t=this._message;e&&!this.editable(e)&&this.setMode(this.modeFor(e)),this._selection=e,this._message=t}change(e){let t=this.snapshot();e(),this.remember(t),this.requestUpdate()}undo(){let e=this._history.pop();e&&(this._plan=JSON.parse(e),this._selection=void 0)}fit(){let e=mt(this.shown,1),t=this.renderRoot?.querySelector?.(".canvas"),i=t?t.clientWidth/Math.max(t.clientHeight,1):1.4,{w:n,h:s}=e;n/s<i?n=s*i:s=n/i,this._view={x:e.x+e.w/2-n/2,y:e.y+e.h/2-s/2,w:n,h:s}}zoom(e){let t=this._view,i=t.x+t.w/2,n=t.y+t.h/2;this._view={x:i-t.w*e/2,y:n-t.h*e/2,w:t.w*e,h:t.h*e}}toPlan(e){let i=this.renderRoot.querySelector("svg.plan").getScreenCTM().inverse(),n=new DOMPoint(e.clientX,e.clientY).matrixTransform(i);return[n.x,n.y]}pixel(){let e=this.renderRoot.querySelector("svg.plan");return e?this._view.w/Math.max(e.clientWidth,1):.02}anchors(e){let t=this.level,i=[];for(let n of t.walls)i.push(n.a,n.b);for(let n of t.rooms)i.push(...n.points);for(let n of t.items)n.points&&i.push(...n.points);return e?i.filter(n=>!e(n)):i}snapWall(e,t,i,n,s){if(t?.altKey)return[$(e[0]),$(e[1])];let l=[];for(let f of this.level.walls)n.has(f)||l.push(f.a,f.b);s&&l.push(s);let r,c=C;for(let f of l){let b=_(f,e);b<c&&(r=f,c=b)}if(r)return[r[0],r[1]];let d=T(e[0]),h=T(e[1]);i&&(Math.abs(d-i[0])<C&&(d=i[0]),Math.abs(h-i[1])<C&&(h=i[1])),s&&(Math.abs(d-s[0])<C/2&&(d=s[0]),Math.abs(h-s[1])<C/2&&(h=s[1]));for(let f of this.level.walls){if(n.has(f))continue;let{at:b,distance:g}=F(f,[d,h]);if(g<C/2&&b>0&&b<L(f)){let y=M(f,b),v=Math.abs(f.a[1]-f.b[1])<1e-6,x=Math.abs(f.a[0]-f.b[0])<1e-6;v?h=f.a[1]:x?d=f.a[0]:[d,h]=y;break}}return[$(d),$(h)]}faceSnap(e){let t=C*.65,i,n,s=t,l=t;for(let r of this.level.walls){let c=r.t/2;if(Math.abs(r.a[1]-r.b[1])<1e-6){if(!(e[0]>=Math.min(r.a[0],r.b[0])-c&&e[0]<=Math.max(r.a[0],r.b[0])+c))continue;for(let h of[r.a[1]-c,r.a[1]+c]){let f=Math.abs(e[1]-h);f<l&&([l,n]=[f,h])}}else if(Math.abs(r.a[0]-r.b[0])<1e-6){if(!(e[1]>=Math.min(r.a[1],r.b[1])-c&&e[1]<=Math.max(r.a[1],r.b[1])+c))continue;for(let h of[r.a[0]-c,r.a[0]+c]){let f=Math.abs(e[0]-h);f<s&&([s,i]=[f,h])}}}return{x:i===void 0?void 0:$(i),y:n===void 0?void 0:$(n)}}snap(e,t,i,n,s=!1){if(t?.altKey)return[$(e[0]),$(e[1])];let l,r=s?Ti:C;for(let h of this.anchors(n)){let f=_(h,e);f<r&&(l=h,r=f)}if(l)return[l[0],l[1]];let c=T(e[0]),d=T(e[1]);if(s){let h=this.faceSnap(e);h.x!==void 0&&(c=h.x),h.y!==void 0&&(d=h.y)}return i&&(Math.abs(c-i[0])<C&&(c=i[0]),Math.abs(d-i[1])<C&&(d=i[1])),[$(c),$(d)]}findWall(e){return this.level.walls.find(t=>t.id===e)}findOpening(e){return this.level.openings.find(t=>t.id===e)}findRoom(e){return this.level.rooms.find(t=>t.id===e)}findZone(e){return(this.level.zones??[]).find(t=>t.id===e)}findItem(e){return this.level.items.find(t=>t.id===e)}findDevice(e){return(this.level.devices??[]).find(t=>t.id===e)}nearestWall(e){let t,i=1/0;for(let n of this.level.walls){let{at:s,distance:l}=F(n,e);l<n.t/2+.25&&l<i&&(t={wall:n,at:s},i=l)}return t}editable(e,t=this._mode){if(t==="plan")return e.kind==="wall"||e.kind==="opening"||e.kind==="room"||e.kind==="item";let i=e.kind==="device"?this.findDevice(e.id)?.kind:void 0;return t==="people"?i==="radar"||i==="camera"||e.kind==="zone":t==="devices"?!!i&&i!=="radar":!1}hitAll(e){let t=this.renderRoot.elementsFromPoint(e.clientX,e.clientY),i=[],n=new Set;for(let s of t)for(let l=s;l&&l.tagName!=="svg";l=l.parentElement){let r=l.dataset??{},c=[r.device?{kind:"device",id:r.device}:void 0,r.opening?{kind:"opening",id:r.opening}:void 0,r.wall?{kind:"wall",id:r.wall}:void 0,r.zone?{kind:"zone",id:r.zone}:void 0,r.item?{kind:"item",id:r.item}:void 0,r.room?{kind:"room",id:r.room}:void 0];for(let d of c)!d||n.has(`${d.kind}:${d.id}`)||(n.add(`${d.kind}:${d.id}`),i.push(d))}return[...i.filter(s=>this.editable(s)),...i.filter(s=>!this.editable(s))]}pickFrom(e,t){let i=this._lastClick&&Math.hypot(t[0]-this._lastClick[0],t[1]-this._lastClick[1])<Tt;this._lastClick=t;let n=this._selection,s=n?e.findIndex(r=>r.kind===n.kind&&r.id===n.id):-1,l=i&&s>=0?e[(s+1)%e.length]:e[0];return this._message=e.length>1?`${e.indexOf(l)+1} of ${e.length} here: click again to select what lies below.`:"",l}hit(e){let t=this.renderRoot.elementsFromPoint(e.clientX,e.clientY),i=[];for(let n of t)for(let s=n;s&&s.tagName!=="svg";s=s.parentElement)i.push(s);for(let n of i){let s=n.dataset??{},r=[s.device?{kind:"device",id:s.device}:void 0,s.opening?{kind:"opening",id:s.opening}:void 0,s.wall?{kind:"wall",id:s.wall}:void 0,s.zone?{kind:"zone",id:s.zone}:void 0,s.item?{kind:"item",id:s.item}:void 0,s.room?{kind:"room",id:s.room}:void 0].find(c=>c&&this.editable(c));if(r)return r}}setMode(e){this._mode=e,this._tool="select",this._draft=[],this._filter="",this._message="",this._selection&&!this.editable(this._selection,e)&&(this._selection=void 0)}pick(e,t){this._selection=e,this._tool="select";let i=this._view;this._view={...i,x:t[0]-i.w/2,y:t[1]-i.h/2}}startPan(e){e.currentTarget.setPointerCapture(e.pointerId),this._drag={kind:"pan",start:[e.clientX,e.clientY],view:{...this._view}}}startPinch(){let e=this._drag;e&&"before"in e&&e.before!==this.snapshot()&&(this._plan=JSON.parse(e.before)),this._drag=void 0;let[t,i]=[...this._pointers.values()];this._pinch={distance:Math.max(_(t,i),1),mid:[(t[0]+i[0])/2,(t[1]+i[1])/2],view:{...this._view}}}movePinch(){let e=this._pinch,[t,i]=[...this._pointers.values()],s=this.renderRoot.querySelector("svg.plan").getBoundingClientRect(),l=e.distance/Math.max(_(t,i),1),r=e.view,c=[r.x+(e.mid[0]-s.left)/s.width*r.w,r.y+(e.mid[1]-s.top)/s.height*r.h],d=[(t[0]+i[0])/2,(t[1]+i[1])/2],h=r.w*l,f=r.h*l;this._view={x:c[0]-(d[0]-s.left)/s.width*h,y:c[1]-(d[1]-s.top)/s.height*f,w:h,h:f}}startHandle(e,t,i,n=!1){if(this.lockedKind(this._selection))return;let s=this.snapshot(),l=Number(t??0);if(e==="wall-a"||e==="wall-b"){let r=e==="wall-a"?"a":"b",c=this._selection?.kind==="wall"?this.findWall(this._selection.id):void 0;this._drag={kind:"wall-end",end:r,origin:c?c[r]:i,alone:n||this._endsAlone,before:s}}else e==="vertex"?this._drag={kind:"vertex",index:l,before:s}:e==="mid"?(this.selectedPoints().splice(l+1,0,i),this._drag={kind:"vertex",index:l+1,before:s}):e==="corner"?this._drag={kind:"corner",index:l,before:s}:e==="radius"?this._drag={kind:"radius",before:s}:e==="opening-end"?this._drag={kind:"opening-end",before:s}:e==="device-end"?this._drag={kind:"device-end",index:l,before:s}:e==="arc-end"?this._drag={kind:"arc-end",index:l,before:s}:e==="map-rotate"?this._drag={kind:"map-rotate",before:s}:e==="aim"&&(this._drag={kind:"aim",before:s})}applyTyped(){let e=/^(\d+(?:\.\d+)?)(?:<(-?\d+(?:\.\d+)?))?$/.exec(this._typed);this._typed="";let t=this._draft.at(-1);if(!e||!t)return;let i=Number(e[1]),n;if(e[2]!==void 0){let s=Number(e[2])*Math.PI/180;n=[Math.cos(s),-Math.sin(s)]}else{let s=this._cursor??[t[0]+1,t[1]],l=_(s,t)||1;n=[(s[0]-t[0])/l,(s[1]-t[1])/l];let r=Math.sin(8*Math.PI/180);Math.abs(n[1])<r?n=[Math.sign(n[0])||1,0]:Math.abs(n[0])<r&&(n=[0,Math.sign(n[1])])}this.addWallPoint([$(t[0]+n[0]*i),$(t[1]+n[1]*i)])}findMowerMap(){return Object.keys(this.hass.states).find(e=>e.startsWith("camera.")&&this.hass.states[e].attributes.mowing_map_api_path)}async loadMowerMap(e){let t=e.map?this.hass.states[e.map]:void 0,i=t?.attributes.mowing_map_api_path;if(!i){this._message="The map camera of the mower has no mowing map; choose the camera of the Dreame mower map.";return}try{let n=await this.hass.callApi("GET",i.replace(/^\/api\//,"")),s=n.projection;e.projection={maxX:s.max_x,minY:s.min_y,scale:s.scale,padding:s.padding,width:s.native_width??n.width,height:s.native_height??n.height};let l=t.attributes;Number.isFinite(Number(l.charger_x))&&l.charger_x!==null?e.dock=[Number(l.charger_x),Number(l.charger_y)]:l.position_status==="known_dock"&&(e.dock=[Number(l.position_x),Number(l.position_y)]);let r=await this.hass.fetchWithAuth(n.background_path),c=this._mapImages.get(e.id);c&&URL.revokeObjectURL(c),this._mapImages.set(e.id,URL.createObjectURL(await r.blob())),this._message="Drag the map until its lawn covers the lawn of the plan; turn it with the handle at its corner."}catch(n){this._message=`The mower map could not be read: ${n.message??n}`}this.requestUpdate()}async vacuumPosition(e){try{let i=(await this.hass.callWS({type:"call_service",domain:"roborock",service:"get_vacuum_current_position",target:{entity_id:e},return_response:!0})).response?.[e];return i?[i.x,i.y]:void 0}catch(t){this._message=`The vacuum did not report its position: ${t.message??t}`;return}}addVacuum(e){let t=Object.keys(this.hass.states).find(s=>s.startsWith("vacuum."))??null,i=t?Object.keys(this.hass.states).find(s=>s.startsWith(`sensor.${t.split(".")[1]}`)&&/room|pokoj/.test(s))??null:null,n={id:k("vacuum"),kind:"vacuum",entity:t,at:e,pairs:[],rotation:0,mirror:!1,roomSensor:i};this.change(()=>(this.level.devices??=[]).push(n)),this._selection={kind:"device",id:n.id},this._tool="select",this._message="Put the vacuum on its dock, then press Dock is here."}async markDock(e){if(!e.entity)return;let t=await this.vacuumPosition(e.entity);t&&(this.change(()=>e.pairs=[{robot:t,plan:e.at},...(e.pairs??[]).slice(1)]),this._message="Dock marked. Send the vacuum somewhere easy to find, then press Mark where it stands and click that spot.")}async markVacuum(e){let t=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(this._tool="select",!t?.entity||!t.pairs?.length)return;let i=await this.vacuumPosition(t.entity);if(!i)return;this.change(()=>t.pairs=[t.pairs[0],{robot:i,plan:e}]);let n=lt(t);this._message=n&&Math.abs(n-1)>.1?`Calibrated, but the distances differ by ${Math.round(Math.abs(n-1)*100)}%: check the spot, or try Mirror.`:"Calibrated: the vacuum now appears where it is."}addMower(e){let t=this.findMowerMap()??null,i=Object.keys(this.hass.states).find(s=>s.startsWith("lawn_mower."))??null,n={id:k("mower"),kind:"mower",entity:i,map:t,at:e,rotation:0,mirror:!1};this.change(()=>(this.level.devices??=[]).push(n)),this._selection={kind:"device",id:n.id},this._tool="select",this.loadMowerMap(n)}addLight(e,t){let i={id:k("light"),kind:"light",entity:null,at:e,radius:t?1:A};t&&(i.to=t),this.change(()=>(this.level.devices??=[]).push(i)),this._selection={kind:"device",id:i.id},this._tool="select"}addScreen(e,t){let i=_(e,t)>.3?t:[$(e[0]+2),e[1]],n=Object.keys(this.hass.states).find(l=>/^remote\..*(projekt|projector)/.test(l))??null,s={id:k("screen"),kind:"screen",entity:n,remote:n,at:e,to:i};this.change(()=>(this.level.devices??=[]).push(s)),this._selection={kind:"device",id:s.id},this._tool="select"}duplicateSelection(){let e=this._selection;if(!e)return;if(this.lockedKind(e)){this.notify("The layout is locked");return}let t=s=>[$(s[0]+.5),$(s[1]+.5)],i=this.level,n;this.change(()=>{if(e.kind==="wall"){let s=this.findWall(e.id),l=k("wall");i.walls.push({...G(s),id:l,a:t(s.a),b:t(s.b)}),n={kind:"wall",id:l}}else if(e.kind==="opening"){let s=this.findOpening(e.id),l=this.findWall(s.wall);if(!l)return;let r=k(s.type),c=Math.min(s.at+s.width+.2,L(l)-s.width/2);i.openings.push({...G(s),id:r,at:$(c)}),n={kind:"opening",id:r}}else if(e.kind==="device"){let s=this.findDevice(e.id),l=k(s.kind);i.devices.push({...G(s),id:l,at:t(s.at),...s.to?{to:t(s.to)}:{}}),n={kind:"device",id:l}}else if(e.kind==="room"){let s=this.findRoom(e.id),l=k("room");i.rooms.push({...G(s),id:l,name:`${s.name} 2`,points:s.points.map(t)}),n={kind:"room",id:l}}else if(e.kind==="zone"){let s=this.findZone(e.id),l=k("zone");i.zones.push({...G(s),id:l,name:`${s.name} 2`,points:s.points.map(t)}),n={kind:"zone",id:l}}else{let s=G(this.findItem(e.id));s.id=k("item"),s.points&&(s.points=s.points.map(t)),s.center&&(s.center=t(s.center)),s.rect&&(s.rect=[$(s.rect[0]+.5),$(s.rect[1]+.5),s.rect[2],s.rect[3]]),i.items.push(s),n={kind:"item",id:s.id}}}),this._selection=n}addWallPoint(e){let t=this._draft.at(-1);if(t&&_(t,e)>.05){let i=this.wallType(this._wallType);this.change(()=>this.level.walls.push({id:k("wall"),a:t,b:e,t:i.t,type:i.id}))}this._draft=[e]}addRoomPoint(e){if(this._draft.length>=3&&_(e,this._draft[0])<C){this.closeRoom();return}this._draft=[...this._draft,e]}closeRoom(){if(this._draft.length<3)return;if(this._tool==="zone"){let t={id:k("zone"),name:`Zone ${(this.level.zones??[]).length+1}`,kind:"count",points:this._draft};this.change(()=>(this.level.zones??=[]).push(t)),this._draft=[],this._tool="select",this._selection={kind:"zone",id:t.id};return}let e={id:k("room"),name:`Room ${this.level.rooms.length+1}`,points:this._draft,lights:[]};this.change(()=>this.level.rooms.push(e)),this._draft=[],this._tool="select",this._selection={kind:"room",id:e.id}}addOpening(e,t){let i=this.nearestWall(e);if(!i){this._message="Click on a wall to place it.";return}let n=L(i.wall),s=Math.min(t==="door"?.9:1.2,n),l=Math.min(Math.max(T(i.at),s/2),n-s/2),r={id:k(t),wall:i.wall.id,at:$(l),width:s,type:t};this.change(()=>this.level.openings.push(r)),this._selection={kind:"opening",id:r.id}}createItem(e,t){let i=this._itemType,n;if(oe.includes(i)){let s=_(e,t)*2;n={id:k("item"),type:i,center:e,diameter:$(s>=.2?s:i==="trampoline"?3.66:i==="round_obstacle"?.9:.6)}}else{let s=Math.min(e[0],t[0]),l=Math.min(e[1],t[1]),r=Math.abs(t[0]-e[0]),c=Math.abs(t[1]-e[1]);(r<.1||c<.1)&&(s=e[0],l=e[1],r=1,c=1),n={id:k("item"),type:i,rect:[$(s),$(l),$(r),$(c)],rotation:0}}this.change(()=>this.level.items.push(n)),this._selection={kind:"item",id:n.id}}joinedEnds(e,t){let i=[];for(let n of this.level.walls)n!==t&&(_(n.a,e)<.01&&i.push({wall:n,end:"a"}),_(n.b,e)<.01&&i.push({wall:n,end:"b"}));return i}dragWallEnd(e,t,i,n,s){let l=this._selection?.kind==="wall"?this.findWall(this._selection.id):void 0;if(!l)return;let r=l[e],c=e==="a"?l.b:l.a,d=s?[]:this.joinedEnds(r,l),h=new Set([l,...d.map(b=>b.wall)]),f=this.snapWall(t,i,c,h,n);l[e]=f;for(let b of d)b.wall[b.end]=f;this.requestUpdate()}moveSelection(e,t){let i=this._selection;if(!i)return;let n=s=>[$(s[0]+e[0]),$(s[1]+e[1])];if(i.kind==="wall"){let s=this.findWall(i.id),l=[...this.joinedEnds(s.a,s),...this.joinedEnds(s.b,s)],r=e;if(l.length){let d=D(s),h=-e[0]*d[1]+e[1]*d[0];r=[-d[1]*h,d[0]*h]}let c=(d,h)=>[$(d[0]+h[0]),$(d[1]+h[1])];s.a=c(s.a,r),s.b=c(s.b,r);for(let d of l){let h=D(d.wall),f=r[0]*h[0]+r[1]*h[1];d.wall[d.end]=c(d.wall[d.end],[h[0]*f,h[1]*f])}}else if(i.kind==="opening"){let s=this.findOpening(i.id),l=this.findWall(s.wall);if(!l)return;let r=L(l),{at:c}=F(l,t);s.at=$(Math.min(Math.max(T(c),s.width/2),r-s.width/2))}else if(i.kind==="room"){let s=this.findRoom(i.id);s.points=s.points.map(n)}else if(i.kind==="zone"){let s=this.findZone(i.id);s.points=s.points.map(n)}else if(i.kind==="device"){let s=this.findDevice(i.id);s.at=n(s.at),s.to&&(s.to=n(s.to))}else{let s=this.findItem(i.id);if(s.points)s.points=s.points.map(n);else if(s.center)s.center=n(s.center);else if(s.rect){let[l,r,c,d]=s.rect;s.rect=[$(l+e[0]),$(r+e[1]),c,d]}}}dragCorner(e,t,i){let n=this.selectedItem();if(!n?.rect)return;let s=n.rotation??0,l=be(n)[(e+2)%4],r=i.altKey?t:this.snap(t,i),c=ge(r,l,-s),d=Math.max(.1,Math.abs(c[0]-l[0])),h=Math.max(.1,Math.abs(c[1]-l[1])),f=c[0]>=l[0]?1:-1,b=c[1]>=l[1]?1:-1,g=ge([l[0]+f*d/2,l[1]+b*h/2],l,s);n.rect=[$(g[0]-d/2),$(g[1]-h/2),$(d),$(h)],this.requestUpdate()}deleteSelection(){let e=this._selection;if(e){if(this.lockedKind(e)){this.notify("The layout is locked");return}this.notify("Deleted"),this.change(()=>{let t=this.level;e.kind==="wall"?(t.walls=t.walls.filter(i=>i.id!==e.id),t.openings=t.openings.filter(i=>i.wall!==e.id)):e.kind==="opening"?t.openings=t.openings.filter(i=>i.id!==e.id):e.kind==="room"?t.rooms=t.rooms.filter(i=>i.id!==e.id):e.kind==="zone"?t.zones=(t.zones??[]).filter(i=>i.id!==e.id):e.kind==="device"?t.devices=(t.devices??[]).filter(i=>i.id!==e.id):t.items=t.items.filter(i=>i.id!==e.id)}),this._selection=void 0}}selectedItem(){return this._selection?.kind==="item"?this.findItem(this._selection.id):void 0}selectedPoints(){let e=this._selection;if(e?.kind==="room")return this.findRoom(e.id)?.points;if(e?.kind==="zone")return this.findZone(e.id)?.points;if(e?.kind==="item")return this.findItem(e.id)?.points}async save(){if(this._plan){this._saving=!0;try{await this.hass.callWS({type:"floorcast/plan/save",plan:this._plan}),this._saved=JSON.stringify(this._plan),this._message="Saved."}catch(e){this._message=`Not saved: ${e.message??e}`}finally{this._saving=!1}}}exportPlan(){let e=new Blob([JSON.stringify(this._plan,null,1)],{type:"application/json"}),t=document.createElement("a");t.href=URL.createObjectURL(e),t.download="floorcast-plan.json",t.click(),URL.revokeObjectURL(t.href)}importPlan(e){let t=e.target.files?.[0];t&&t.text().then(i=>{try{let n=JSON.parse(i);if(!Array.isArray(n.levels)||!n.levels.length)throw new Error("no levels");let s=this.snapshot();this.setPlan(n,!1),this.remember(s),this._message="Imported. Save to keep it."}catch(n){this._message=`Import failed: ${n.message}`}})}render(){return this._plan?p`
+`;var Lt=8,Fn="floorcast-editor-lock",jn="floorcast-editor-hidden",Rt=["wall","door","window","gate","room","item"],Ct={wall:"Wall",door:"Door",window:"Window",gate:"Gate",room:"Room",zone:"Zone",item:"Object",light:"Light",sprinkler:"Sprinkler",mower:"Mower",vacuum:"Vacuum",sensor:"Sensor",screen:"Screen",camera:"Camera",radar:"Radar",mark:"Mark the vacuum",calibrate:"Calibrate"};function Ei(a){try{return localStorage.getItem(a)==="1"}catch{return!1}}function Si(a,o){try{localStorage.setItem(a,o?"1":"0")}catch{}}function Ti(a){try{return JSON.parse(localStorage.getItem(a)??"[]")}catch{return[]}}function Ai(a,o){try{localStorage.setItem(a,JSON.stringify(o))}catch{}}var Gn=[{mode:"plan",label:"Plan"},{mode:"devices",label:"Devices"},{mode:"people",label:"People"},{mode:"settings",label:"\u2699 Settings"}],Nt={plan:[["wall","Wall","W"],["door","Door","D"],["window","Window","N"],["gate","Gate","G"],["room","Room","R"],["item","Garden or furniture","O"]],devices:[["light","Light or strip","L"],["sensor","Sensor or alarm","S"],["screen","Screen","T"],["sprinkler","Sprinkler","P"],["camera","Camera","C"],["mower","Mower","M"],["vacuum","Vacuum","V"]],people:[["radar","Radar","A"],["zone","Zone","Z"]],settings:[]},Li=new Map(Object.entries(Nt).flatMap(([a,o])=>o.map(([e])=>[e,a]))),Vn=new Map(Object.values(Nt).flatMap(a=>a.map(([o,,e])=>[e.toLowerCase(),o]))),Dt={light:"Light",sprinkler:"Sprinkler",camera:"Camera",mower:"Mower",vacuum:"Vacuum",radar:"Radar",sensor:"Sensor",thermometer:"Thermometer",screen:"Screen"},Ge=["blind","gate","lock","contact"],Kn=["light","sensor","alarm","presence","blind","gate","lock","contact","camera"],N={lawn:"Lawn",paving:"Paving",terrace:"Terrace",bed:"Flower bed",hedge:"Hedge or shrubs",vegetable:"Vegetable garden",greenhouse:"Greenhouse",shelter:"Shelter",garden_house:"Garden house",trampoline:"Trampoline",manhole:"Manhole",obstacle:"Obstacle (furniture)",round_obstacle:"Round obstacle (table, pouf)"},Ot={count:"Count people here",entrance:"Entrance (people count at once)",exclude:"Ignore (fan, curtain, reflections)",stationary:"Resting place (sofa, bed)"},Ri=.05,O=.2,Ci=.05,Di=60,T=(a,o=Ri)=>Math.round(a/o)*o,$=a=>Math.round(a*1e3)/1e3,V=a=>JSON.parse(JSON.stringify(a)),Ht=class extends S{constructor(){super(...arguments);this.narrow=!1;this._saved="";this._levelId="";this._tool="select";this._mode="plan";this._confirmDelete=!1;this._filter="";this._bigImage=!1;this._imageZoom={scale:1,origin:[50,50]};this._imageAspect=16/9;this._calibrationTarget="frigate";this._groundPreview=new Set;this._groundFeed=new Ee(()=>this.requestUpdate());this._paths=new Map;this._itemType="obstacle";this._wallType="outer";this._view={x:-5,y:-5,w:10,h:10};this._draft=[];this._message="";this._saving=!1;this._typed="";this._lightShape="point";this._mapImages=new Map;this._endsAlone=!1;this._pointers=new Map;this._garden=!0;this._live=!0;this._guide=!1;this._locked=Ei(Fn);this._find="";this._hidden=new Set(Ti(jn));this._layersOpen=!1;this._history=[];this._loaded=!1;this._walkHours=24;this._raw={};this.onWheel=e=>{e.preventDefault();let t=this.toPlan(e),i=e.deltaY>0?1.15:1/1.15,n=this._view;this._view={x:t[0]-(t[0]-n.x)*i,y:t[1]-(t[1]-n.y)*i,w:n.w*i,h:n.h*i}};this.onDown=e=>{if(this._pointers.set(e.pointerId,[e.clientX,e.clientY]),this._pointers.size===2){this.startPinch();return}if(this._pointers.size>2)return;let t=e.composedPath()[0],i=t.dataset?.handle;if(i&&e.button===0){e.currentTarget.setPointerCapture(e.pointerId),this.startHandle(i,t.dataset.index,this.toPlan(e),e.shiftKey);return}if(e.button===1||e.button===0&&e.shiftKey&&this._tool==="select"){this.startPan(e);return}if(e.button!==0)return;e.currentTarget.setPointerCapture(e.pointerId);let n=this.toPlan(e),s=["select","mark","calibrate"].includes(this._tool)?void 0:this._tool,l=this._history.length;switch(queueMicrotask(()=>{s&&this._history.length>l&&this.notify(`${Ct[s]??"Item"} placed`)}),this._tool){case"select":{let r=this.hitAll(e),c=this._selection,d=!!c&&r.some(f=>f.kind===c.kind&&f.id===c.id),h=[e.clientX,e.clientY];if(d&&!this.lockedKind(c)){this._drag={kind:"move",start:n,before:this.snapshot(),moved:!1,screen:h,armed:!1,candidates:r};return}this._drag={kind:"press",screen:h,view:{...this._view},candidates:r};return}case"wall":this.addWallPoint(this.snapWall(n,e,this._draft.at(-1),new Set));return;case"room":case"zone":{let r=this.snap(n,e,void 0,void 0,!0);this._draft.length?this.addRoomPoint(r):this._drag={kind:"create-room",start:r,current:r};return}case"light":{let r=this.snap(n,e);if(this._lightShape==="line"){this._drag={kind:"create-light",start:r,current:r};return}this.addLight(r);return}case"screen":{let r=this.snap(n,e);this._drag={kind:"create-light",start:r,current:r};return}case"mower":this.addMower(this.snap(n,e));return;case"radar":{let r={id:k("radar"),kind:"radar",source:ht(this.hass.states)[0]??null,at:this.snap(n,e),heading:180,arc:ge,radius:te,mirror:!1};this.change(()=>(this.level.devices??=[]).push(r)),this._selection={kind:"device",id:r.id},this._tool="select";return}case"camera":{let r=Object.keys(this.hass.states).find(d=>d.startsWith("camera."))??null,c={id:k("camera"),kind:"camera",entity:r,at:this.snap(n,e),heading:180,arc:ee,radius:W};this.change(()=>(this.level.devices??=[]).push(c)),this._selection={kind:"device",id:c.id},this._tool="select";return}case"vacuum":this.addVacuum(this.snap(n,e));return;case"sensor":{let r={id:k("sensor"),kind:"sensor",sensorType:"generic",entity:null,at:this.snap(n,e)};this.change(()=>(this.level.devices??=[]).push(r)),this._selection={kind:"device",id:r.id},this._tool="select";return}case"mark":this.markVacuum(this.snap(n,e));return;case"calibrate":{let r=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!r||!this._imagePoint)return;if(this._calibrationTarget==="mower"&&!this.mowerPose(r)){this._message="The mower reports no heading now; the spot is not kept.";return}let c={image:this._imagePoint,plan:this.snap(n,e)};this.change(()=>this.setPairs(r,[...this.pairsOf(r),c])),this._imagePoint=void 0,this._tool="select";let d=this.pairsOf(r).length;this._message=d<4?`${d} of at least 4 spots. Click the next one in the image.`:`${d} spots; add more or press Done.`;return}case"sprinkler":{let r={id:k("sprinkler"),kind:"sprinkler",entity:null,at:this.snap(n,e),radius:Q,heading:0,arc:360,nozzle:"rotor"};this.change(()=>(this.level.devices??=[]).push(r)),this._selection={kind:"device",id:r.id},this._tool="select";return}case"door":case"window":case"gate":this.addOpening(n,this._tool);return;case"item":{let r=this.snap(n,e);this._drag={kind:"create-item",start:r,current:r};return}}};this.onMove=e=>{if(this._pointers.has(e.pointerId)&&this._pointers.set(e.pointerId,[e.clientX,e.clientY]),this._pinch){this._pointers.size===2&&this.movePinch();return}let t=this.toPlan(e);this._cursor=this._tool==="wall"?this.snapWall(t,e,this._draft.at(-1),new Set):this.snap(t,e,void 0,void 0,this._tool==="room"||this._tool==="zone");let i=this._drag;if(i)switch(i.kind){case"press":{if(Math.hypot(e.clientX-i.screen[0],e.clientY-i.screen[1])<Lt)return;this._drag={kind:"pan",start:i.screen,view:i.view};let n=this.pixel();this._view={...i.view,x:i.view.x-(e.clientX-i.screen[0])*n,y:i.view.y-(e.clientY-i.screen[1])*n};return}case"pan":{let n=this.pixel();this._view={...i.view,x:i.view.x-(e.clientX-i.start[0])*n,y:i.view.y-(e.clientY-i.start[1])*n};return}case"move":{if(!i.armed){if(Math.hypot(e.clientX-i.screen[0],e.clientY-i.screen[1])<Lt)return;i.armed=!0}let n=e.altKey?[t[0]-i.start[0],t[1]-i.start[1]]:[T(t[0]-i.start[0]),T(t[1]-i.start[1])];if(!n[0]&&!n[1])return;i.moved=!0,this.moveSelection(n,t),i.start=[i.start[0]+n[0],i.start[1]+n[1]],this.requestUpdate();return}case"wall-end":this.dragWallEnd(i.end,t,e,i.origin,i.alone);return;case"vertex":{let n=this.selectedPoints();if(!n)return;let s=n[i.index],l=this._selection?.kind==="room"||this._selection?.kind==="zone";n[i.index]=this.snap(t,e,void 0,r=>r===s,l),this.requestUpdate();return}case"corner":this.dragCorner(i.index,t,e);return;case"radius":{let n=this.selectedItem();n?.center&&(n.diameter=Math.max(.2,$(T(2*_(n.center,t))))),this.requestUpdate();return}case"device-end":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;i.index===0?n.at=this.snap(t,e):n.to=this.snap(t,e),this.requestUpdate();return}case"aim":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;let s=Ie(n.at,t);n.heading=e.altKey?$(s):Math.round(s/5)*5,n.radius=Math.max(1,$(T(_(n.at,t),.5))),this.requestUpdate();return}case"map-rotate":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;let s=Math.atan2(t[1]-n.at[1],t[0]-n.at[0])*180/Math.PI;n.rotation=e.altKey?$(s):Math.round(s*2)/2,this.requestUpdate();return}case"arc-end":{let n=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(!n)return;let s=e.altKey?Ie(n.at,t):Math.round(Ie(n.at,t)/5)*5;n.radius=Math.max(.5,$(T(_(n.at,t),.1)));let l=n.heading??0,r=n.arc??360;if(r>=360)n.heading=s%360;else if(i.index===0){let c=l+r;n.heading=s%360,n.arc=((c-s)%360+360)%360||360}else n.arc=((s-l)%360+360)%360||360;this.requestUpdate();return}case"create-light":i.current=this.snap(t,e,i.start),this.requestUpdate();return;case"opening-end":{let n=this._selection?.kind==="opening"?this.findOpening(this._selection.id):void 0,s=n&&this.findWall(n.wall);if(!n||!s)return;let{at:l}=j(s,t);n.width=Math.max(.3,$(T(2*Math.abs(l-n.at)))),this.requestUpdate();return}case"create-item":i.current=this.snap(t,e),this.requestUpdate();return;case"create-room":i.current=this.snap(t,e,void 0,void 0,!0),this.requestUpdate();return}};this.onUp=e=>{if(this._pointers.delete(e.pointerId),this._pinch){this._pointers.size<2&&(this._pinch=void 0);return}let t=this._drag;if(this._drag=void 0,!!t){if(t.kind==="press"){this.select(this.pickFrom(t.candidates,t.screen));return}if(t.kind==="move"&&!t.armed&&t.candidates){this.select(this.pickFrom(t.candidates,t.screen));return}if(t.kind==="move"&&t.moved&&this.notify("Moved"),t.kind==="create-item"||t.kind==="create-light"||t.kind==="create-room"){let i=this._tool,n=this._history.length;queueMicrotask(()=>{this._history.length>n&&this.notify(`${Ct[i]??"Item"} placed`)})}if(t.kind==="create-item"){this.createItem(t.start,t.current);return}if(t.kind==="create-light"&&this._tool==="screen"){this.addScreen(t.start,t.current);return}if(t.kind==="create-light"){this.addLight(t.start,_(t.start,t.current)>.2?t.current:void 0);return}if(t.kind==="create-room"){let[i,n]=[t.start,t.current];Math.abs(n[0]-i[0])>.2&&Math.abs(n[1]-i[1])>.2?(this._draft=[i,[n[0],i[1]],n,[i[0],n[1]]],this.closeRoom()):this.addRoomPoint(i);return}"before"in t&&this.remember(t.before),this.requestUpdate()}};this.onDouble=()=>{this._tool==="wall"&&(this._draft=[]),(this._tool==="room"||this._tool==="zone")&&this.closeRoom()};this.onKey=e=>{let t=e.composedPath()[0]?.tagName;if(!(t==="INPUT"||t==="SELECT"||t==="TEXTAREA")&&!this._guide){if(this._tool==="wall"&&this._draft.length){if(/^[0-9.,<-]$/.test(e.key)){this._typed+=e.key===","?".":e.key,e.preventDefault();return}if(this._typed&&e.key==="Backspace"){this._typed=this._typed.slice(0,-1),e.preventDefault();return}if(this._typed&&e.key==="Enter"){this.applyTyped();return}if(this._typed&&e.key==="Escape"){this._typed="";return}}if(e.key.toLowerCase()==="d"&&(e.ctrlKey||e.metaKey)&&this._selection){e.preventDefault(),this.duplicateSelection();return}if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&Vn.has(e.key.toLowerCase())&&!this._draft.length){e.preventDefault(),this.startTool(Vn.get(e.key.toLowerCase()));return}if(e.key==="/"){e.preventDefault(),this.renderRoot.querySelector("input.find")?.focus();return}e.key==="Escape"?this._draft.length?this._draft=[]:this._tool!=="select"?this.cancelTool():this._selection=void 0:e.key==="Enter"&&(this._tool==="room"||this._tool==="zone")?this.closeRoom():(e.key==="Delete"||e.key==="Backspace")&&this._selection?this.deleteSelection():e.key.toLowerCase()==="z"&&(e.ctrlKey||e.metaKey)&&(e.preventDefault(),this.undo())}}}static{this.properties={hass:{attribute:!1},narrow:{attribute:!1},_plan:{state:!0},_saved:{state:!0},_levelId:{state:!0},_registry:{state:!0},_tool:{state:!0},_itemType:{state:!0},_wallType:{state:!0},_selection:{state:!0},_view:{state:!0},_draft:{state:!0},_cursor:{state:!0},_confirmDelete:{state:!0},_paletteMode:{state:!0},_deleteLevel:{state:!0},_locked:{state:!0},_toast:{state:!0},_find:{state:!0},_hidden:{state:!0},_layersOpen:{state:!0},_message:{state:!0},_saving:{state:!0},_garden:{state:!0},_live:{state:!0},_typed:{state:!0},_lightShape:{state:!0},_endsAlone:{state:!0},_mode:{state:!0},_filter:{state:!0},_imagePoint:{state:!0},_people:{state:!0},_raw:{state:!0},_walks:{state:!0},_walkHours:{state:!0},_bigImage:{state:!0},_imageZoom:{state:!0},_frigateCameras:{state:!0},_paths:{state:!0},_groundPreview:{state:!0},_guide:{state:!0}}}updated(e){let t=je(this._plan?.appearance,this.hass?.themes?.darkMode),i=this._mode==="settings"&&this._paletteMode?this._paletteMode:t.mode;Wn(this,je(this._plan?.appearance,void 0,i).colours),e.has("hass")&&this.hass&&!this._loaded&&(this._loaded=!0,this.load()),e.has("hass")&&this.hass&&!this._unsubscribePeople&&this.isConnected&&(this._unsubscribePeople=this.hass.connection.subscribeMessage(n=>{this._people=n.people,this._raw=n.raw??{}},{type:"floorcast/people/subscribe"}),this._unsubscribePeople.catch(()=>this._people=void 0))}connectedCallback(){super.connectedCallback(),window.addEventListener("keydown",this.onKey)}disconnectedCallback(){super.disconnectedCallback(),window.removeEventListener("keydown",this.onKey),this._unsubscribePeople?.then(e=>e()).catch(()=>{}),this._unsubscribePeople=void 0,this._groundFeed.stop(),this._groundPreview=new Set}async load(){let e=await this.hass.callWS({type:"floorcast/plan/get"});this.setPlan(e.plan,!0)}setPlan(e,t){let i=JSON.stringify(e),n=!1;if(!e.wallTypes){n=!0,e.wallTypes=V(Se);for(let s of e.levels)for(let l of s.walls??[])l.type??=e.wallTypes.find(r=>Math.abs(r.t-l.t)<1e-6)?.id}for(let s of e.levels){s.walls??=[],s.openings??=[],s.rooms??=[],s.items??=[],s.devices??=[];for(let l of s.rooms){let r=l.lights??[];if(!r.length){delete l.lights;continue}n=!0;let[c]=P(l.points),d=Math.min(...l.points.map(h=>h[1]))+.45;r.forEach((h,f)=>{let b=(f-(r.length-1)/2)*.6;s.devices.push({id:k("light"),kind:"light",entity:h,at:[$(c+b),$(d)],radius:L})}),delete l.lights}for(let l of s.rooms){if(!l.temperature&&!l.humidity&&!l.sensors?.length&&!l.presence?.length)continue;n=!0;let[r,c]=P(l.points);(l.temperature||l.humidity)&&s.devices.push({id:k("sensor"),kind:"sensor",sensorType:"temperature",entity:l.temperature??null,secondary:l.humidity?[{entity:l.humidity}]:[],at:[$(r),$(c+.55)]}),(l.sensors??[]).forEach((d,h)=>{s.devices.push({id:k("sensor"),kind:"sensor",entity:d,at:[$(r),$(c+1.3+h*.5)]})}),delete l.temperature,delete l.humidity,delete l.sensors,delete l.presence}}for(let s of e.levels)dn(s)&&(n=!0);this._plan=e,t&&(this._saved=i),n&&(this._message="The plan was brought to the new format (wall types, lights and sensors placed in the rooms). Save to keep it."),e.levels.some(s=>s.id===this._levelId)||(this._levelId=e.levels[0].id),this._selection=void 0,this.fit(),this.updateComplete.then(()=>this.fit())}get wallTypes(){return this._plan.wallTypes??=V(Se),this._plan.wallTypes}wallType(e){return this.wallTypes.find(t=>t.id===e)??this.wallTypes[0]??Se[0]}applyWallType(e){for(let t of this._plan.levels)for(let i of t.walls)i.type===e.id&&(i.t=e.t)}get level(){return this._plan.levels.find(e=>e.id===this._levelId)??this._plan.levels[0]}get shown(){return this._garden?this.level:un(this.level)}get dirty(){return!!this._plan&&JSON.stringify(this._plan)!==this._saved}snapshot(){return JSON.stringify(this._plan)}remember(e){e!==this.snapshot()&&(this._history.push(e),this._history.length>Di&&this._history.shift())}notify(e){window.clearTimeout(this._toastTimer),this._toast=e,this._toastTimer=window.setTimeout(()=>this._toast=void 0,5e3)}lockedKind(e){return this._locked&&!!e&&["wall","opening","room","item"].includes(e.kind)}modeFor(e){return e.kind==="wall"||e.kind==="opening"||e.kind==="room"||e.kind==="item"?"plan":e.kind==="zone"||this.findDevice(e.id)?.kind==="radar"?"people":"devices"}select(e){this._confirmDelete=!1;let t=this._message;e&&!this.editable(e)&&this.setMode(this.modeFor(e)),this._selection=e,this._message=t}change(e){let t=this.snapshot();e(),this.remember(t),this.requestUpdate()}undo(){let e=this._history.pop();e&&(this._plan=JSON.parse(e),this._selection=void 0)}fit(){let e=gt(this.shown,1),t=this.renderRoot?.querySelector?.(".canvas"),i=t?t.clientWidth/Math.max(t.clientHeight,1):1.4,{w:n,h:s}=e;n/s<i?n=s*i:s=n/i,this._view={x:e.x+e.w/2-n/2,y:e.y+e.h/2-s/2,w:n,h:s}}zoom(e){let t=this._view,i=t.x+t.w/2,n=t.y+t.h/2;this._view={x:i-t.w*e/2,y:n-t.h*e/2,w:t.w*e,h:t.h*e}}toPlan(e){let i=this.renderRoot.querySelector("svg.plan").getScreenCTM().inverse(),n=new DOMPoint(e.clientX,e.clientY).matrixTransform(i);return[n.x,n.y]}pixel(){let e=this.renderRoot.querySelector("svg.plan");return e?this._view.w/Math.max(e.clientWidth,1):.02}anchors(e){let t=this.level,i=[];for(let n of t.walls)i.push(n.a,n.b);for(let n of t.rooms)i.push(...n.points);for(let n of t.items)n.points&&i.push(...n.points);return e?i.filter(n=>!e(n)):i}snapWall(e,t,i,n,s){if(t?.altKey)return[$(e[0]),$(e[1])];let l=[];for(let f of this.level.walls)n.has(f)||l.push(f.a,f.b);s&&l.push(s);let r,c=O;for(let f of l){let b=_(f,e);b<c&&(r=f,c=b)}if(r)return[r[0],r[1]];let d=T(e[0]),h=T(e[1]);i&&(Math.abs(d-i[0])<O&&(d=i[0]),Math.abs(h-i[1])<O&&(h=i[1])),s&&(Math.abs(d-s[0])<O/2&&(d=s[0]),Math.abs(h-s[1])<O/2&&(h=s[1]));for(let f of this.level.walls){if(n.has(f))continue;let{at:b,distance:g}=j(f,[d,h]);if(g<O/2&&b>0&&b<R(f)){let y=M(f,b),v=Math.abs(f.a[1]-f.b[1])<1e-6,x=Math.abs(f.a[0]-f.b[0])<1e-6;v?h=f.a[1]:x?d=f.a[0]:[d,h]=y;break}}return[$(d),$(h)]}faceSnap(e){let t=O*.65,i,n,s=t,l=t;for(let r of this.level.walls){let c=r.t/2;if(Math.abs(r.a[1]-r.b[1])<1e-6){if(!(e[0]>=Math.min(r.a[0],r.b[0])-c&&e[0]<=Math.max(r.a[0],r.b[0])+c))continue;for(let h of[r.a[1]-c,r.a[1]+c]){let f=Math.abs(e[1]-h);f<l&&([l,n]=[f,h])}}else if(Math.abs(r.a[0]-r.b[0])<1e-6){if(!(e[1]>=Math.min(r.a[1],r.b[1])-c&&e[1]<=Math.max(r.a[1],r.b[1])+c))continue;for(let h of[r.a[0]-c,r.a[0]+c]){let f=Math.abs(e[0]-h);f<s&&([s,i]=[f,h])}}}return{x:i===void 0?void 0:$(i),y:n===void 0?void 0:$(n)}}snap(e,t,i,n,s=!1){if(t?.altKey)return[$(e[0]),$(e[1])];let l,r=s?Ci:O;for(let h of this.anchors(n)){let f=_(h,e);f<r&&(l=h,r=f)}if(l)return[l[0],l[1]];let c=T(e[0]),d=T(e[1]);if(s){let h=this.faceSnap(e);h.x!==void 0&&(c=h.x),h.y!==void 0&&(d=h.y)}return i&&(Math.abs(c-i[0])<O&&(c=i[0]),Math.abs(d-i[1])<O&&(d=i[1])),[$(c),$(d)]}findWall(e){return this.level.walls.find(t=>t.id===e)}findOpening(e){return this.level.openings.find(t=>t.id===e)}findRoom(e){return this.level.rooms.find(t=>t.id===e)}findZone(e){return(this.level.zones??[]).find(t=>t.id===e)}findItem(e){return this.level.items.find(t=>t.id===e)}findDevice(e){return(this.level.devices??[]).find(t=>t.id===e)}nearestWall(e){let t,i=1/0;for(let n of this.level.walls){let{at:s,distance:l}=j(n,e);l<n.t/2+.25&&l<i&&(t={wall:n,at:s},i=l)}return t}editable(e,t=this._mode){if(t==="plan")return e.kind==="wall"||e.kind==="opening"||e.kind==="room"||e.kind==="item";let i=e.kind==="device"?this.findDevice(e.id)?.kind:void 0;return t==="people"?i==="radar"||i==="camera"||e.kind==="zone":t==="devices"?!!i&&i!=="radar":!1}hitAll(e){let t=this.renderRoot.elementsFromPoint(e.clientX,e.clientY),i=[],n=new Set;for(let s of t)for(let l=s;l&&l.tagName!=="svg";l=l.parentElement){let r=l.dataset??{},c=[r.device?{kind:"device",id:r.device}:void 0,r.opening?{kind:"opening",id:r.opening}:void 0,r.wall?{kind:"wall",id:r.wall}:void 0,r.zone?{kind:"zone",id:r.zone}:void 0,r.item?{kind:"item",id:r.item}:void 0,r.room?{kind:"room",id:r.room}:void 0];for(let d of c)!d||n.has(`${d.kind}:${d.id}`)||(n.add(`${d.kind}:${d.id}`),i.push(d))}return[...i.filter(s=>this.editable(s)),...i.filter(s=>!this.editable(s))]}pickFrom(e,t){let i=this._lastClick&&Math.hypot(t[0]-this._lastClick[0],t[1]-this._lastClick[1])<Lt;this._lastClick=t;let n=this._selection,s=n?e.findIndex(r=>r.kind===n.kind&&r.id===n.id):-1,l=i&&s>=0?e[(s+1)%e.length]:e[0];return this._message=e.length>1?`${e.indexOf(l)+1} of ${e.length} here: click again to select what lies below.`:"",l}hit(e){let t=this.renderRoot.elementsFromPoint(e.clientX,e.clientY),i=[];for(let n of t)for(let s=n;s&&s.tagName!=="svg";s=s.parentElement)i.push(s);for(let n of i){let s=n.dataset??{},r=[s.device?{kind:"device",id:s.device}:void 0,s.opening?{kind:"opening",id:s.opening}:void 0,s.wall?{kind:"wall",id:s.wall}:void 0,s.zone?{kind:"zone",id:s.zone}:void 0,s.item?{kind:"item",id:s.item}:void 0,s.room?{kind:"room",id:s.room}:void 0].find(c=>c&&this.editable(c));if(r)return r}}setMode(e){this._mode=e,this._tool="select",this._draft=[],this._filter="",this._message="",this._selection&&!this.editable(this._selection,e)&&(this._selection=void 0)}pick(e,t){this._selection=e,this._tool="select";let i=this._view;this._view={...i,x:t[0]-i.w/2,y:t[1]-i.h/2}}startPan(e){e.currentTarget.setPointerCapture(e.pointerId),this._drag={kind:"pan",start:[e.clientX,e.clientY],view:{...this._view}}}startPinch(){let e=this._drag;e&&"before"in e&&e.before!==this.snapshot()&&(this._plan=JSON.parse(e.before)),this._drag=void 0;let[t,i]=[...this._pointers.values()];this._pinch={distance:Math.max(_(t,i),1),mid:[(t[0]+i[0])/2,(t[1]+i[1])/2],view:{...this._view}}}movePinch(){let e=this._pinch,[t,i]=[...this._pointers.values()],s=this.renderRoot.querySelector("svg.plan").getBoundingClientRect(),l=e.distance/Math.max(_(t,i),1),r=e.view,c=[r.x+(e.mid[0]-s.left)/s.width*r.w,r.y+(e.mid[1]-s.top)/s.height*r.h],d=[(t[0]+i[0])/2,(t[1]+i[1])/2],h=r.w*l,f=r.h*l;this._view={x:c[0]-(d[0]-s.left)/s.width*h,y:c[1]-(d[1]-s.top)/s.height*f,w:h,h:f}}startHandle(e,t,i,n=!1){if(this.lockedKind(this._selection))return;let s=this.snapshot(),l=Number(t??0);if(e==="wall-a"||e==="wall-b"){let r=e==="wall-a"?"a":"b",c=this._selection?.kind==="wall"?this.findWall(this._selection.id):void 0;this._drag={kind:"wall-end",end:r,origin:c?c[r]:i,alone:n||this._endsAlone,before:s}}else e==="vertex"?this._drag={kind:"vertex",index:l,before:s}:e==="mid"?(this.selectedPoints().splice(l+1,0,i),this._drag={kind:"vertex",index:l+1,before:s}):e==="corner"?this._drag={kind:"corner",index:l,before:s}:e==="radius"?this._drag={kind:"radius",before:s}:e==="opening-end"?this._drag={kind:"opening-end",before:s}:e==="device-end"?this._drag={kind:"device-end",index:l,before:s}:e==="arc-end"?this._drag={kind:"arc-end",index:l,before:s}:e==="map-rotate"?this._drag={kind:"map-rotate",before:s}:e==="aim"&&(this._drag={kind:"aim",before:s})}applyTyped(){let e=/^(\d+(?:\.\d+)?)(?:<(-?\d+(?:\.\d+)?))?$/.exec(this._typed);this._typed="";let t=this._draft.at(-1);if(!e||!t)return;let i=Number(e[1]),n;if(e[2]!==void 0){let s=Number(e[2])*Math.PI/180;n=[Math.cos(s),-Math.sin(s)]}else{let s=this._cursor??[t[0]+1,t[1]],l=_(s,t)||1;n=[(s[0]-t[0])/l,(s[1]-t[1])/l];let r=Math.sin(8*Math.PI/180);Math.abs(n[1])<r?n=[Math.sign(n[0])||1,0]:Math.abs(n[0])<r&&(n=[0,Math.sign(n[1])])}this.addWallPoint([$(t[0]+n[0]*i),$(t[1]+n[1]*i)])}findMowerMap(){return Object.keys(this.hass.states).find(e=>e.startsWith("camera.")&&this.hass.states[e].attributes.mowing_map_api_path)}async loadMowerMap(e){let t=e.map?this.hass.states[e.map]:void 0,i=t?.attributes.mowing_map_api_path;if(!i){this._message="The map camera of the mower has no mowing map; choose the camera of the Dreame mower map.";return}try{let n=await this.hass.callApi("GET",i.replace(/^\/api\//,"")),s=n.projection;e.projection={maxX:s.max_x,minY:s.min_y,scale:s.scale,padding:s.padding,width:s.native_width??n.width,height:s.native_height??n.height};let l=t.attributes;Number.isFinite(Number(l.charger_x))&&l.charger_x!==null?e.dock=[Number(l.charger_x),Number(l.charger_y)]:l.position_status==="known_dock"&&(e.dock=[Number(l.position_x),Number(l.position_y)]);let r=await this.hass.fetchWithAuth(n.background_path),c=this._mapImages.get(e.id);c&&URL.revokeObjectURL(c),this._mapImages.set(e.id,URL.createObjectURL(await r.blob())),this._message="Drag the map until its lawn covers the lawn of the plan; turn it with the handle at its corner."}catch(n){this._message=`The mower map could not be read: ${n.message??n}`}this.requestUpdate()}async vacuumPosition(e){try{let i=(await this.hass.callWS({type:"call_service",domain:"roborock",service:"get_vacuum_current_position",target:{entity_id:e},return_response:!0})).response?.[e];return i?[i.x,i.y]:void 0}catch(t){this._message=`The vacuum did not report its position: ${t.message??t}`;return}}addVacuum(e){let t=Object.keys(this.hass.states).find(s=>s.startsWith("vacuum."))??null,i=t?Object.keys(this.hass.states).find(s=>s.startsWith(`sensor.${t.split(".")[1]}`)&&/room|pokoj/.test(s))??null:null,n={id:k("vacuum"),kind:"vacuum",entity:t,at:e,pairs:[],rotation:0,mirror:!1,roomSensor:i};this.change(()=>(this.level.devices??=[]).push(n)),this._selection={kind:"device",id:n.id},this._tool="select",this._message="Put the vacuum on its dock, then press Dock is here."}async markDock(e){if(!e.entity)return;let t=await this.vacuumPosition(e.entity);t&&(this.change(()=>e.pairs=[{robot:t,plan:e.at},...(e.pairs??[]).slice(1)]),this._message="Dock marked. Send the vacuum somewhere easy to find, then press Mark where it stands and click that spot.")}async markVacuum(e){let t=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(this._tool="select",!t?.entity||!t.pairs?.length)return;let i=await this.vacuumPosition(t.entity);if(!i)return;this.change(()=>t.pairs=[t.pairs[0],{robot:i,plan:e}]);let n=dt(t);this._message=n&&Math.abs(n-1)>.1?`Calibrated, but the distances differ by ${Math.round(Math.abs(n-1)*100)}%: check the spot, or try Mirror.`:"Calibrated: the vacuum now appears where it is."}addMower(e){let t=this.findMowerMap()??null,i=Object.keys(this.hass.states).find(s=>s.startsWith("lawn_mower."))??null,n={id:k("mower"),kind:"mower",entity:i,map:t,at:e,rotation:0,mirror:!1};this.change(()=>(this.level.devices??=[]).push(n)),this._selection={kind:"device",id:n.id},this._tool="select",this.loadMowerMap(n)}addLight(e,t){let i={id:k("light"),kind:"light",entity:null,at:e,radius:t?1:L};t&&(i.to=t),this.change(()=>(this.level.devices??=[]).push(i)),this._selection={kind:"device",id:i.id},this._tool="select"}addScreen(e,t){let i=_(e,t)>.3?t:[$(e[0]+2),e[1]],n=Object.keys(this.hass.states).find(l=>/^remote\..*(projekt|projector)/.test(l))??null,s={id:k("screen"),kind:"screen",entity:n,remote:n,at:e,to:i};this.change(()=>(this.level.devices??=[]).push(s)),this._selection={kind:"device",id:s.id},this._tool="select"}duplicateSelection(){let e=this._selection;if(!e)return;if(this.lockedKind(e)){this.notify("The layout is locked");return}let t=s=>[$(s[0]+.5),$(s[1]+.5)],i=this.level,n;this.change(()=>{if(e.kind==="wall"){let s=this.findWall(e.id),l=k("wall");i.walls.push({...V(s),id:l,a:t(s.a),b:t(s.b)}),n={kind:"wall",id:l}}else if(e.kind==="opening"){let s=this.findOpening(e.id),l=this.findWall(s.wall);if(!l)return;let r=k(s.type),c=Math.min(s.at+s.width+.2,R(l)-s.width/2);i.openings.push({...V(s),id:r,at:$(c)}),n={kind:"opening",id:r}}else if(e.kind==="device"){let s=this.findDevice(e.id),l=k(s.kind);i.devices.push({...V(s),id:l,at:t(s.at),...s.to?{to:t(s.to)}:{}}),n={kind:"device",id:l}}else if(e.kind==="room"){let s=this.findRoom(e.id),l=k("room");i.rooms.push({...V(s),id:l,name:`${s.name} 2`,points:s.points.map(t)}),n={kind:"room",id:l}}else if(e.kind==="zone"){let s=this.findZone(e.id),l=k("zone");i.zones.push({...V(s),id:l,name:`${s.name} 2`,points:s.points.map(t)}),n={kind:"zone",id:l}}else{let s=V(this.findItem(e.id));s.id=k("item"),s.points&&(s.points=s.points.map(t)),s.center&&(s.center=t(s.center)),s.rect&&(s.rect=[$(s.rect[0]+.5),$(s.rect[1]+.5),s.rect[2],s.rect[3]]),i.items.push(s),n={kind:"item",id:s.id}}}),this._selection=n}addWallPoint(e){let t=this._draft.at(-1);if(t&&_(t,e)>.05){let i=this.wallType(this._wallType);this.change(()=>this.level.walls.push({id:k("wall"),a:t,b:e,t:i.t,type:i.id}))}this._draft=[e]}addRoomPoint(e){if(this._draft.length>=3&&_(e,this._draft[0])<O){this.closeRoom();return}this._draft=[...this._draft,e]}closeRoom(){if(this._draft.length<3)return;if(this._tool==="zone"){let t={id:k("zone"),name:`Zone ${(this.level.zones??[]).length+1}`,kind:"count",points:this._draft};this.change(()=>(this.level.zones??=[]).push(t)),this._draft=[],this._tool="select",this._selection={kind:"zone",id:t.id};return}let e={id:k("room"),name:`Room ${this.level.rooms.length+1}`,points:this._draft,lights:[]};this.change(()=>this.level.rooms.push(e)),this._draft=[],this._tool="select",this._selection={kind:"room",id:e.id}}addOpening(e,t){let i=this.nearestWall(e);if(!i){this._message="Click on a wall to place it.";return}let n=R(i.wall),s=Math.min(t==="door"?.9:t==="gate"?2.5:1.2,n),l=Math.min(Math.max(T(i.at),s/2),n-s/2),r={id:k(t),wall:i.wall.id,at:$(l),width:s,type:t};this.change(()=>this.level.openings.push(r)),this._selection={kind:"opening",id:r.id}}createItem(e,t){let i=this._itemType,n;if(ae.includes(i)){let s=_(e,t)*2;n={id:k("item"),type:i,center:e,diameter:$(s>=.2?s:i==="trampoline"?3.66:i==="round_obstacle"?.9:.6)}}else{let s=Math.min(e[0],t[0]),l=Math.min(e[1],t[1]),r=Math.abs(t[0]-e[0]),c=Math.abs(t[1]-e[1]);(r<.1||c<.1)&&(s=e[0],l=e[1],r=1,c=1),n={id:k("item"),type:i,rect:[$(s),$(l),$(r),$(c)],rotation:0}}this.change(()=>this.level.items.push(n)),this._selection={kind:"item",id:n.id}}joinedEnds(e,t){let i=[];for(let n of this.level.walls)n!==t&&(_(n.a,e)<.01&&i.push({wall:n,end:"a"}),_(n.b,e)<.01&&i.push({wall:n,end:"b"}));return i}dragWallEnd(e,t,i,n,s){let l=this._selection?.kind==="wall"?this.findWall(this._selection.id):void 0;if(!l)return;let r=l[e],c=e==="a"?l.b:l.a,d=s?[]:this.joinedEnds(r,l),h=new Set([l,...d.map(b=>b.wall)]),f=this.snapWall(t,i,c,h,n);l[e]=f;for(let b of d)b.wall[b.end]=f;this.requestUpdate()}moveSelection(e,t){let i=this._selection;if(!i)return;let n=s=>[$(s[0]+e[0]),$(s[1]+e[1])];if(i.kind==="wall"){let s=this.findWall(i.id),l=[...this.joinedEnds(s.a,s),...this.joinedEnds(s.b,s)],r=e;if(l.length){let d=C(s),h=-e[0]*d[1]+e[1]*d[0];r=[-d[1]*h,d[0]*h]}let c=(d,h)=>[$(d[0]+h[0]),$(d[1]+h[1])];s.a=c(s.a,r),s.b=c(s.b,r);for(let d of l){let h=C(d.wall),f=r[0]*h[0]+r[1]*h[1];d.wall[d.end]=c(d.wall[d.end],[h[0]*f,h[1]*f])}}else if(i.kind==="opening"){let s=this.findOpening(i.id),l=this.findWall(s.wall);if(!l)return;let r=R(l),{at:c}=j(l,t);s.at=$(Math.min(Math.max(T(c),s.width/2),r-s.width/2))}else if(i.kind==="room"){let s=this.findRoom(i.id);s.points=s.points.map(n)}else if(i.kind==="zone"){let s=this.findZone(i.id);s.points=s.points.map(n)}else if(i.kind==="device"){let s=this.findDevice(i.id);s.at=n(s.at),s.to&&(s.to=n(s.to))}else{let s=this.findItem(i.id);if(s.points)s.points=s.points.map(n);else if(s.center)s.center=n(s.center);else if(s.rect){let[l,r,c,d]=s.rect;s.rect=[$(l+e[0]),$(r+e[1]),c,d]}}}dragCorner(e,t,i){let n=this.selectedItem();if(!n?.rect)return;let s=n.rotation??0,l=we(n)[(e+2)%4],r=i.altKey?t:this.snap(t,i),c=be(r,l,-s),d=Math.max(.1,Math.abs(c[0]-l[0])),h=Math.max(.1,Math.abs(c[1]-l[1])),f=c[0]>=l[0]?1:-1,b=c[1]>=l[1]?1:-1,g=be([l[0]+f*d/2,l[1]+b*h/2],l,s);n.rect=[$(g[0]-d/2),$(g[1]-h/2),$(d),$(h)],this.requestUpdate()}deleteSelection(){let e=this._selection;if(e){if(this.lockedKind(e)){this.notify("The layout is locked");return}this.notify("Deleted"),this.change(()=>{let t=this.level;e.kind==="wall"?(t.walls=t.walls.filter(i=>i.id!==e.id),t.openings=t.openings.filter(i=>i.wall!==e.id)):e.kind==="opening"?t.openings=t.openings.filter(i=>i.id!==e.id):e.kind==="room"?t.rooms=t.rooms.filter(i=>i.id!==e.id):e.kind==="zone"?t.zones=(t.zones??[]).filter(i=>i.id!==e.id):e.kind==="device"?t.devices=(t.devices??[]).filter(i=>i.id!==e.id):t.items=t.items.filter(i=>i.id!==e.id)}),this._selection=void 0}}selectedItem(){return this._selection?.kind==="item"?this.findItem(this._selection.id):void 0}selectedPoints(){let e=this._selection;if(e?.kind==="room")return this.findRoom(e.id)?.points;if(e?.kind==="zone")return this.findZone(e.id)?.points;if(e?.kind==="item")return this.findItem(e.id)?.points}async save(){if(this._plan){this._saving=!0;try{await this.hass.callWS({type:"floorcast/plan/save",plan:this._plan}),this._saved=JSON.stringify(this._plan),this._message="Saved."}catch(e){this._message=`Not saved: ${e.message??e}`}finally{this._saving=!1}}}exportPlan(){let e=new Blob([JSON.stringify(this._plan,null,1)],{type:"application/json"}),t=document.createElement("a");t.href=URL.createObjectURL(e),t.download="floorcast-plan.json",t.click(),URL.revokeObjectURL(t.href)}importPlan(e){let t=e.target.files?.[0];t&&t.text().then(i=>{try{let n=JSON.parse(i);if(!Array.isArray(n.levels)||!n.levels.length)throw new Error("no levels");let s=this.snapshot();this.setPlan(n,!1),this.remember(s),this._message="Imported. Save to keep it."}catch(n){this._message=`Import failed: ${n.message}`}})}render(){return this._plan?u`
       <div class="top">
         <div class="levels">
-          ${this.narrow?p`<ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>`:m}
-          ${this._plan.levels.map(e=>p`<button
+          ${this.narrow?u`<ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>`:m}
+          ${this._plan.levels.map(e=>u`<button
                 class="chip ${e.id===this.level.id?"on":""}"
                 @click=${()=>{this._levelId=e.id,this._selection=void 0,this._draft=[],this.fit(),this._walks&&this.loadWalks(this._walkHours)}}
               >
@@ -1265,7 +1319,7 @@ data:
           <button
             class="chip ghost"
             title="Add level"
-            @click=${()=>{let e=ut(`Level ${this._plan.levels.length+1}`);this.change(()=>this._plan.levels.push(e)),this._levelId=e.id}}
+            @click=${()=>{let e=ft(`Level ${this._plan.levels.length+1}`);this.change(()=>this._plan.levels.push(e)),this._levelId=e.id}}
           >
             +
           </button>
@@ -1273,7 +1327,7 @@ data:
             <input
               type="checkbox"
               .checked=${this._garden}
-              @change=${()=>{this._garden=!this._garden;let e=this.selectedItem();!this._garden&&e&&dt.includes(e.type)&&(this._selection=void 0),this.fit()}}
+              @change=${()=>{this._garden=!this._garden;let e=this.selectedItem();!this._garden&&e&&pt.includes(e.type)&&(this._selection=void 0),this.fit()}}
             />
             <span class="track"><span class="knob"></span></span>
             Garden
@@ -1288,7 +1342,7 @@ data:
           <button
             class=${this._locked?"on":""}
             title=${this._locked?"Walls, doors, windows, rooms and objects stay where they are. Click to unlock.":"Lock walls, doors, windows, rooms and objects where they are"}
-            @click=${()=>{this._locked=!this._locked,xi(Wn,this._locked),this._locked&&At.includes(this._tool)&&this.cancelTool()}}
+            @click=${()=>{this._locked=!this._locked,Si(Fn,this._locked),this._locked&&Rt.includes(this._tool)&&this.cancelTool()}}
           >
             ${this._locked?"\u{1F512}":"\u{1F513}"} Layout
           </button>
@@ -1302,7 +1356,7 @@ data:
         </div>
       </div>
       <div class="main">
-        ${this._guide?p`<floorcast-guide class="guide"></floorcast-guide>`:m}
+        ${this._guide?u`<floorcast-guide class="guide"></floorcast-guide>`:m}
         <div class="canvas" ?hidden=${this._guide}>
           ${this.renderCanvas()} ${this.renderBigImage()} ${this.renderPlacing()} ${this.renderToast()}
           <div class="view-buttons">
@@ -1313,17 +1367,17 @@ data:
         </div>
         <aside ?hidden=${this._guide}>${this.renderPanel()}</aside>
       </div>
-    `:p`<div class="loading">Loading…</div>`}cancelTool(){this._tool="select",this._draft=[],this._message=""}startTool(e){if(this._locked&&At.includes(e)){this.notify("The layout is locked");return}let t=Ei.get(e);t&&t!==this._mode&&this.setMode(t),this._tool=e,this._draft=[],this._message="",this._selection=void 0}hiddenDevice(e){return this._hidden.has("devices")&&!this.editable({kind:"device",id:e.id})}renderPlacing(){if(this._tool==="select"||this._guide)return m;let e=Lt[this._tool]??this._tool;return p`<div class="placing-bar">
-      <b>${e}</b><span>${jn[this._tool]}</span>
+    `:u`<div class="loading">Loading…</div>`}cancelTool(){this._tool="select",this._draft=[],this._message=""}startTool(e){if(this._locked&&Rt.includes(e)){this.notify("The layout is locked");return}let t=Li.get(e);t&&t!==this._mode&&this.setMode(t),this._tool=e,this._draft=[],this._message="",this._selection=void 0}hiddenDevice(e){return this._hidden.has("devices")&&!this.editable({kind:"device",id:e.id})}renderPlacing(){if(this._tool==="select"||this._guide)return m;let e=Ct[this._tool]??this._tool;return u`<div class="placing-bar">
+      <b>${e}</b><span>${Bn[this._tool]}</span>
       <button @click=${()=>this.cancelTool()}>Cancel (Esc)</button>
-    </div>`}renderToast(){return this._toast?p`<div class="toast">
+    </div>`}renderToast(){return this._toast?u`<div class="toast">
       <span>${this._toast}</span>
       <button
         @click=${()=>{this.undo(),this._toast=void 0}}
       >
         Undo
       </button>
-    </div>`:m}findResults(){let e=this._find.toLowerCase().split(/\s+/).filter(Boolean);if(!e.length)return[];let t=[],i=n=>n?String(this.hass.states[n]?.attributes.friendly_name??""):"";for(let n of this._plan.levels){for(let s of n.rooms)t.push({label:s.name,detail:`Room \xB7 ${n.name}`,level:n,s:{kind:"room",id:s.id},at:P(s.points),text:`room ${s.name} ${s.area??""}`});for(let s of n.devices??[]){let l=s.kind==="sensor"&&s.sensorType==="alarm"?"Alarm":Rt[s.kind];t.push({label:s.label||i(s.entity)||s.entity||l,detail:`${l} \xB7 ${s.entity??s.source??"no entity"} \xB7 ${n.name}`,level:n,s:{kind:"device",id:s.id},at:s.at,text:`${l} ${s.kind} ${s.label??""} ${s.entity??""} ${i(s.entity)} ${s.source??""}`})}for(let s of n.openings){let l=n.walls.find(c=>c.id===s.wall);if(!l)continue;let r=s.type==="door"?"Door":"Window";t.push({label:i(s.cover)||i(s.contact)||r,detail:`${r} \xB7 ${[s.contact,s.cover].filter(Boolean).join(", ")||"no sensor"} \xB7 ${n.name}`,level:n,s:{kind:"opening",id:s.id},at:M(l,s.at),text:`${r} ${s.contact??""} ${s.cover??""} ${i(s.contact)} ${i(s.cover)}`})}for(let s of n.zones??[])t.push({label:s.name,detail:`Zone \xB7 ${n.name}`,level:n,s:{kind:"zone",id:s.id},at:P(s.points),text:`zone ${s.name} ${s.kind}`});for(let s of n.items){let l=s.center??P(Ie(s));t.push({label:s.name||H[s.type],detail:`Object \xB7 ${n.name}`,level:n,s:{kind:"item",id:s.id},at:l,text:`object ${H[s.type]} ${s.type} ${s.name??""}`})}}return t.filter(n=>e.every(s=>n.text.toLowerCase().includes(s))).slice(0,12)}goTo(e){this._find="",e.level.id!==this.level.id&&(this._levelId=e.level.id,this._draft=[]),this.setMode(this.modeFor(e.s)),this.pick(e.s,e.at)}renderFind(){let e=this.findResults();return p`<div class="find-box">
+    </div>`:m}findResults(){let e=this._find.toLowerCase().split(/\s+/).filter(Boolean);if(!e.length)return[];let t=[],i=n=>n?String(this.hass.states[n]?.attributes.friendly_name??""):"";for(let n of this._plan.levels){for(let s of n.rooms)t.push({label:s.name,detail:`Room \xB7 ${n.name}`,level:n,s:{kind:"room",id:s.id},at:P(s.points),text:`room ${s.name} ${s.area??""}`});for(let s of n.devices??[]){let l=s.kind==="sensor"&&s.sensorType==="alarm"?"Alarm":Dt[s.kind];t.push({label:s.label||i(s.entity)||s.entity||l,detail:`${l} \xB7 ${s.entity??s.source??"no entity"} \xB7 ${n.name}`,level:n,s:{kind:"device",id:s.id},at:s.at,text:`${l} ${s.kind} ${s.label??""} ${s.entity??""} ${i(s.entity)} ${s.source??""}`})}for(let s of n.openings){let l=n.walls.find(c=>c.id===s.wall);if(!l)continue;let r=ye[s.type];t.push({label:i(s.cover)||i(s.lock)||i(s.contact)||r,detail:`${r} \xB7 ${[s.contact,s.cover,s.lock].filter(Boolean).join(", ")||"no sensor"} \xB7 ${n.name}`,level:n,s:{kind:"opening",id:s.id},at:M(l,s.at),text:`${r} ${s.contact??""} ${s.cover??""} ${s.lock??""} ${i(s.contact)} ${i(s.cover)} ${i(s.lock)}`})}for(let s of n.zones??[])t.push({label:s.name,detail:`Zone \xB7 ${n.name}`,level:n,s:{kind:"zone",id:s.id},at:P(s.points),text:`zone ${s.name} ${s.kind}`});for(let s of n.items){let l=s.center??P(He(s));t.push({label:s.name||N[s.type],detail:`Object \xB7 ${n.name}`,level:n,s:{kind:"item",id:s.id},at:l,text:`object ${N[s.type]} ${s.type} ${s.name??""}`})}}return t.filter(n=>e.every(s=>n.text.toLowerCase().includes(s))).slice(0,12)}goTo(e){this._find="",e.level.id!==this.level.id&&(this._levelId=e.level.id,this._draft=[]),this.setMode(this.modeFor(e.s)),this.pick(e.s,e.at)}renderFind(){let e=this.findResults();return u`<div class="find-box">
       <input
         class="find"
         type="search"
@@ -1332,27 +1386,27 @@ data:
         @input=${t=>this._find=t.target.value}
         @keydown=${t=>{t.key==="Enter"&&e[0]&&this.goTo(e[0]),t.key==="Escape"&&(this._find="")}}
       />
-      ${this._find.trim()?p`<div class="find-results">
-            ${e.length?e.map(t=>p`<button @click=${()=>this.goTo(t)}>
+      ${this._find.trim()?u`<div class="find-results">
+            ${e.length?e.map(t=>u`<button @click=${()=>this.goTo(t)}>
                     <span>${t.label}</span><em>${t.detail}</em>
-                  </button>`):p`<p class="muted">Nothing found.</p>`}
+                  </button>`):u`<p class="muted">Nothing found.</p>`}
           </div>`:m}
-    </div>`}renderLayers(){let e=(t,i)=>p`<label class="check">
+    </div>`}renderLayers(){let e=(t,i)=>u`<label class="check">
       <input
         type="checkbox"
         .checked=${!this._hidden.has(t)}
-        @change=${()=>{let n=new Set(this._hidden);n.has(t)?n.delete(t):n.add(t),this._hidden=n,Mi(zn,[...n])}}
+        @change=${()=>{let n=new Set(this._hidden);n.has(t)?n.delete(t):n.add(t),this._hidden=n,Ai(jn,[...n])}}
       />
       ${i}
-    </label>`;return p`<div class="layers-box">
+    </label>`;return u`<div class="layers-box">
       <button class=${this._hidden.size?"on":""} @click=${()=>this._layersOpen=!this._layersOpen} title="Show or hide parts of the plan">
         Layers ▾
       </button>
-      ${this._layersOpen?p`<div class="layers-menu">
+      ${this._layersOpen?u`<div class="layers-menu">
             ${e("devices","Devices")} ${e("zones","Zones")} ${e("names","Room names")}
             <p class="muted">Hidden parts cannot be clicked.</p>
           </div>`:m}
-    </div>`}renderCanvas(){let e=this._view,t=this.level,i=this.pixel();return p`<svg
+    </div>`}renderCanvas(){let e=this._view,t=this.level,i=this.pixel();return u`<svg
       class="plan mode-${this._mode} ${this._tool!=="select"?"placing":""}"
       viewBox="${e.x} ${e.y} ${e.w} ${e.h}"
       @pointerdown=${this.onDown}
@@ -1363,20 +1417,21 @@ data:
       @wheel=${this.onWheel}
       @contextmenu=${n=>{n.preventDefault(),this._draft=[]}}
     >
-      ${$n}
+      ${vn}
       <defs>
         <pattern id="fc-grid" patternUnits="userSpaceOnUse" width="1" height="1">
           <path d="M1 0H0V1" fill="none" class="grid"></path>
         </pattern>
       </defs>
       <rect x=${e.x} y=${e.y} width=${e.w} height=${e.h} fill="url(#fc-grid)"></rect>
-      ${Dn(this.shown,this._live?this.hass.states:void 0,un(this._plan),this._live?this.liveSprays():m)}
+      ${Nn(this.shown,this._live?this.hass.states:void 0,fn(this._plan),this._live?this.liveSprays():m)}
       ${this._groundPreview.size?this._groundFeed.render(this.shown.id,void 0,this._groundPreview):m}
-      ${this._live?Cn(this.shown,this.hass.states,"editor"):m}
-      ${this._live?Ln(this.shown,this.hass.states,"editor"):m}
-      ${this._live?kn(this.shown,this.hass.states,i*10):m}
+      ${this._live?Hn(this.shown,this.hass.states,"editor"):m}
+      ${this._live?On(this.shown,this.hass.states,"editor"):m}
+      ${this._live?xn(this.shown,this.hass.states,i*10):m}
+      ${this.shown.openings.filter(n=>n.lock).map(n=>{let s=this.shown.walls.find(l=>l.id===n.wall);return s?Cn(Rn(s,n,i*14),this._live?this.hass.states[n.lock]?.state:"locked",i*14):m})}
       ${this._hidden.has("names")?m:this.shown.rooms.map(n=>{let[s,l]=P(n.points);return n.stairs?m:w`<text class="fc-label" x=${s} y=${l}>${n.name}</text>`})}
-      ${this._mode==="people"?(this.shown.devices??[]).filter(n=>n.kind==="radar"||n.kind==="camera"&&!!n.frigate).map(n=>w`<path class="radar-range ${n.kind}" d=${n.kind==="radar"?vt(n):yt(n)}></path>`):m}
+      ${this._mode==="people"?(this.shown.devices??[]).filter(n=>n.kind==="radar"||n.kind==="camera"&&!!n.frigate).map(n=>w`<path class="radar-range ${n.kind}" d=${n.kind==="radar"?_t(n):kt(n)}></path>`):m}
       ${(this._mode==="people"||!this._hidden.has("zones")?this.shown.zones??[]:[]).map(n=>{let s=n.points.map((c,d)=>`${d?"L":"M"}${c[0]} ${c[1]}`).join("")+"Z",[l,r]=P(n.points);return w`<g data-zone=${n.id} class="zone ${n.kind}">
           <path class="area" d=${s}></path>
           <path class="edge" stroke-width=${i*10} d=${s}></path>
@@ -1384,28 +1439,28 @@ data:
         </g>`})}
       ${(this.shown.devices??[]).filter(n=>!this.hiddenDevice(n)).map(n=>w`<g class="kind kind-${n.kind}">${n.kind==="radar"?w`<g data-device=${n.id} class="camera-device">
                 <circle class="hit" cx=${n.at[0]} cy=${n.at[1]} r=${i*9}></circle>
-                ${xn(n,i*5)}
-                ${this._live&&this.showsRawTargets(n)?De(n,this.hass.states).map(s=>Ue(s,this._mode==="people"?"raw":"seen")):m}
+                ${Mn(n,i*5)}
+                ${this._live&&this.showsRawTargets(n)?Oe(n,this.hass.states).map(s=>Fe(s,this._mode==="people"?"raw":"seen")):m}
               </g>`:n.kind==="camera"?w`<g data-device=${n.id} class="camera-device">
-                ${_n(n,`editor-camera-${n.id}`)}
+                ${Pn(n,`editor-camera-${n.id}`)}
                 <circle class="hit" cx=${n.at[0]} cy=${n.at[1]} r=${i*9}></circle>
-                ${Pn(n,i*5)}
+                ${En(n,i*5)}
               </g>`:n.kind==="vacuum"?w`<g data-device=${n.id} class="mower-device">
                 <circle class="hit" cx=${n.at[0]} cy=${n.at[1]} r=${i*9}></circle>
-                ${Rn(n.at,Math.max(1,i*9/.175))}
+                ${In(n.at,Math.max(1,i*9/.175))}
               </g>`:n.kind==="mower"?this.renderMowerInEditor(n,i):n.kind==="sprinkler"?w`<g data-device=${n.id} class="nozzle ${n.entity?"":"unset"}">
-                <path class="area" d=${ze(n)}></path>
+                <path class="area" d=${We(n)}></path>
                 <circle cx=${n.at[0]} cy=${n.at[1]} r=${i*6}></circle>
               </g>`:n.kind==="screen"?w`<g data-device=${n.id} class="sensor-device">
-                ${An(n,this._live&&Le(n.entity?this.hass.states[n.entity]?.state:void 0))}
+                ${Dn(n,this._live&&Re(n.entity?this.hass.states[n.entity]?.state:void 0))}
                 <path class="hit-line" stroke-width=${i*14}
                   d="M${n.at[0]} ${n.at[1]}L${(n.to??n.at)[0]} ${(n.to??n.at)[1]}"></path>
               </g>`:n.kind==="sensor"&&n.sensorType==="alarm"?w`<g data-device=${n.id} class="sensor-device">
                 <circle class="hit" cx=${n.at[0]} cy=${n.at[1]} r=${i*12}></circle>
-                ${(()=>{let s=rn(n.entity,n.entity?this.hass.states[n.entity]:void 0);return Tn(n.at,s.kind,this._live&&s.active,!n.entity||s.unknown,i*14)})()}
+                ${(()=>{let s=cn(n.entity,n.entity?this.hass.states[n.entity]:void 0);return Ln(n.at,s.kind,this._live&&s.active,!n.entity||s.unknown,i*14)})()}
               </g>`:n.kind==="sensor"?w`<g data-device=${n.id} class="sensor-device">
                 <circle class="hit" cx=${n.at[0]} cy=${n.at[1]} r=${i*12}></circle>
-                ${Sn(n.at,n.label,(this._live&&n.entity?rt(this.hass.states[n.entity],n.main):void 0)??(n.sensorType==="temperature"?"\u2013\xB0":n.sensorType==="humidity"?"\u2013%":"Sensor"),this._live?(n.secondary??[]).map(s=>{let l=s.entity?rt(this.hass.states[s.entity],s):void 0;return l&&s.label?`${s.label} ${l}`:l}).filter(s=>!!s):[],_t(1/i).value,_t(1/i).sub,!n.entity)}
+                ${An(n.at,n.label,(this._live&&n.entity?ct(this.hass.states[n.entity],n.main):void 0)??(n.sensorType==="temperature"?"\u2013\xB0":n.sensorType==="humidity"?"\u2013%":"Sensor"),this._live?(n.secondary??[]).map(s=>{let l=s.entity?ct(this.hass.states[s.entity],s):void 0;return l&&s.label?`${s.label} ${l}`:l}).filter(s=>!!s):[],Pt(1/i).value,Pt(1/i).sub,!n.entity)}
               </g>`:n.to?w`<g data-device=${n.id} class="lamp ${n.entity?"":"unset"}">
                 <path class="line" stroke-width=${i*7} d="M${n.at[0]} ${n.at[1]}L${n.to[0]} ${n.to[1]}"></path>
               </g>`:w`<g data-device=${n.id} class="lamp ${n.entity?"":"unset"} ${this._live&&n.entity&&this.hass.states[n.entity]?.state==="on"?"on":""}">
@@ -1415,122 +1470,122 @@ data:
       ${this._mode==="people"&&this._walks?this._walks.map(n=>w`<polyline class="walk" points=${n.map(s=>`${s[0]},${s[1]}`).join(" ")}></polyline>`):m}
       ${this.trackedPeople()}
       ${this.renderSelection(i)} ${this.renderDraft(i)}
-    </svg>`}showsRawTargets(e){if(this._mode!=="people")return!0;if(this._selection?.kind==="zone")return!1;let t=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;return t?.kind==="camera"?!1:t?.kind!=="radar"||t.id===e.id}trackedPeople(){if(!this._live||!this._people||this._mode!=="people")return m;let e=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0,t=e?.kind==="radar"?e.source:e?.kind==="camera"?e.frigate:void 0,i=e?.kind==="camera"&&e.frigate?this._raw[this.level.id]?.[e.frigate]??[]:[],n=(this._people[this.level.id]??[]).filter(s=>!t||!!s.sources?.includes(t));return w`${i.map(s=>Ue(s,"raw"))}
-      ${n.map(s=>Ue([s.x,s.y],`${s.status} ${s.source??""}`))}`}renderDraft(e){let t=this._cursor;if(this._drag?.kind==="create-light"){let{start:d,current:h}=this._drag;return w`<path class="draft-wall" stroke-width=${e*7} d="M${d[0]} ${d[1]}L${h[0]} ${h[1]}"></path>`}if(this._drag?.kind==="create-room"){let{start:d,current:h}=this._drag;return w`<rect class="draft" x=${Math.min(d[0],h[0])} y=${Math.min(d[1],h[1])}
-        width=${Math.abs(h[0]-d[0])} height=${Math.abs(h[1]-d[1])}></rect>`}if(this._drag?.kind==="create-item"){let{start:d,current:h}=this._drag;return oe.includes(this._itemType)?w`<circle class="draft" cx=${d[0]} cy=${d[1]} r=${_(d,h)}></circle>`:w`<rect class="draft" x=${Math.min(d[0],h[0])} y=${Math.min(d[1],h[1])}
+    </svg>`}showsRawTargets(e){if(this._mode!=="people")return!0;if(this._selection?.kind==="zone")return!1;let t=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;return t?.kind==="camera"?!1:t?.kind!=="radar"||t.id===e.id}trackedPeople(){if(!this._live||!this._people||this._mode!=="people")return m;let e=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0,t=e?.kind==="radar"?e.source:e?.kind==="camera"?e.frigate:void 0,i=e?.kind==="camera"&&e.frigate?this._raw[this.level.id]?.[e.frigate]??[]:[],n=(this._people[this.level.id]??[]).filter(s=>!t||!!s.sources?.includes(t));return w`${i.map(s=>Fe(s,"raw"))}
+      ${n.map(s=>Fe([s.x,s.y],`${s.status} ${s.source??""}`))}`}renderDraft(e){let t=this._cursor;if(this._drag?.kind==="create-light"){let{start:d,current:h}=this._drag;return w`<path class="draft-wall" stroke-width=${e*7} d="M${d[0]} ${d[1]}L${h[0]} ${h[1]}"></path>`}if(this._drag?.kind==="create-room"){let{start:d,current:h}=this._drag;return w`<rect class="draft" x=${Math.min(d[0],h[0])} y=${Math.min(d[1],h[1])}
+        width=${Math.abs(h[0]-d[0])} height=${Math.abs(h[1]-d[1])}></rect>`}if(this._drag?.kind==="create-item"){let{start:d,current:h}=this._drag;return ae.includes(this._itemType)?w`<circle class="draft" cx=${d[0]} cy=${d[1]} r=${_(d,h)}></circle>`:w`<rect class="draft" x=${Math.min(d[0],h[0])} y=${Math.min(d[1],h[1])}
         width=${Math.abs(h[0]-d[0])} height=${Math.abs(h[1]-d[1])}></rect>`}let i=this._tool==="wall"||this._tool==="room"||this._tool==="zone",n=t&&i?[...this._draft,t]:this._draft,s=t&&this._tool!=="select"?w`<circle class="cursor" cx=${t[0]} cy=${t[1]} r=${e*4}></circle>`:m;if(n.length<2)return s;let l=n.map((d,h)=>`${h?"L":"M"}${d[0]} ${d[1]}`).join(""),r=this._draft.length&&t?_(this._draft.at(-1),t):0,c=this._typed?`${this._typed} m \u23CE`:`${r.toFixed(2)} m`;return w`
       <path class=${this._tool==="wall"?"draft-wall":"draft"} stroke-width=${this._tool==="wall"?this.wallType(this._wallType).t:e*2} d=${l}></path>
       ${s}
       ${r||this._typed?w`<text class="measure ${this._typed?"typed":""}" x=${t[0]+e*10} y=${t[1]-e*10} font-size=${e*13}>${c}</text>`:m}
-    `}watering(e){let t=e?this.hass.states[e]?.state:void 0;return t==="open"||t==="opening"||t==="on"}liveSprays(){return(this.shown.devices??[]).filter(e=>e.kind==="sprinkler").map(e=>Mn(e,this.watering(e.entity)))}stateLine(e){if(!e)return m;let t=this.hass.states[e];if(!t)return p`<p class="muted">${e} does not exist.</p>`;let i=e.split(".")[0],n=t.attributes.brightness,s=n&&t.state==="on"?` \xB7 ${Math.round(Number(n)/255*100)}%`:"",l=t.attributes.unit_of_measurement?` ${t.attributes.unit_of_measurement}`:"",r=t.attributes.friendly_name??e,c=m;if(i==="light"||i==="switch")c=p`<button class="small" @click=${()=>this.hass.callService("homeassistant","toggle",{entity_id:e})}>
+    `}watering(e){let t=e?this.hass.states[e]?.state:void 0;return t==="open"||t==="opening"||t==="on"}liveSprays(){return(this.shown.devices??[]).filter(e=>e.kind==="sprinkler").map(e=>Sn(e,this.watering(e.entity)))}stateLine(e){if(!e)return m;let t=this.hass.states[e];if(!t)return u`<p class="muted">${e} does not exist.</p>`;let i=e.split(".")[0],n=t.attributes.brightness,s=n&&t.state==="on"?` \xB7 ${Math.round(Number(n)/255*100)}%`:"",l=t.attributes.unit_of_measurement?` ${t.attributes.unit_of_measurement}`:"",r=t.attributes.friendly_name??e,c=m;if(i==="light"||i==="switch")c=u`<button class="small" @click=${()=>this.hass.callService("homeassistant","toggle",{entity_id:e})}>
         ${t.state==="on"?"Turn off":"Turn on"}
-      </button>`;else if(i==="valve"){let d=t.state==="open"||t.state==="opening";c=p`<button
+      </button>`;else if(i==="valve"){let d=t.state==="open"||t.state==="opening";c=u`<button
         class="small"
         @click=${()=>{!d&&!confirm(`Open ${r}? Water starts flowing.`)||this.hass.callService("valve",d?"close_valve":"open_valve",{entity_id:e})}}
       >
         ${d?"Close":"Open"}
-      </button>`}return p`<div class="state-line">
+      </button>`}return u`<div class="state-line">
       <span><b>${r}</b>: ${t.state}${l}${s}</span>
       ${c}
-    </div>`}renderMowerInEditor(e,t){let i=kt(e,e.map?this.hass.states[e.map]?.attributes:void 0),n=e.entity?this.hass.states[e.entity]?.state:void 0;return w`<g data-device=${e.id} class="mower-device">
+    </div>`}renderMowerInEditor(e,t){let i=xt(e,e.map?this.hass.states[e.map]?.attributes:void 0),n=e.entity?this.hass.states[e.entity]?.state:void 0;return w`<g data-device=${e.id} class="mower-device">
       <circle class="anchor" cx=${e.at[0]} cy=${e.at[1]} r=${t*7}></circle>
-      ${i?En(i,n):m}
-    </g>`}renderSelection(e){let t=this._selection;if(!t)return m;let i=e*6;if(t.kind==="device"){let r=this.findDevice(t.id);if(!r)return m;if(r.kind==="radar"){let c=N(r.at,r.heading??0,r.radius??ee);return w`<path class="selected-area" d=${vt(r)}></path>
-          <circle class="handle" data-handle="aim" cx=${c[0]} cy=${c[1]} r=${i}></circle>`}if(r.kind==="camera"){let c=N(r.at,r.heading??0,r.radius??z),d=Re(r.calibration??[]),h=d?(this._paths.get(r.id)??[]).map(f=>f.map(b=>cn(d,b)).filter(b=>!!b)):[];return w`<path class="selected-area" d=${yt(r)}></path>
+      ${i?Tn(i,n):m}
+    </g>`}renderSelection(e){let t=this._selection;if(!t)return m;let i=e*6;if(t.kind==="device"){let r=this.findDevice(t.id);if(!r)return m;if(r.kind==="radar"){let c=U(r.at,r.heading??0,r.radius??te);return w`<path class="selected-area" d=${_t(r)}></path>
+          <circle class="handle" data-handle="aim" cx=${c[0]} cy=${c[1]} r=${i}></circle>`}if(r.kind==="camera"){let c=U(r.at,r.heading??0,r.radius??W),d=Ce(r.calibration??[]),h=d?(this._paths.get(r.id)??[]).map(f=>f.map(b=>hn(d,b)).filter(b=>!!b)):[];return w`<path class="selected-area" d=${kt(r)}></path>
           ${h.map(f=>w`<polyline class="seen-path" stroke-width=${e*3} points=${f.map(b=>`${b[0]},${b[1]}`).join(" ")}></polyline>`)}
           ${(r.calibration??[]).map((f,b)=>w`<g class="calibration-mark"><circle cx=${f.plan[0]} cy=${f.plan[1]} r=${e*8}></circle>
               <text x=${f.plan[0]} y=${f.plan[1]} font-size=${e*10}>${b+1}</text></g>`)}
-          <circle class="handle" data-handle="aim" cx=${c[0]} cy=${c[1]} r=${i}></circle>`}if(r.kind==="mower"){if(!r.projection)return m;let c=r.projection,d=this._mapImages.get(r.id),h=X(r,[r.mirror?0:c.width,0]),f=[[0,0],[c.width,0],[c.width,c.height],[0,c.height]].map(y=>X(r,y)),b=this.mowerPose(r),g=b?(r.ground?.spots??[]).map(y=>Gn(y.ahead,b)):[];return w`
-          ${d?w`<image class="mower-map" href=${d} width=${c.width} height=${c.height} transform=${dn(r)}></image>`:m}
+          <circle class="handle" data-handle="aim" cx=${c[0]} cy=${c[1]} r=${i}></circle>`}if(r.kind==="mower"){if(!r.projection)return m;let c=r.projection,d=this._mapImages.get(r.id),h=J(r,[r.mirror?0:c.width,0]),f=[[0,0],[c.width,0],[c.width,c.height],[0,c.height]].map(y=>J(r,y)),b=this.mowerPose(r),g=b?(r.ground?.spots??[]).map(y=>Zn(y.ahead,b)):[];return w`
+          ${d?w`<image class="mower-map" href=${d} width=${c.width} height=${c.height} transform=${pn(r)}></image>`:m}
           <path class="selected-area" d=${f.map((y,v)=>`${v?"L":"M"}${y[0]} ${y[1]}`).join("")+"Z"}></path>
           <circle class="handle" data-handle="map-rotate" cx=${h[0]} cy=${h[1]} r=${i*1.3}></circle>
           ${g.map((y,v)=>w`<g class="calibration-mark"><circle cx=${y[0]} cy=${y[1]} r=${e*8}></circle>
-              <text x=${y[0]} y=${y[1]} font-size=${e*10}>${v+1}</text></g>`)}`}if(r.kind==="sprinkler"){let c=r.radius??J,d=r.arc??360,h=N(r.at,r.heading??0,c),f=N(r.at,(r.heading??0)+d,c);return w`<path class="selected-area" d=${ze(r)}></path>
+              <text x=${y[0]} y=${y[1]} font-size=${e*10}>${v+1}</text></g>`)}`}if(r.kind==="sprinkler"){let c=r.radius??Q,d=r.arc??360,h=U(r.at,r.heading??0,c),f=U(r.at,(r.heading??0)+d,c);return w`<path class="selected-area" d=${We(r)}></path>
           <circle class="handle" data-handle="arc-end" data-index="0" cx=${h[0]} cy=${h[1]} r=${i}></circle>
-          ${d<360?w`<circle class="handle mid" data-handle="arc-end" data-index="1" cx=${f[0]} cy=${f[1]} r=${i}></circle>`:m}`}if(r.kind==="screen"&&r.to){let c=Mt(this.level,r);return w`<path class="selected-area" d=${c.map((d,h)=>`${h?"L":"M"}${d[0]} ${d[1]}`).join("")+"Z"}></path>
+          ${d<360?w`<circle class="handle mid" data-handle="arc-end" data-index="1" cx=${f[0]} cy=${f[1]} r=${i}></circle>`:m}`}if(r.kind==="screen"&&r.to){let c=St(this.level,r);return w`<path class="selected-area" d=${c.map((d,h)=>`${h?"L":"M"}${d[0]} ${d[1]}`).join("")+"Z"}></path>
           <circle class="handle" data-handle="device-end" data-index="0" cx=${r.at[0]} cy=${r.at[1]} r=${i}></circle>
-          <circle class="handle" data-handle="device-end" data-index="1" cx=${r.to[0]} cy=${r.to[1]} r=${i}></circle>`}if(r.to){let c=`M${r.at[0]} ${r.at[1]}L${r.to[0]} ${r.to[1]}`;return w`<path class="reach-line" stroke-width=${(r.radius??A)*2} d=${c}></path>
+          <circle class="handle" data-handle="device-end" data-index="1" cx=${r.to[0]} cy=${r.to[1]} r=${i}></circle>`}if(r.to){let c=`M${r.at[0]} ${r.at[1]}L${r.to[0]} ${r.to[1]}`;return w`<path class="reach-line" stroke-width=${(r.radius??L)*2} d=${c}></path>
           <circle class="handle" data-handle="device-end" data-index="0" cx=${r.at[0]} cy=${r.at[1]} r=${i}></circle>
-          <circle class="handle" data-handle="device-end" data-index="1" cx=${r.to[0]} cy=${r.to[1]} r=${i}></circle>`}return w`<circle class="reach" cx=${r.at[0]} cy=${r.at[1]} r=${r.radius??A}></circle>
+          <circle class="handle" data-handle="device-end" data-index="1" cx=${r.to[0]} cy=${r.to[1]} r=${i}></circle>`}return w`<circle class="reach" cx=${r.at[0]} cy=${r.at[1]} r=${r.radius??L}></circle>
         <circle class="selected-area" cx=${r.at[0]} cy=${r.at[1]} r=${e*11}></circle>`}let n=(r,c,d,h="handle")=>w`<circle class=${h} data-handle=${c} data-index=${d??m} cx=${r[0]} cy=${r[1]} r=${i}></circle>`;if(t.kind==="wall"){let r=this.findWall(t.id);return r?w`<path class="selected" stroke-width=${r.t} d="M${r.a[0]} ${r.a[1]}L${r.b[0]} ${r.b[1]}"></path>
         ${n(r.a,"wall-a")}${n(r.b,"wall-b")}`:m}if(t.kind==="opening"){let r=this.findOpening(t.id),c=r&&this.findWall(r.wall);if(!r||!c)return m;let d=M(c,r.at-r.width/2),h=M(c,r.at+r.width/2);return w`<path class="selected" stroke-width=${c.t} d="M${d[0]} ${d[1]}L${h[0]} ${h[1]}"></path>
         ${n(h,"opening-end")}`}let s=this.selectedPoints();if(s){let r=s.map((c,d)=>{let h=s[(d+1)%s.length];return n([(c[0]+h[0])/2,(c[1]+h[1])/2],"mid",d,"handle mid")});return w`<path class="selected-area" d=${s.map((c,d)=>`${d?"L":"M"}${c[0]} ${c[1]}`).join("")+"Z"}></path>
-        ${r}${s.map((c,d)=>n(c,"vertex",d))}`}let l=this.selectedItem();if(l?.rect){let r=be(l);return w`<path class="selected-area" d=${r.map((c,d)=>`${d?"L":"M"}${c[0]} ${c[1]}`).join("")+"Z"}></path>
+        ${r}${s.map((c,d)=>n(c,"vertex",d))}`}let l=this.selectedItem();if(l?.rect){let r=we(l);return w`<path class="selected-area" d=${r.map((c,d)=>`${d?"L":"M"}${c[0]} ${c[1]}`).join("")+"Z"}></path>
         ${r.map((c,d)=>n(c,"corner",d))}`}if(l?.center){let r=(l.diameter??1)/2;return w`<circle class="selected-area" cx=${l.center[0]} cy=${l.center[1]} r=${r}></circle>
-        ${n([l.center[0]+r,l.center[1]],"radius")}`}return m}renderPanel(){let e=It[this._mode];return p`
+        ${n([l.center[0]+r,l.center[1]],"radius")}`}return m}renderPanel(){let e=Nt[this._mode];return u`
       <nav class="tabs">
-        ${Nn.map(({mode:t,label:i})=>p`<button class="tab ${t===this._mode?"on":""}" @click=${()=>this.setMode(t)}>${i}</button>`)}
+        ${Gn.map(({mode:t,label:i})=>u`<button class="tab ${t===this._mode?"on":""}" @click=${()=>this.setMode(t)}>${i}</button>`)}
       </nav>
-      ${e.length?p`<section class="add-section">
+      ${e.length?u`<section class="add-section">
             <h4>Add</h4>
             <div class="palette">
-              ${e.map(([t,i,n])=>{let s=this._locked&&At.includes(t),l=this._tool===t;return p`<button
+              ${e.map(([t,i,n])=>{let s=this._locked&&Rt.includes(t),l=this._tool===t;return u`<button
                   class=${l?"on":""}
                   ?disabled=${s}
-                  title=${s?"Unlock the layout to draw":jn[t]}
+                  title=${s?"Unlock the layout to draw":Bn[t]}
                   @click=${()=>l?this.cancelTool():this.startTool(t)}
                 >
                   <span>${i}</span><kbd>${n}</kbd>
                 </button>`})}
             </div>
-            ${this.toolOptions()!==m?p`<div class="tools">${this.toolOptions()}</div>`:m}
+            ${this.toolOptions()!==m?u`<div class="tools">${this.toolOptions()}</div>`:m}
           </section>`:m}
-      ${this._selection?p`<button class="back" @click=${()=>this._selection=void 0}>‹ ${Nn.find(t=>t.mode===this._mode).label}</button>
+      ${this._selection?u`<button class="back" @click=${()=>this._selection=void 0}>‹ ${Gn.find(t=>t.mode===this._mode).label}</button>
             ${this.renderProperties()}`:this.renderList()}
-      ${this._message?p`<p class="message">${this._message}</p>`:m}
-    `}toolOptions(){return this._tool==="wall"?p`<select @change=${e=>this._wallType=e.target.value} title="Wall type">
-        ${this.wallTypes.map(e=>p`<option value=${e.id} ?selected=${e.id===this._wallType}>${e.name} ${(e.t*100).toFixed(1)} cm</option>`)}
-      </select>`:this._tool==="light"?p`<select @change=${e=>this._lightShape=e.target.value}>
+      ${this._message?u`<p class="message">${this._message}</p>`:m}
+    `}toolOptions(){return this._tool==="wall"?u`<select @change=${e=>this._wallType=e.target.value} title="Wall type">
+        ${this.wallTypes.map(e=>u`<option value=${e.id} ?selected=${e.id===this._wallType}>${e.name} ${(e.t*100).toFixed(1)} cm</option>`)}
+      </select>`:this._tool==="light"?u`<select @change=${e=>this._lightShape=e.target.value}>
         <option value="point" ?selected=${this._lightShape==="point"}>Point (click)</option>
         <option value="line" ?selected=${this._lightShape==="line"}>Line (drag)</option>
-      </select>`:this._tool==="item"?p`<select @change=${e=>this._itemType=e.target.value}>
-        ${Object.keys(H).map(e=>p`<option value=${e} ?selected=${e===this._itemType}>${H[e]}</option>`)}
-      </select>`:m}renderList(){return this._mode==="settings"?this.levelProperties():this._mode==="plan"?p`${this.levelsSection()} ${this.filterBox()} ${this.buildingList()} ${this.objectList()}`:this._mode==="devices"?this.deviceList():p`${this.radarList()} ${this.cameraList()} ${this.zoneList()}`}filterBox(){return p`<input
+      </select>`:this._tool==="item"?u`<select @change=${e=>this._itemType=e.target.value}>
+        ${Object.keys(N).map(e=>u`<option value=${e} ?selected=${e===this._itemType}>${N[e]}</option>`)}
+      </select>`:m}renderList(){return this._mode==="settings"?this.levelProperties():this._mode==="plan"?u`${this.levelsSection()} ${this.filterBox()} ${this.buildingList()} ${this.objectList()}`:this._mode==="devices"?this.deviceList():u`${this.radarList()} ${this.cameraList()} ${this.zoneList()}`}filterBox(){return u`<input
       class="filter"
       type="search"
       placeholder="Filter"
       .value=${this._filter}
       @input=${e=>this._filter=e.target.value}
-    />`}passesFilter(...e){let t=this._filter.trim().toLowerCase();return!t||e.some(i=>i?.toLowerCase().includes(t))}listRow(e,t,i,n=""){return p`<button class="list-row ${n}" @click=${i}>
+    />`}passesFilter(...e){let t=this._filter.trim().toLowerCase();return!t||e.some(i=>i?.toLowerCase().includes(t))}listRow(e,t,i,n=""){return u`<button class="list-row ${n}" @click=${i}>
       <span>${e}</span><em>${t}</em>
-    </button>`}entityName(e){return e?this.hass.states[e]?.attributes.friendly_name??e:void 0}shortState(e){if(!e)return"no entity";let t=this.hass.states[e];if(!t)return"missing";let i=t.attributes.unit_of_measurement;return i?`${t.state} ${i}`:t.state}buildingList(){let e=this.shown,t=e.rooms.filter(i=>this.passesFilter(i.name));return p`
+    </button>`}entityName(e){return e?this.hass.states[e]?.attributes.friendly_name??e:void 0}shortState(e){if(!e)return"no entity";let t=this.hass.states[e];if(!t)return"missing";let i=t.attributes.unit_of_measurement;return i?`${t.state} ${i}`:t.state}buildingList(){let e=this.shown,t=e.rooms.filter(i=>this.passesFilter(i.name));return u`
       <p class="muted">
         ${e.walls.length} walls · ${e.openings.filter(i=>i.type==="door").length} doors ·
         ${e.openings.filter(i=>i.type==="window").length} windows. Click a wall, door or window on the plan to edit it.
       </p>
       <h3>Rooms</h3>
-      ${t.map(i=>this.listRow(i.name,We(e,i)[0]?this.shortState(We(e,i)[0].entity):i.stairs?"stairs":i.outdoor?"outdoor":"",()=>this.pick({kind:"room",id:i.id},P(i.points))))}
-    `}objectList(){let e=this.shown.items.filter(n=>this.passesFilter(n.name,H[n.type])),t=n=>n.rect?`${n.rect[2].toFixed(2)} \xD7 ${n.rect[3].toFixed(2)} m`:n.center?`\u2300 ${(n.diameter??1).toFixed(2)} m`:"free shape",i=n=>{let s=Dt(n);return[s.x+s.w/2,s.y+s.h/2]};return p`
+      ${t.map(i=>this.listRow(i.name,ze(e,i)[0]?this.shortState(ze(e,i)[0].entity):i.stairs?"stairs":i.outdoor?"outdoor":"",()=>this.pick({kind:"room",id:i.id},P(i.points))))}
+    `}objectList(){let e=this.shown.items.filter(n=>this.passesFilter(n.name,N[n.type])),t=n=>n.rect?`${n.rect[2].toFixed(2)} \xD7 ${n.rect[3].toFixed(2)} m`:n.center?`\u2300 ${(n.diameter??1).toFixed(2)} m`:"free shape",i=n=>{let s=It(n);return[s.x+s.w/2,s.y+s.h/2]};return u`
       <h3>Garden and furniture</h3>
-      ${e.map(n=>this.listRow(n.name||H[n.type],t(n),()=>this.pick({kind:"item",id:n.id},i(n))))}
-      ${e.length?m:p`<p class="muted">No objects. Choose + Add, Garden or furniture, and drag on the plan.</p>`}
-    `}deviceList(){let e=this.shown,t=r=>r.kind==="sensor"&&r.sensorType==="alarm"?"Alarm":Rt[r.kind],i=(e.devices??[]).filter(r=>r.kind!=="radar"&&this.passesFilter(t(r),r.entity,this.entityName(r.entity),r.label)),n=new Map;for(let r of i){let c=R(e,U(r))?.id??"";n.set(c,[...n.get(c)??[],r])}let s=i.filter(r=>!r.entity).length,l=r=>r.map(c=>this.listRow(this.entityName(c.entity)??c.label??`${t(c)} without entity`,c.entity?`${t(c)} \xB7 ${this.shortState(c.entity)}`:t(c),()=>this.pick({kind:"device",id:c.id},U(c)),c.entity?"":"unset"));return p`
+      ${e.map(n=>this.listRow(n.name||N[n.type],t(n),()=>this.pick({kind:"item",id:n.id},i(n))))}
+      ${e.length?m:u`<p class="muted">No objects. Choose + Add, Garden or furniture, and drag on the plan.</p>`}
+    `}deviceList(){let e=this.shown,t=r=>r.kind==="sensor"&&r.sensorType==="alarm"?"Alarm":Dt[r.kind],i=(e.devices??[]).filter(r=>r.kind!=="radar"&&this.passesFilter(t(r),r.entity,this.entityName(r.entity),r.label)),n=new Map;for(let r of i){let c=D(e,F(r))?.id??"";n.set(c,[...n.get(c)??[],r])}let s=i.filter(r=>!r.entity).length,l=r=>r.map(c=>this.listRow(this.entityName(c.entity)??c.label??`${t(c)} without entity`,c.entity?`${t(c)} \xB7 ${this.shortState(c.entity)}`:t(c),()=>this.pick({kind:"device",id:c.id},F(c)),c.entity?"":"unset"));return u`
       ${this.filterBox()}
-      ${s?p`<p class="muted warn">${s} without an entity: they are marked below.</p>`:m}
-      ${e.rooms.filter(r=>n.has(r.id)).map(r=>p`<h3 class="link" @click=${()=>this.pick({kind:"room",id:r.id},P(r.points))}>${r.name}</h3>
+      ${s?u`<p class="muted warn">${s} without an entity: they are marked below.</p>`:m}
+      ${e.rooms.filter(r=>n.has(r.id)).map(r=>u`<h3 class="link" @click=${()=>this.pick({kind:"room",id:r.id},P(r.points))}>${r.name}</h3>
             ${l(n.get(r.id))}`)}
-      ${n.has("")?p`<h3>Outside the rooms</h3>${l(n.get(""))}`:m}
-      ${i.length?m:p`<p class="muted">No devices. Choose + Add and click on the plan, or link a room to its area.</p>`}
-    `}radarList(){let e=(this.shown.devices??[]).filter(t=>t.kind==="radar");return p`
+      ${n.has("")?u`<h3>Outside the rooms</h3>${l(n.get(""))}`:m}
+      ${i.length?m:u`<p class="muted">No devices. Choose + Add and click on the plan, or link a room to its area.</p>`}
+    `}radarList(){let e=(this.shown.devices??[]).filter(t=>t.kind==="radar");return u`
       <h3>Radars</h3>
-      ${e.map(t=>{let i=De(t,this.hass.states).length,n=!!t.source&&this.hass.states[`sensor.${t.source}_target_1_x`]?.state!=="unavailable";return this.listRow(t.source??"Radar without sensors",n?`sees ${i}`:"offline",()=>this.pick({kind:"device",id:t.id},t.at),n?"":"unset")})}
-      ${e.length?m:p`<p class="muted">No radars on this level. Choose + Add, Radar, and click where one hangs.</p>`}
+      ${e.map(t=>{let i=Oe(t,this.hass.states).length,n=!!t.source&&this.hass.states[`sensor.${t.source}_target_1_x`]?.state!=="unavailable";return this.listRow(t.source??"Radar without sensors",n?`sees ${i}`:"offline",()=>this.pick({kind:"device",id:t.id},t.at),n?"":"unset")})}
+      ${e.length?m:u`<p class="muted">No radars on this level. Choose + Add, Radar, and click where one hangs.</p>`}
       ${e.length?this.trackingProperties("radar"):m}
       <p class="muted">
         Blue dots are people after the rules, grey dots the raw targets of the radars. Select a radar to see only its own targets and
         the people it sees. Zones work the same for radars and cameras.
       </p>
-    `}cameraList(){let e=(this.shown.devices??[]).filter(i=>i.kind==="camera"),t=this._people?.[this.level.id]??[];return p`
+    `}cameraList(){let e=(this.shown.devices??[]).filter(i=>i.kind==="camera"),t=this._people?.[this.level.id]??[];return u`
       <h3>Cameras</h3>
       ${e.map(i=>{let n=i.calibration?.length??0,s=t.filter(r=>r.camera&&r.camera===i.frigate).length,l=i.frigate?n<4?`${n} of 4 spots`:`sees ${s}`:"no Frigate camera";return this.listRow(this.entityName(i.entity)??i.frigate??"Camera without entity",l,()=>this.pick({kind:"device",id:i.id},i.at),i.frigate&&n>=4?"":"unset")})}
-      ${e.length?m:p`<p class="muted">No cameras on this level. Add one in Devices, then calibrate it here to count people.</p>`}
+      ${e.length?m:u`<p class="muted">No cameras on this level. Add one in Devices, then calibrate it here to count people.</p>`}
       ${e.some(i=>i.frigate&&(i.calibration?.length??0)>=4)?this.trackingProperties("camera"):m}
       <p class="muted">
         Select a camera to choose its Frigate camera and calibrate it: four spots on the ground, in the image and on the plan. People a
         calibrated camera sees are tracked as purple dots and counted with the radar people in the same rooms and zones. A selected
         camera also shows its raw detections in grey, before snapping into rooms and tracking.
       </p>
-    `}countIn(e,t){let i=this.hass.states[`sensor.floorcast_${Ri(`${this.level.id}_${e}`)}_count`];if(i)return i.state;let n=(this._people?.[this.level.id]??[]).filter(s=>s.status!=="unconfirmed");return String(n.filter(s=>te([s.x,s.y],t)).length)}zoneList(){let e=this.shown,t=e.zones??[],i=e.rooms.filter(n=>!n.stairs);return p`
+    `}countIn(e,t){let i=this.hass.states[`sensor.floorcast_${Ii(`${this.level.id}_${e}`)}_count`];if(i)return i.state;let n=(this._people?.[this.level.id]??[]).filter(s=>s.status!=="unconfirmed");return String(n.filter(s=>ne([s.x,s.y],t)).length)}zoneList(){let e=this.shown,t=e.zones??[],i=e.rooms.filter(n=>!n.stairs);return u`
       <h3>Rooms</h3>
       ${i.map(n=>this.listRow(n.name,this.countIn(n.id,n.points),()=>this.centreOn(P(n.points)),"people"))}
       <h3>Where people walked</h3>
@@ -1540,18 +1595,18 @@ data:
           Show</label
         >
         <select @change=${n=>this.loadWalks(Number(n.target.value))}>
-          ${[1,6,24].map(n=>p`<option value=${n} ?selected=${n===this._walkHours}>${n} h</option>`)}
+          ${[1,6,24].map(n=>u`<option value=${n} ?selected=${n===this._walkHours}>${n} h</option>`)}
         </select>
         <button class="danger" @click=${()=>this.clearWalks()}>Clear</button>
       </div>
       <h3>Zones</h3>
-      ${t.map(n=>this.listRow(n.name,n.kind==="count"?this.countIn(n.id,n.points):Ct[n.kind].replace(/ \(.*\)$/,""),()=>this.pick({kind:"zone",id:n.id},P(n.points)),n.kind==="count"?"people":""))}
-      ${t.length?m:p`<p class="muted">No zones. Draw one with Zone to count a part of a room, mark a door or ignore a fan.</p>`}
+      ${t.map(n=>this.listRow(n.name,n.kind==="count"?this.countIn(n.id,n.points):Ot[n.kind].replace(/ \(.*\)$/,""),()=>this.pick({kind:"zone",id:n.id},P(n.points)),n.kind==="count"?"people":""))}
+      ${t.length?m:u`<p class="muted">No zones. Draw one with Zone to count a part of a room, mark a door or ignore a fan.</p>`}
       <p class="muted">
         Every room a radar or a calibrated camera sees counts its people; zones count a part of a room or steer the tracking. The rules
         are the same for people seen by radars and by cameras.
       </p>
-    `}showWalks(e){e?this.loadWalks(this._walkHours):this._walks=void 0}async loadWalks(e){this._walkHours=e;try{let t=await this.hass.callWS({type:"floorcast/history/get",level:this.level.id,hours:e});this._walks=t.walks,this._message=t.walks.length?"":"Nobody walked here in that time."}catch(t){this._message=`History not read: ${t.message??t}`}}async clearWalks(){confirm("Clear the history of where people walked on every level?")&&(await this.hass.callWS({type:"floorcast/history/clear"}),this._walks&&(this._walks=[]))}centreOn(e){let t=this._view;this._view={...t,x:e[0]-t.w/2,y:e[1]-t.h/2}}renderProperties(){let e=this._selection,t=e?.kind==="wall"?this.wallProperties(this.findWall(e.id)):e?.kind==="opening"?this.openingProperties(this.findOpening(e.id)):e?.kind==="room"?this.roomProperties(this.findRoom(e.id)):e?.kind==="zone"?this.zoneProperties(this.findZone(e.id)):e?.kind==="item"?this.itemProperties(this.findItem(e.id)):e?.kind==="device"?this.deviceProperties(this.findDevice(e.id)):this.levelProperties();return p`${this.breadcrumb()} ${t}`}number(e,t,i,n=.05,s="m"){return p`<label class="field">
+    `}showWalks(e){e?this.loadWalks(this._walkHours):this._walks=void 0}async loadWalks(e){this._walkHours=e;try{let t=await this.hass.callWS({type:"floorcast/history/get",level:this.level.id,hours:e});this._walks=t.walks,this._message=t.walks.length?"":"Nobody walked here in that time."}catch(t){this._message=`History not read: ${t.message??t}`}}async clearWalks(){confirm("Clear the history of where people walked on every level?")&&(await this.hass.callWS({type:"floorcast/history/clear"}),this._walks&&(this._walks=[]))}centreOn(e){let t=this._view;this._view={...t,x:e[0]-t.w/2,y:e[1]-t.h/2}}renderProperties(){let e=this._selection,t=e?.kind==="wall"?this.wallProperties(this.findWall(e.id)):e?.kind==="opening"?this.openingProperties(this.findOpening(e.id)):e?.kind==="room"?this.roomProperties(this.findRoom(e.id)):e?.kind==="zone"?this.zoneProperties(this.findZone(e.id)):e?.kind==="item"?this.itemProperties(this.findItem(e.id)):e?.kind==="device"?this.deviceProperties(this.findDevice(e.id)):this.levelProperties();return u`${this.breadcrumb()} ${t}`}number(e,t,i,n=.05,s="m"){return u`<label class="field">
       <span>${e}</span>
       <input
         type="number"
@@ -1560,10 +1615,10 @@ data:
         @change=${l=>{let r=Number(l.target.value);Number.isFinite(r)&&this.change(()=>i(r))}}
       />
       <em>${s}</em>
-    </label>`}text(e,t,i){return p`<label class="field wide">
+    </label>`}text(e,t,i){return u`<label class="field wide">
       <span>${e}</span>
       <input type="text" .value=${t} @change=${n=>this.change(()=>i(n.target.value))} />
-    </label>`}deleteButton(){let e=this._selection,t=e?.kind==="device"?this.findDevice(e.id):void 0,i=this.lockedKind(e);return p`
+    </label>`}deleteButton(){let e=this._selection,t=e?.kind==="device"?this.findDevice(e.id):void 0,i=this.lockedKind(e);return u`
       ${t?this.positionFields(t):m}
       <div class="row end">
         <button title="Copy (Ctrl+D)" ?disabled=${i} @click=${()=>this.duplicateSelection()}>Duplicate</button>
@@ -1576,16 +1631,16 @@ data:
           ${this._confirmDelete?"Click again to delete":"Delete"}
         </button>
       </div>
-    `}positionFields(e){let t=(i,n)=>{let s=n-e.at[i];e.at=i===0?[$(n),e.at[1]]:[e.at[0],$(n)],e.to&&(e.to=i===0?[$(e.to[0]+s),e.to[1]]:[e.to[0],$(e.to[1]+s)])};return p`<details class="settings">
+    `}positionFields(e){let t=(i,n)=>{let s=n-e.at[i];e.at=i===0?[$(n),e.at[1]]:[e.at[0],$(n)],e.to&&(e.to=i===0?[$(e.to[0]+s),e.to[1]]:[e.to[0],$(e.to[1]+s)])};return u`<details class="settings">
       <summary>Position</summary>
       ${this.number("x (east)",e.at[0],i=>t(0,i))} ${this.number("y (south)",e.at[1],i=>t(1,i))}
-    </details>`}breadcrumb(){let e=this._selection;if(!e)return m;let t=this.level,i,n="";if(e.kind==="device"){let l=this.findDevice(e.id);i=l&&U(l),n=l?l.kind==="sensor"&&l.sensorType==="alarm"?"Alarm":Rt[l.kind]:""}else if(e.kind==="opening"){let l=this.findOpening(e.id),r=l&&this.findWall(l.wall);i=l&&r?M(r,l.at):void 0,n=l?.type==="door"?"Door":"Window"}else if(e.kind==="item"){let l=this.findItem(e.id);i=l?l.center??P(Ie(l)):void 0,n=l?l.name||H[l.type]:""}else e.kind==="wall"?n="Wall":e.kind==="zone"&&(n="Zone");let s=e.kind==="room"?this.findRoom(e.id):i?R(t,i):void 0;return p`<nav class="crumbs">
+    </details>`}breadcrumb(){let e=this._selection;if(!e)return m;let t=this.level,i,n="";if(e.kind==="device"){let l=this.findDevice(e.id);i=l&&F(l),n=l?l.kind==="sensor"&&l.sensorType==="alarm"?"Alarm":Dt[l.kind]:""}else if(e.kind==="opening"){let l=this.findOpening(e.id),r=l&&this.findWall(l.wall);i=l&&r?M(r,l.at):void 0,n=l?ye[l.type]:""}else if(e.kind==="item"){let l=this.findItem(e.id);i=l?l.center??P(He(l)):void 0,n=l?l.name||N[l.type]:""}else e.kind==="wall"?n="Wall":e.kind==="zone"&&(n="Zone");let s=e.kind==="room"?this.findRoom(e.id):i?D(t,i):void 0;return u`<nav class="crumbs">
       <span>${t.name}</span>
-      ${s?p`› ${e.kind==="room"?p`<span>${s.name}</span>`:p`<a @click=${()=>this.select({kind:"room",id:s.id})}>${s.name}</a>`}`:m}
-      ${n?p`› <span>${n}</span>`:m}
-    </nav>`}levelsSection(){let e=this._plan.levels,t=(i,n)=>this.change(()=>{let s=[...e],[l]=s.splice(i,1);s.splice(i+n,0,l),this._plan.levels=s});return p`
+      ${s?u`› ${e.kind==="room"?u`<span>${s.name}</span>`:u`<a @click=${()=>this.select({kind:"room",id:s.id})}>${s.name}</a>`}`:m}
+      ${n?u`› <span>${n}</span>`:m}
+    </nav>`}levelsSection(){let e=this._plan.levels,t=(i,n)=>this.change(()=>{let s=[...e],[l]=s.splice(i,1);s.splice(i+n,0,l),this._plan.levels=s});return u`
       <h3>Levels</h3>
-      ${e.map((i,n)=>p`<div class="level-row ${i.id===this.level.id?"current":""}">
+      ${e.map((i,n)=>u`<div class="level-row ${i.id===this.level.id?"current":""}">
           <input
             type="text"
             .value=${i.name}
@@ -1605,14 +1660,14 @@ data:
         </div>`)}
       <div class="row">
         <button
-          @click=${()=>{let i=ut(`Level ${e.length+1}`);this.change(()=>this._plan.levels.push(i)),this._levelId=i.id}}
+          @click=${()=>{let i=ft(`Level ${e.length+1}`);this.change(()=>this._plan.levels.push(i)),this._levelId=i.id}}
         >
           Add level
         </button>
       </div>
-    `}levelProperties(){return p`
+    `}levelProperties(){return u`
       <h3>Wall types</h3>
-      ${this.wallTypes.map(e=>p`<div class="type-row">
+      ${this.wallTypes.map(e=>u`<div class="type-row">
           <input
             type="text"
             .value=${e.name}
@@ -1645,14 +1700,14 @@ data:
         />
         Rounded corners</label
       >
-      ${this._plan.roundCorners?this.number("Radius",(this._plan.cornerRadius??we)*100,e=>this._plan.cornerRadius=Math.max(0,e)/100,1,"cm"):m}
+      ${this._plan.roundCorners?this.number("Radius",(this._plan.cornerRadius??$e)*100,e=>this._plan.cornerRadius=Math.max(0,e)/100,1,"cm"):m}
       ${this.appearanceProperties()}
       <h3>Plan file</h3>
       <div class="row">
         <button @click=${()=>this.exportPlan()}>Export</button>
         <label class="button">Import<input type="file" accept="application/json,.json" hidden @change=${this.importPlan} /></label>
       </div>
-    `}appearanceProperties(){let e=this._plan,t=e.appearance??{},i=Fe(t,this.hass?.themes?.darkMode).mode,n=this._paletteMode??i,s=t[n]??{},l=n==="dark"?Et:St,r=(c,d)=>this.change(()=>{let h={...e.appearance?.[n]??{}};d&&d!==l[c]?h[c]=d:delete h[c],e.appearance={...e.appearance,[n]:h}});return p`
+    `}appearanceProperties(){let e=this._plan,t=e.appearance??{},i=je(t,this.hass?.themes?.darkMode).mode,n=this._paletteMode??i,s=t[n]??{},l=n==="dark"?Tt:At,r=(c,d)=>this.change(()=>{let h={...e.appearance?.[n]??{}};d&&d!==l[c]?h[c]=d:delete h[c],e.appearance={...e.appearance,[n]:h}});return u`
       <h3>Appearance</h3>
       <label class="field wide">
         <span>Theme</span>
@@ -1666,14 +1721,14 @@ data:
       </label>
       <div class="row">
         <span class="muted">Colours of</span>
-        ${["dark","light"].map(c=>p`<button class=${n===c?"on":""} @click=${()=>this._paletteMode=c}>${c==="dark"?"Dark":"Light"}</button>`)}
+        ${["dark","light"].map(c=>u`<button class=${n===c?"on":""} @click=${()=>this._paletteMode=c}>${c==="dark"?"Dark":"Light"}</button>`)}
       </div>
-      ${On.map(c=>p`<details class="settings" ?open=${c.name==="Building"}>
+      ${zn.map(c=>u`<details class="settings" ?open=${c.name==="Building"}>
           <summary>${c.name}</summary>
-          ${c.keys.map(([d,h])=>p`<div class="colour-row">
+          ${c.keys.map(([d,h])=>u`<div class="colour-row">
               <span>${h}</span>
               <input type="color" .value=${s[d]??l[d]} @change=${f=>r(d,f.target.value)} />
-              ${s[d]?p`<button class="small" title="Back to the default colour" @click=${()=>r(d,void 0)}>↺</button>`:p`<span></span>`}
+              ${s[d]?u`<button class="small" title="Back to the default colour" @click=${()=>r(d,void 0)}>↺</button>`:u`<span></span>`}
             </div>`)}
         </details>`)}
       <div class="row">
@@ -1687,35 +1742,36 @@ data:
       <p class="muted">
         The plan in this editor shows the colours you edit. Every card uses them; a card can still choose dark or light for itself.
       </p>
-    `}wallProperties(e){return e?p`
+    `}wallProperties(e){return e?u`
       <h3>Wall</h3>
       <label class="field wide">
         <span>Type</span>
         <select
           @change=${t=>this.change(()=>{let i=t.target.value;if(!i){delete e.type;return}e.type=i,e.t=this.wallType(i).t})}
         >
-          ${this.wallTypes.map(t=>p`<option value=${t.id} ?selected=${t.id===e.type}>${t.name} ${(t.t*100).toFixed(1)} cm</option>`)}
+          ${this.wallTypes.map(t=>u`<option value=${t.id} ?selected=${t.id===e.type}>${t.name} ${(t.t*100).toFixed(1)} cm</option>`)}
           <option value="" ?selected=${!e.type}>Own thickness</option>
         </select>
       </label>
       ${this.number("Thickness",e.t*100,t=>{e.t=Math.max(1,t)/100,delete e.type},.5,"cm")}
-      <p class="muted">Length ${L(e).toFixed(2)} m</p>
+      <p class="muted">Length ${R(e).toFixed(2)} m</p>
       <label class="check" title="Same as holding Shift while dragging an end"
         ><input type="checkbox" .checked=${this._endsAlone} @change=${t=>this._endsAlone=t.target.checked} />
         Move ends alone (detach from joined walls)</label
       >
       ${this.deleteButton()}
-    `:m}openingProperties(e){return e?p`
-      <h3>${e.type==="door"?"Door":"Window"}</h3>
+    `:m}openingProperties(e){return e?u`
+      <h3>${ye[e.type]}</h3>
       <label class="field wide">
         <span>Type</span>
         <select @change=${t=>this.change(()=>e.type=t.target.value)}>
           <option value="door" ?selected=${e.type==="door"}>Door</option>
           <option value="window" ?selected=${e.type==="window"}>Window</option>
+          <option value="gate" ?selected=${e.type==="gate"}>Gate or garage door</option>
         </select>
       </label>
       ${this.number("Width",e.width*100,t=>e.width=Math.max(10,t)/100,5,"cm")}
-      ${e.type==="door"?p`<div class="row">
+      ${e.type==="door"?u`<div class="row">
             <button title="Moves the hinge to the other side of the door" @click=${()=>this.change(()=>e.hingeEnd=!e.hingeEnd)}>
               Flip hinge
             </button>
@@ -1734,14 +1790,40 @@ data:
         ></floorcast-entity-picker>
       </div>
       ${this.stateLine(e.contact)}
-      ${e.type==="door"?p`<label class="field wide">
+      ${e.type==="door"?u`<div class="pick">
+              <span>Lock</span>
+              <floorcast-entity-picker
+                .hass=${this.hass}
+                .domains=${["lock"]}
+                .value=${e.lock??null}
+                optional
+                @value-changed=${t=>this.change(()=>e.lock=t.detail)}
+              ></floorcast-entity-picker>
+            </div>
+            ${this.stateLine(e.lock)}
+            ${e.lock?u`${this.confirmCheck(e,!0)}
+                  <p class="muted">A padlock beside the door: a tap on the card locks or unlocks it, holding opens it.</p>`:m}
+            <label class="field wide">
               <span>Drawn as</span>
               <select @change=${t=>this.change(()=>e.drawn=t.target.value)}>
                 <option value="open" ?selected=${e.drawn!=="closed"}>Open</option>
                 <option value="closed" ?selected=${e.drawn==="closed"}>Closed</option>
               </select>
             </label>
-            <p class="muted">With a sensor the door follows it; this is how it is drawn without one or while the sensor is unavailable.</p>`:p`<div class="pick">
+            <p class="muted">With a sensor the door follows it; this is how it is drawn without one or while the sensor is unavailable.</p>`:e.type==="gate"?u`<div class="pick">
+                <span>Gate</span>
+                <floorcast-entity-picker
+                  .hass=${this.hass}
+                  .domains=${["cover"]}
+                  .value=${e.cover??null}
+                  optional
+                  @value-changed=${t=>this.change(()=>e.cover=t.detail)}
+                ></floorcast-entity-picker>
+              </div>
+              ${this.stateLine(e.cover)} ${this.confirmCheck(e,!0)}
+              <p class="muted">
+                Drawn closed across the opening for as much as the cover closes it. A tap on the card opens, closes or stops it.
+              </p>`:u`<div class="pick">
               <span>Blind</span>
               <floorcast-entity-picker
                 .hass=${this.hass}
@@ -1752,7 +1834,7 @@ data:
               ></floorcast-entity-picker>
             </div>
             ${this.stateLine(e.cover)}
-            ${e.cover?p`<div class="row">
+            ${e.cover?u`<div class="row">
                     <button title="Draws the blind on the other side of the wall" @click=${()=>this.change(()=>e.blindFlip=!e.blindFlip)}>
                       Flip blind side
                     </button>
@@ -1760,19 +1842,19 @@ data:
                   ${this.confirmCheck(e)}
                   <p class="muted">The bar outside the window is as long as the blind covers it; the number is its position, 100% open.</p>`:m}`}
       ${this.deleteButton()}
-    `:m}radarProperties(e){let t=ct(this.hass.states),i=De(e,this.hass.states).length;return p`
+    `:m}radarProperties(e){let t=ht(this.hass.states),i=Oe(e,this.hass.states).length;return u`
       <h3>Radar</h3>
       <label class="field wide">
         <span>Sensors</span>
         <select @change=${n=>this.change(()=>e.source=n.target.value||null)}>
           <option value="" ?selected=${!e.source}>–</option>
-          ${t.map(n=>p`<option value=${n} ?selected=${n===e.source}>sensor.${n}_target_…</option>`)}
+          ${t.map(n=>u`<option value=${n} ?selected=${n===e.source}>sensor.${n}_target_…</option>`)}
         </select>
       </label>
       <p class="muted">${e.source?`Sees ${i} ${i===1?"person":"people"} now.`:"Choose the target sensors of the radar."}</p>
       ${this.number("Heading",e.heading??0,n=>e.heading=(n%360+360)%360,1,"\xB0")}
-      ${this.number("View",e.arc??fe,n=>e.arc=Math.min(180,Math.max(10,n)),5,"\xB0")}
-      ${this.number("Range",e.radius??ee,n=>e.radius=Math.max(1,n),.5,"m")}
+      ${this.number("View",e.arc??ge,n=>e.arc=Math.min(180,Math.max(10,n)),5,"\xB0")}
+      ${this.number("Range",e.radius??te,n=>e.radius=Math.max(1,n),.5,"m")}
       <label class="check"
         ><input type="checkbox" .checked=${!!e.mirror} @change=${n=>this.change(()=>e.mirror=n.target.checked)} />
         Mirror (people move the wrong way sideways)</label
@@ -1782,7 +1864,7 @@ data:
         follows you, and mirror it when it goes left as you go right. Targets beyond the range are ignored.
       </p>
       ${this.deleteButton()}
-    `}cameraProperties(e){return p`
+    `}cameraProperties(e){return u`
       <h3>Camera</h3>
       <div class="pick">
         <span>Camera</span>
@@ -1796,18 +1878,18 @@ data:
       </div>
       ${this.stateLine(e.entity)}
       ${this.number("Heading",e.heading??0,t=>e.heading=(t%360+360)%360,5,"\xB0")}
-      ${this.number("View",e.arc??Q,t=>e.arc=Math.min(360,Math.max(10,t)),5,"\xB0")}
-      ${this.number("Range",e.radius??z,t=>e.radius=Math.max(1,t),.5,"m")}
+      ${this.number("View",e.arc??ee,t=>e.arc=Math.min(360,Math.max(10,t)),5,"\xB0")}
+      ${this.number("Range",e.radius??W,t=>e.radius=Math.max(1,t),.5,"m")}
       <p class="muted">Drag the handle at the end of the view to aim the camera. On the card a tap shows a still, holding opens the live view.</p>
       ${this.frigateProperties(e)} ${this.groundProperties(e)}
       ${this.deleteButton()}
-    `}toggleGroundPreview(e){let t=new Set(this._groundPreview);t.has(e.id)?t.delete(e.id):t.add(e.id),this._groundPreview=t,this._groundFeed.stop(),t.size&&this._groundFeed.start(this.hass,[...t],!0)}groundPreviewRow(e){let t=!!this._plan&&JSON.stringify(this._plan)!==this._saved;return p`<div class="row">
+    `}toggleGroundPreview(e){let t=new Set(this._groundPreview);t.has(e.id)?t.delete(e.id):t.add(e.id),this._groundPreview=t,this._groundFeed.stop(),t.size&&this._groundFeed.start(this.hass,[...t],!0)}groundPreviewRow(e){let t=!!this._plan&&JSON.stringify(this._plan)!==this._saved;return u`<div class="row">
         <button class=${this._groundPreview.has(e.id)?"primary":""} @click=${()=>this.toggleGroundPreview(e)}>
           ${this._groundPreview.has(e.id)?"Hide preview":"Preview"}
         </button>
         <button ?disabled=${!t||this._saving} @click=${()=>this.save()}>Save and redraw</button>
       </div>
-      <p class="muted">The integration draws the saved plan; save after a change to see it.</p>`}groundProperties(e){let t=e.kind==="mower";if(!(t?e.camera:e.entity))return t?p`<h3>Ground view (experimental)</h3><p class="muted">Choose the camera of the mower above first.</p>`:m;let n=e.ground??{},s=b=>{let g={...e.ground};b(g),e.ground=g},l=t?"mower":"ground",r=this.pairsOf(e,l),c=t?this.mowerPose(e):void 0,d=[...this.level.zones??[],...this.level.rooms],h=new Set(n.zones??[]),f=(b,g)=>this.change(()=>s(y=>y.zones=g?[...(y.zones??[]).filter(v=>v!==b),b]:(y.zones??[]).filter(v=>v!==b)));return p`
+      <p class="muted">The integration draws the saved plan; save after a change to see it.</p>`}groundProperties(e){let t=e.kind==="mower";if(!(t?e.camera:e.entity))return t?u`<h3>Ground view (experimental)</h3><p class="muted">Choose the camera of the mower above first.</p>`:m;let n=e.ground??{},s=b=>{let g={...e.ground};b(g),e.ground=g},l=t?"mower":"ground",r=this.pairsOf(e,l),c=t?this.mowerPose(e):void 0,d=[...this.level.zones??[],...this.level.rooms],h=new Set(n.zones??[]),f=(b,g)=>this.change(()=>s(y=>y.zones=g?[...(y.zones??[]).filter(v=>v!==b),b]:(y.zones??[]).filter(v=>v!==b)));return u`
       <h3>Ground view (experimental)</h3>
       <p class="muted">
         The camera image is laid on the plan like the top view of a car. Only flat ground lies true; walls, fences and people
@@ -1818,27 +1900,27 @@ data:
         <select
           @change=${b=>this.change(()=>{let g=b.target.value;g==="window"?delete e.preview:e.preview=g})}
         >
-          ${[["window","Window"],["ground","Ground"],["both","Ground and window"]].map(([b,g])=>p`<option value=${b} ?selected=${(e.preview??"window")===b}>${g}</option>`)}
+          ${[["window","Window"],["ground","Ground"],["both","Ground and window"]].map(([b,g])=>u`<option value=${b} ?selected=${(e.preview??"window")===b}>${g}</option>`)}
         </select>
       </label>
       <p class="muted">
         What the card shows when the preview opens: ${t?"a tap on the mower":"the camera sees someone, or a tap on it"}.
-        The ground needs ${Ae} calibration spots.
+        The ground needs ${Le} calibration spots.
       </p>
-      ${t?m:p`<p class="muted">Lay it on these zones or rooms; tick only the paving or the terrace.</p>
-            ${d.map(b=>p`<label class="check"
+      ${t?m:u`<p class="muted">Lay it on these zones or rooms; tick only the paving or the terrace.</p>
+            ${d.map(b=>u`<label class="check"
                 ><input type="checkbox" .checked=${h.has(b.id)} @change=${g=>f(b.id,g.target.checked)} />
                 ${b.name}</label
               >`)}`}
       <h4>Calibration</h4>
       <p class="muted">
-        ${r.length>=Ae?`Calibrated with ${r.length} spots.`:`${r.length} of at least ${Ae} spots; the image is not laid until then.`}
+        ${r.length>=Le?`Calibrated with ${r.length} spots.`:`${r.length} of at least ${Le} spots; the image is not laid until then.`}
         Click a spot on the ground in the image, then the same spot on the plan${t?", with the mower standing still":""}.
       </p>
       ${this.spotList(e,l)}
       <div class="row">
         <button ?disabled=${t&&!c} @click=${()=>this.openBigImage(l)}>Calibrate</button>
-        ${t?m:p`<button
+        ${t?m:u`<button
               ?disabled=${!(e.calibration?.length??0)}
               @click=${()=>this.change(()=>s(b=>b.calibration=structuredClone(e.calibration??[])))}
             >
@@ -1846,11 +1928,11 @@ data:
             </button>`}
         <button ?disabled=${!r.length} @click=${()=>this.change(()=>s(b=>t?b.spots=[]:b.calibration=[]))}>Clear</button>
       </div>
-      ${t&&!c?p`<p class="muted">The mower reports no heading now, so it cannot be calibrated.</p>`:m}
+      ${t&&!c?u`<p class="muted">The mower reports no heading now, so it cannot be calibrated.</p>`:m}
       <h4>Range</h4>
-      ${this.number("Visible range",n.range??(t?n.reach??2:e.radius??z),b=>s(g=>g.range=Math.min(30,Math.max(.3,b))),t?.1:.5,"m")}
+      ${this.number("Visible range",n.range??(t?n.reach??2:e.radius??W),b=>s(g=>g.range=Math.min(30,Math.max(.3,b))),t?.1:.5,"m")}
       <p class="muted">The image is whole up to half the range from the ${t?"mower":"camera"} and fades out at the range.</p>
-      ${t?p`
+      ${t?u`
             ${this.number("Position delay",n.delay??0,b=>s(g=>g.delay=Math.min(10,Math.max(0,b))),.5,"s")}
             <p class="muted">
               The mower and its track are shown this late and move smoothly between the places it reports, every few seconds;
@@ -1864,38 +1946,38 @@ data:
             </p>
           `:m}
       ${this.groundPreviewRow(e)}
-    `}frigateProperties(e){this._frigateCameras||(this._frigateCameras=[],this.hass.callWS({type:"floorcast/frigate/cameras"}).then(l=>this._frigateCameras=l.cameras).catch(()=>{}));let t=this._frigateCameras,i=t.find(l=>l.name===e.frigate),n=e.calibration??[],s=e.entity?this.hass.states[e.entity]?.attributes.entity_picture:void 0;return p`
+    `}frigateProperties(e){this._frigateCameras||(this._frigateCameras=[],this.hass.callWS({type:"floorcast/frigate/cameras"}).then(l=>this._frigateCameras=l.cameras).catch(()=>{}));let t=this._frigateCameras,i=t.find(l=>l.name===e.frigate),n=e.calibration??[],s=e.entity?this.hass.states[e.entity]?.attributes.entity_picture:void 0;return u`
       <h3>Objects from Frigate</h3>
       <label class="field wide">
         <span>Frigate</span>
         <select @change=${l=>this.change(()=>e.frigate=l.target.value||null)}>
           <option value="" ?selected=${!e.frigate}>–</option>
-          ${t.map(l=>p`<option value=${l.name} ?selected=${l.name===e.frigate}>${l.name}</option>`)}
-          ${e.frigate&&!i?p`<option selected value=${e.frigate}>${e.frigate}</option>`:m}
+          ${t.map(l=>u`<option value=${l.name} ?selected=${l.name===e.frigate}>${l.name}</option>`)}
+          ${e.frigate&&!i?u`<option selected value=${e.frigate}>${e.frigate}</option>`:m}
         </select>
       </label>
-      ${e.frigate&&!i?.size?p`${this.number("Detect width",e.detect?.[0]??1280,l=>e.detect=[l,e.detect?.[1]??720],1,"px")}
+      ${e.frigate&&!i?.size?u`${this.number("Detect width",e.detect?.[0]??1280,l=>e.detect=[l,e.detect?.[1]??720],1,"px")}
           ${this.number("Detect height",e.detect?.[1]??720,l=>e.detect=[e.detect?.[0]??1280,l],1,"px")}`:m}
-      ${e.frigate?p`<p class="muted">
+      ${e.frigate?u`<p class="muted">
               Click a spot on the ground in the image, then the same spot on the plan: corners of the terrace, of the paving, a post.
               Four or more spots, spread as wide as the camera sees.
             </p>
-            ${s?p`<div class="row">
+            ${s?u`<div class="row">
                     <button class="primary" @click=${()=>this.openBigImage("frigate")}>Calibrate on a large image</button>
                   </div>
                   <div class="calibration-image" @click=${()=>this.openBigImage("frigate")}>
                   <img src=${s} alt="" draggable="false" />
-                  ${n.map((l,r)=>p`<span class="mark" style="left:${l.image[0]*100}%;top:${l.image[1]*100}%">${r+1}</span>`)}
-                  ${this._imagePoint?p`<span class="mark waiting" style="left:${this._imagePoint[0]*100}%;top:${this._imagePoint[1]*100}%">?</span>`:m}
-                </div>`:p`<p class="muted">Choose the camera entity above to see its image.</p>`}
+                  ${n.map((l,r)=>u`<span class="mark" style="left:${l.image[0]*100}%;top:${l.image[1]*100}%">${r+1}</span>`)}
+                  ${this._imagePoint?u`<span class="mark waiting" style="left:${this._imagePoint[0]*100}%;top:${this._imagePoint[1]*100}%">?</span>`:m}
+                </div>`:u`<p class="muted">Choose the camera entity above to see its image.</p>`}
             ${this.spotList(e,"frigate")}
             <p class="muted">
-              ${n.length<4?`${n.length} of at least 4 spots.`:Re(n)?`Calibrated with ${n.length} spots.`:"These spots do not fix the view; spread them wider, not along one line."}
+              ${n.length<4?`${n.length} of at least 4 spots.`:Ce(n)?`Calibrated with ${n.length} spots.`:"These spots do not fix the view; spread them wider, not along one line."}
             </p>
             <div class="row">
-              <button ?disabled=${!Re(n)} @click=${()=>this.loadPaths(e)}>Show recent paths</button>
+              <button ?disabled=${!Ce(n)} @click=${()=>this.loadPaths(e)}>Show recent paths</button>
             </div>`:m}
-    `}pairsOf(e,t=this._calibrationTarget){if(t==="mower"){let i=this.mowerPose(e);return(e.ground?.spots??[]).map(n=>({image:n.image,plan:i?Gn(n.ahead,i):n.ahead}))}return(t==="ground"?e.ground?.calibration:e.calibration)??[]}setPairs(e,t,i=this._calibrationTarget){if(i==="mower"){let n=this.mowerPose(e);n&&(e.ground={...e.ground,spots:t.map(s=>({image:s.image,ahead:Ci(s.plan,n)}))});return}i==="ground"?e.ground={...e.ground,calibration:t}:e.calibration=t}spotList(e,t){let i=this.pairsOf(e,t),n=t!=="mower"||!!this.mowerPose(e);return i.map((s,l)=>p`<div class="list-row static">
+    `}pairsOf(e,t=this._calibrationTarget){if(t==="mower"){let i=this.mowerPose(e);return(e.ground?.spots??[]).map(n=>({image:n.image,plan:i?Zn(n.ahead,i):n.ahead}))}return(t==="ground"?e.ground?.calibration:e.calibration)??[]}setPairs(e,t,i=this._calibrationTarget){if(i==="mower"){let n=this.mowerPose(e);n&&(e.ground={...e.ground,spots:t.map(s=>({image:s.image,ahead:Hi(s.plan,n)}))});return}i==="ground"?e.ground={...e.ground,calibration:t}:e.calibration=t}spotList(e,t){let i=this.pairsOf(e,t),n=t!=="mower"||!!this.mowerPose(e);return i.map((s,l)=>u`<div class="list-row static">
         <span
           >${l+1}. image ${s.image[0].toFixed(2)}, ${s.image[1].toFixed(2)} → plan ${s.plan[0].toFixed(2)},
           ${s.plan[1].toFixed(2)}</span
@@ -1908,7 +1990,7 @@ data:
         >
           ×
         </button>
-      </div>`)}mowerPose(e){let t=e.map?kt(e,this.hass.states[e.map]?.attributes):void 0;return t&&t.heading!==void 0?{at:t.at,heading:t.heading}:void 0}openBigImage(e){let t=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(e==="mower"&&t&&!this.mowerPose(t)){this._message="The mower reports no heading now; calibrate it when its map shows where it heads.";return}this._calibrationTarget=e,this._bigImage=!0,this._imagePoint=void 0,this._imageZoom={scale:1,origin:[50,50]},this._message="Click a spot on the ground in the image; the wheel zooms in."}renderBigImage(){let e=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0,t=e?.kind==="camera"?e.entity:e?.kind==="mower"?e.camera:void 0,i=t?this.hass.states[t]?.attributes.entity_picture:void 0;if(!this._bigImage||!e||!i||this._imagePoint)return m;let n=this.pairsOf(e),s=this._imageZoom;return p`<div class="big-image" @wheel=${l=>this.zoomImage(l)}>
+      </div>`)}mowerPose(e){let t=e.map?xt(e,this.hass.states[e.map]?.attributes):void 0;return t&&t.heading!==void 0?{at:t.at,heading:t.heading}:void 0}openBigImage(e){let t=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0;if(e==="mower"&&t&&!this.mowerPose(t)){this._message="The mower reports no heading now; calibrate it when its map shows where it heads.";return}this._calibrationTarget=e,this._bigImage=!0,this._imagePoint=void 0,this._imageZoom={scale:1,origin:[50,50]},this._message="Click a spot on the ground in the image; the wheel zooms in."}renderBigImage(){let e=this._selection?.kind==="device"?this.findDevice(this._selection.id):void 0,t=e?.kind==="camera"?e.entity:e?.kind==="mower"?e.camera:void 0,i=t?this.hass.states[t]?.attributes.entity_picture:void 0;if(!this._bigImage||!e||!i||this._imagePoint)return m;let n=this.pairsOf(e),s=this._imageZoom;return u`<div class="big-image" @wheel=${l=>this.zoomImage(l)}>
       <div class="big-image-bar">
         <span>${n.length} ${n.length===1?"spot":"spots"}${n.length<4?", at least 4 needed":""}. Click a spot on the ground.</span>
         <button ?disabled=${!n.length} @click=${()=>this.change(()=>this.setPairs(e,n.slice(0,-1)))}>Remove last</button>
@@ -1928,10 +2010,10 @@ data:
             draggable="false"
             @load=${l=>{let r=l.target;r.naturalHeight&&(this._imageAspect=r.naturalWidth/r.naturalHeight),this.requestUpdate()}}
           />
-          ${n.map((l,r)=>p`<span class="mark" style="left:${l.image[0]*100}%;top:${l.image[1]*100}%;transform:translate(-50%,-50%) scale(${1/s.scale})">${r+1}</span>`)}
+          ${n.map((l,r)=>u`<span class="mark" style="left:${l.image[0]*100}%;top:${l.image[1]*100}%;transform:translate(-50%,-50%) scale(${1/s.scale})">${r+1}</span>`)}
         </div>
       </div>
-    </div>`}zoomImage(e){e.preventDefault();let t=this.renderRoot.querySelector(".calibration-image.big");if(!t)return;let i=t.getBoundingClientRect(),n=[Math.min(100,Math.max(0,(e.clientX-i.left)/i.width*100)),Math.min(100,Math.max(0,(e.clientY-i.top)/i.height*100))],s=Math.min(6,Math.max(1,this._imageZoom.scale*(e.deltaY<0?1.25:.8)));this._imageZoom={scale:s,origin:s===1?[50,50]:n}}pickImagePoint(e){let t=e.currentTarget.getBoundingClientRect(),i=Math.min(1,Math.max(0,(e.clientX-t.left)/t.width)),n=Math.min(1,Math.max(0,(e.clientY-t.top)/t.height));this._imagePoint=[$(i),$(n)],this._tool="calibrate",this._message="Now click the same spot on the plan."}async loadPaths(e){try{let i=(await this.hass.callWS({type:"frigate/events/get",instance_id:"frigate",cameras:[e.frigate],labels:["person"],limit:15})).map(n=>(n.data?.path_data??[]).map(([s])=>s)).filter(n=>n.length>1);this._paths=new Map(this._paths).set(e.id,i),this._message=i.length?`${i.length} recent paths drawn on the plan.`:"No recent paths of people from this camera."}catch(t){this._message=`Paths not read: ${t.message??t}`}}screenProperties(e){let t=(i,n,s,l)=>p`<div class="pick">
+    </div>`}zoomImage(e){e.preventDefault();let t=this.renderRoot.querySelector(".calibration-image.big");if(!t)return;let i=t.getBoundingClientRect(),n=[Math.min(100,Math.max(0,(e.clientX-i.left)/i.width*100)),Math.min(100,Math.max(0,(e.clientY-i.top)/i.height*100))],s=Math.min(6,Math.max(1,this._imageZoom.scale*(e.deltaY<0?1.25:.8)));this._imageZoom={scale:s,origin:s===1?[50,50]:n}}pickImagePoint(e){let t=e.currentTarget.getBoundingClientRect(),i=Math.min(1,Math.max(0,(e.clientX-t.left)/t.width)),n=Math.min(1,Math.max(0,(e.clientY-t.top)/t.height));this._imagePoint=[$(i),$(n)],this._tool="calibrate",this._message="Now click the same spot on the plan."}async loadPaths(e){try{let i=(await this.hass.callWS({type:"frigate/events/get",instance_id:"frigate",cameras:[e.frigate],labels:["person"],limit:15})).map(n=>(n.data?.path_data??[]).map(([s])=>s)).filter(n=>n.length>1);this._paths=new Map(this._paths).set(e.id,i),this._message=i.length?`${i.length} recent paths drawn on the plan.`:"No recent paths of people from this camera."}catch(t){this._message=`Paths not read: ${t.message??t}`}}screenProperties(e){let t=(i,n,s,l)=>u`<div class="pick">
         <span>${i}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
@@ -1941,12 +2023,12 @@ data:
           @value-changed=${r=>this.change(()=>l(r.detail))}
         ></floorcast-entity-picker>
       </div>
-      ${this.stateLine(s)}`;return p`
+      ${this.stateLine(s)}`;return u`
       <h3>Screen</h3>
       ${t("Power",["remote","media_player","switch"],e.entity,i=>e.entity=i)}
       ${t("Remote",["remote"],e.remote,i=>e.remote=i)}
-      ${this.number("Light reach",e.radius??xt,i=>e.radius=Math.max(.5,i),.5,"m")}
-      ${this.number("Light spread",e.arc??Pt,i=>e.arc=Math.min(160,Math.max(0,i)),5,"\xB0")}
+      ${this.number("Light reach",e.radius??Mt,i=>e.radius=Math.max(.5,i),.5,"m")}
+      ${this.number("Light spread",e.arc??Et,i=>e.arc=Math.min(160,Math.max(0,i)),5,"\xB0")}
       <div class="row">
         <button title="Lets the light fall on the other side of the screen" @click=${()=>this.change(()=>e.flip=!e.flip)}>
           Flip light side
@@ -1959,7 +2041,7 @@ data:
         OK, back, home, volume and play, sent to the remote entity.
       </p>
       ${this.deleteButton()}
-    `}sensorValueSettings(e,t){return p`<label class="field wide">
+    `}sensorValueSettings(e,t){return u`<label class="field wide">
         <span>Unit</span>
         <select @change=${i=>t(n=>n.unit=i.target.value)}>
           <option value="auto" ?selected=${(e.unit??"auto")==="auto"}>Short (°, %, or the entity's)</option>
@@ -1973,13 +2055,13 @@ data:
         <select
           @change=${i=>{let n=i.target.value;t(s=>n==="auto"?delete s.decimals:s.decimals=Number(n))}}
         >
-          ${["auto","0","1","2","3"].map(i=>p`<option value=${i} ?selected=${(e.decimals===void 0?"auto":String(e.decimals))===i}>${i==="auto"?"Auto":i}</option>`)}
+          ${["auto","0","1","2","3"].map(i=>u`<option value=${i} ?selected=${(e.decimals===void 0?"auto":String(e.decimals))===i}>${i==="auto"?"Auto":i}</option>`)}
         </select>
       </label>
       <label class="check"
         ><input type="checkbox" .checked=${e.showUnit!==!1} @change=${i=>t(n=>n.showUnit=i.target.checked)} />
         Show the unit</label
-      >`}sensorProperties(e){let t=e.sensorType??"generic";if(t==="alarm")return this.alarmProperties(e);let i=t==="generic"?void 0:t,n=["sensor","input_number","number","counter","binary_sensor","input_text","input_select"],s=(c,d,h,f)=>p`<div class="pick">
+      >`}sensorProperties(e){let t=e.sensorType??"generic";if(t==="alarm")return this.alarmProperties(e);let i=t==="generic"?void 0:t,n=["sensor","input_number","number","counter","binary_sensor","input_text","input_select"],s=(c,d,h,f)=>u`<div class="pick">
         <span>${c}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
@@ -1990,21 +2072,21 @@ data:
           @value-changed=${b=>this.change(()=>h(b.detail))}
         ></floorcast-entity-picker>
       </div>
-      ${this.stateLine(d)}`,l=e.secondary??[],r=R(this.level,e.at);return p`
+      ${this.stateLine(d)}`,l=e.secondary??[],r=D(this.level,e.at);return u`
       <h3>Sensor</h3>
       ${this.sensorTypeSelect(e)}
       ${this.text("Header",e.label??"",c=>c.trim()?e.label=c.trim():delete e.label)}
       <h4>Main value</h4>
       ${s("Entity",e.entity,c=>e.entity=c,i)}
       ${this.sensorValueSettings(e.main??{},c=>this.change(()=>{e.main={...e.main},c(e.main)}))}
-      ${l.map((c,d)=>p`<h4>Secondary value ${d+1}</h4>
+      ${l.map((c,d)=>u`<h4>Secondary value ${d+1}</h4>
           ${s("Entity",c.entity,h=>c.entity=h)}
           ${this.text("Label",c.label??"",h=>h.trim()?c.label=h.trim():delete c.label)}
           ${this.sensorValueSettings(c,h=>this.change(()=>h(c)))}
           <div class="row">
             <button @click=${()=>this.change(()=>e.secondary=l.filter((h,f)=>f!==d))}>Remove this value</button>
           </div>`)}
-      ${l.length<at?p`<div class="row">
+      ${l.length<lt?u`<div class="row">
             <button @click=${()=>this.change(()=>e.secondary=[...l,{entity:null}])}>Add a secondary value</button>
           </div>`:m}
       <p class="muted">
@@ -2013,7 +2095,7 @@ data:
         ${t==="temperature"?r?` Holding ${r.name} on the card opens this temperature.`:" Outside the rooms.":""}
       </p>
       ${this.deleteButton()}
-    `}alarmProperties(e){let t=R(this.level,e.at);return p`
+    `}alarmProperties(e){let t=D(this.level,e.at);return u`
       <h3>Sensor</h3>
       ${this.sensorTypeSelect(e)}
       <div class="pick">
@@ -2021,7 +2103,7 @@ data:
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["binary_sensor","alarm_control_panel"]}
-          .deviceClass=${Object.keys(Te)}
+          .deviceClass=${Object.keys(Ae)}
           .value=${e.entity??null}
           optional
           @value-changed=${i=>this.change(()=>e.entity=i.detail)}
@@ -2030,16 +2112,16 @@ data:
       ${this.stateLine(e.entity)}
       <p class="muted">
         A smoke, gas, carbon monoxide or water sensor, or an alarm panel. While it alarms,
-        ${t?p`${t.name} pulses red`:"the card"} and a bar at the top of the card names it; otherwise a small grey
+        ${t?u`${t.name} pulses red`:"the card"} and a bar at the top of the card names it; otherwise a small grey
         symbol shows where it is.
       </p>
       ${this.deleteButton()}
-    `}sensorTypeSelect(e){let t=e.sensorType??"generic";return p`<label class="field wide">
+    `}sensorTypeSelect(e){let t=e.sensorType??"generic";return u`<label class="field wide">
       <span>Type</span>
       <select @change=${i=>this.change(()=>e.sensorType=i.target.value)}>
-        ${[["temperature","Temperature"],["humidity","Humidity"],["generic","Other"],["alarm","Alarm"]].map(([i,n])=>p`<option value=${i} ?selected=${t===i}>${n}</option>`)}
+        ${[["temperature","Temperature"],["humidity","Humidity"],["generic","Other"],["alarm","Alarm"]].map(([i,n])=>u`<option value=${i} ?selected=${t===i}>${n}</option>`)}
       </select>
-    </label>`}batteryPicker(e){return p`<div class="pick">
+    </label>`}batteryPicker(e){return u`<div class="pick">
         <span>Battery</span>
         <floorcast-entity-picker
           .hass=${this.hass}
@@ -2050,7 +2132,7 @@ data:
           @value-changed=${t=>this.change(()=>e.battery=t.detail)}
         ></floorcast-entity-picker>
       </div>
-      ${this.stateLine(e.battery)}`}vacuumProperties(e){let t=e.pairs??[],i=lt(e);return p`
+      ${this.stateLine(e.battery)}`}vacuumProperties(e){let t=e.pairs??[],i=dt(e);return u`
       <h3>Vacuum</h3>
       <div class="pick">
         <span>Vacuum</span>
@@ -2097,7 +2179,7 @@ data:
         Mirror the map</label
       >
       ${this.deleteButton()}
-    `}mowerProperties(e){return p`
+    `}mowerProperties(e){return u`
       <h3>Mower</h3>
       <div class="pick">
         <span>Mower</span>
@@ -2144,7 +2226,7 @@ data:
       </p>
       ${this.groundProperties(e)}
       ${this.deleteButton()}
-    `}sprinklerProperties(e){return p`
+    `}sprinklerProperties(e){return u`
       <h3>Sprinkler</h3>
       <div class="pick">
         <span>Valve</span>
@@ -2164,7 +2246,7 @@ data:
           <option value="spray" ?selected=${e.nozzle==="spray"}>Spray (whole arc at once)</option>
         </select>
       </label>
-      ${this.number("Throw",e.radius??J,t=>e.radius=Math.max(.5,t),.5,"m")}
+      ${this.number("Throw",e.radius??Q,t=>e.radius=Math.max(.5,t),.5,"m")}
       ${this.number("Start",e.heading??0,t=>e.heading=(t%360+360)%360,5,"\xB0")}
       ${this.number("Arc",e.arc??360,t=>e.arc=Math.min(360,Math.max(5,t)),5,"\xB0")}
       ${this.confirmCheck(e,!0)}
@@ -2173,7 +2255,7 @@ data:
         card a tap opens or closes the valve, holding opens its details.
       </p>
       ${this.deleteButton()}
-    `}deviceProperties(e){if(!e)return m;if(e.kind==="sprinkler")return this.sprinklerProperties(e);if(e.kind==="mower")return this.mowerProperties(e);if(e.kind==="vacuum")return this.vacuumProperties(e);if(e.kind==="camera")return this.cameraProperties(e);if(e.kind==="radar")return this.radarProperties(e);if(e.kind==="sensor")return this.sensorProperties(e);if(e.kind==="screen")return this.screenProperties(e);let t=R(this.level,U(e)),i=e.entity?this._plan.levels.flatMap(n=>n.devices??[]).filter(n=>n.entity===e.entity).length:0;return p`
+    `}deviceProperties(e){if(!e)return m;if(e.kind==="sprinkler")return this.sprinklerProperties(e);if(e.kind==="mower")return this.mowerProperties(e);if(e.kind==="vacuum")return this.vacuumProperties(e);if(e.kind==="camera")return this.cameraProperties(e);if(e.kind==="radar")return this.radarProperties(e);if(e.kind==="sensor")return this.sensorProperties(e);if(e.kind==="screen")return this.screenProperties(e);let t=D(this.level,F(e)),i=e.entity?this._plan.levels.flatMap(n=>n.devices??[]).filter(n=>n.entity===e.entity).length:0;return u`
       <h3>${e.to?"Line light":"Light"}</h3>
       <div class="pick">
         <span>Entity</span>
@@ -2186,51 +2268,51 @@ data:
         ></floorcast-entity-picker>
       </div>
       ${this.stateLine(e.entity)}
-      ${i>1?p`<p class="muted">${i} light points use this entity and switch together.</p>`:m}
-      ${e.to?p`<p class="muted">Length ${_(e.at,e.to).toFixed(2)} m</p>`:m}
-      ${this.number(e.to?"Glow width":"Glow",e.radius??A,n=>e.radius=Math.max(.2,n),.25,"m")}
+      ${i>1?u`<p class="muted">${i} light points use this entity and switch together.</p>`:m}
+      ${e.to?u`<p class="muted">Length ${_(e.at,e.to).toFixed(2)} m</p>`:m}
+      ${this.number(e.to?"Glow width":"Glow",e.radius??L,n=>e.radius=Math.max(.2,n),.25,"m")}
       ${this.confirmCheck(e)}
       <p class="muted">
-        ${t?e.confirm?p`In ${t.name}: tapping the room leaves this light out.`:p`In ${t.name}: tapping the room switches this light with the others in it.`:"Outside any room."}
+        ${t?e.confirm?u`In ${t.name}: tapping the room leaves this light out.`:u`In ${t.name}: tapping the room switches this light with the others in it.`:"Outside any room."}
         The glow stops at walls and reaches rooms open to this one.
       </p>
       ${this.deleteButton()}
-    `}confirmCheck(e,t=!1){let i=t?e.confirm!==!1:!!e.confirm;return p`<label class="check"
+    `}confirmCheck(e,t=!1){let i=t?e.confirm!==!1:!!e.confirm;return u`<label class="check"
         ><input
           type="checkbox"
           .checked=${i}
           @change=${n=>this.change(()=>{let s=n.target.checked;e.confirm=s===t?void 0:s})}
         />
         Ask before switching</label
-      >`}async loadRegistry(){this._registry="loading";try{let[e,t,i,n]=await Promise.all([this.hass.callWS({type:"config/area_registry/list"}),this.hass.callWS({type:"config/device_registry/list"}),this.hass.callWS({type:"config/entity_registry/list"}),this.hass.callWS({type:"config/floor_registry/list"}).catch(()=>[])]),s=new Map(t.map(d=>[d.id,d.area_id])),l=new Map(n.map(d=>[d.floor_id,d.name])),r={},c={};for(let d of i){if(d.disabled_by||d.hidden_by||d.entity_category)continue;let h=d.area_id??(d.device_id?s.get(d.device_id):null);h&&(r[d.entity_id]=h),d.device_id&&(c[d.entity_id]=d.device_id)}this._registry={areas:e.map(d=>({id:d.area_id,name:d.name,floor:d.floor_id?l.get(d.floor_id):void 0})).sort((d,h)=>(d.floor??"~").localeCompare(h.floor??"~")||d.name.localeCompare(h.name)),entityArea:r,entityDevice:c}}catch{this._registry="failed"}}areaEntities(e,t){let i=He(this._plan);return Object.entries(t.entityArea).filter(([,n])=>n===e.area).map(([n])=>({entity:n,kind:gt(n,this.hass.states[n]),used:i.has(n)})).filter(n=>!!n.kind).sort((n,s)=>Number(n.used)-Number(s.used)||Fn.indexOf(n.kind)-Fn.indexOf(s.kind)||n.entity.localeCompare(s.entity))}freeOpenings(e,t,i){let n=fn(this.level,e);if(i==="blind")return n.filter(r=>r.type==="window"&&!r.cover);let s=this.hass.states[t]?.attributes.device_class,l=s==="window"?"window":s==="opening"?void 0:"door";return n.filter(r=>!r.contact&&(!l||r.type===l))}placeEntity(e,t,i,n,s,l){let r=this.level.devices??=[],c=s??$e(e,1,.5)[0];if(i==="light"&&r.push({id:k("light"),kind:"light",entity:t,at:c,radius:A}),i==="camera"&&r.push({id:k("camera"),kind:"camera",entity:t,at:c,heading:180,arc:Q,radius:z}),i==="alarm"&&r.push({id:k("sensor"),kind:"sensor",sensorType:"alarm",entity:t,at:c}),i==="presence"&&(e.occupancy=[...e.occupancy??[],t]),i==="blind"&&l&&(l.cover=t),i==="contact"&&l&&(l.contact=t),i==="sensor"){let d=He(this._plan),h=n.entityDevice[t],f=Object.keys(n.entityArea).filter(g=>g!==t&&h&&n.entityDevice[g]===h&&gt(g,this.hass.states[g])==="sensor"&&!d.has(g)),b=this.hass.states[t]?.attributes.device_class;r.push({id:k("sensor"),kind:"sensor",sensorType:b==="temperature"?"temperature":b==="humidity"?"humidity":"generic",entity:t,at:c,...f.length?{secondary:f.slice(0,at).map(g=>({entity:g}))}:{}})}}placeAll(e,t){this.change(()=>{let i=this.areaEntities(e,t).filter(d=>!d.used),n=i.filter(d=>d.kind==="light");$e(e,n.length,.5).forEach((d,h)=>this.placeEntity(e,n[h].entity,"light",t,d));let s=i.filter(d=>d.kind==="sensor").sort((d,h)=>+(this.hass.states[h.entity]?.attributes.device_class==="temperature")-+(this.hass.states[d.entity]?.attributes.device_class==="temperature")),l=()=>He(this._plan),r=s.filter(d=>!l().has(d.entity));for(let d of r)l().has(d.entity)||this.placeEntity(e,d.entity,"sensor",t,$e(e,1,.25)[0]);let c=i.filter(d=>d.kind==="alarm"||d.kind==="camera");$e(e,c.length,.75).forEach((d,h)=>this.placeEntity(e,c[h].entity,c[h].kind,t,d));for(let d of i.filter(h=>h.kind==="presence"))this.placeEntity(e,d.entity,"presence",t);for(let d of i.filter(h=>h.kind==="blind"||h.kind==="contact")){let h=this.freeOpenings(e,d.entity,d.kind);h.length===1&&this.placeEntity(e,d.entity,d.kind,t,void 0,h[0])}})}areaSection(e){let t=this._registry;if(t===void 0)return queueMicrotask(()=>this.loadRegistry()),m;if(t==="loading")return p`<p class="muted">Reading the areas of Home Assistant…</p>`;if(t==="failed")return p`<p class="muted">The areas of Home Assistant could not be read.</p>`;let i=c=>c.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(),n=e.area===void 0?t.areas.find(c=>i(c.name)===i(e.name)):void 0,s=[...new Set(t.areas.map(c=>c.floor))],l=e.area?this.areaEntities(e,t):[],r=l.filter(c=>!c.used&&(c.kind!=="blind"&&c.kind!=="contact"||this.freeOpenings(e,c.entity,c.kind).length===1));return p`
+      >`}async loadRegistry(){this._registry="loading";try{let[e,t,i,n]=await Promise.all([this.hass.callWS({type:"config/area_registry/list"}),this.hass.callWS({type:"config/device_registry/list"}),this.hass.callWS({type:"config/entity_registry/list"}),this.hass.callWS({type:"config/floor_registry/list"}).catch(()=>[])]),s=new Map(t.map(d=>[d.id,d.area_id])),l=new Map(n.map(d=>[d.floor_id,d.name])),r={},c={};for(let d of i){if(d.disabled_by||d.hidden_by||d.entity_category)continue;let h=d.area_id??(d.device_id?s.get(d.device_id):null);h&&(r[d.entity_id]=h),d.device_id&&(c[d.entity_id]=d.device_id)}this._registry={areas:e.map(d=>({id:d.area_id,name:d.name,floor:d.floor_id?l.get(d.floor_id):void 0})).sort((d,h)=>(d.floor??"~").localeCompare(h.floor??"~")||d.name.localeCompare(h.name)),entityArea:r,entityDevice:c}}catch{this._registry="failed"}}areaEntities(e,t){let i=Ne(this._plan);return Object.entries(t.entityArea).filter(([,n])=>n===e.area).map(([n])=>({entity:n,kind:wt(n,this.hass.states[n]),used:i.has(n)})).filter(n=>!!n.kind).sort((n,s)=>Number(n.used)-Number(s.used)||Kn.indexOf(n.kind)-Kn.indexOf(s.kind)||n.entity.localeCompare(s.entity))}freeOpenings(e,t,i){let n=bn(this.level,e);if(i==="blind")return n.filter(r=>r.type==="window"&&!r.cover);if(i==="gate")return n.filter(r=>r.type==="gate"&&!r.cover);if(i==="lock")return n.filter(r=>r.type==="door"&&!r.lock);let s=this.hass.states[t]?.attributes.device_class,l=s==="window"?"window":s==="opening"?void 0:"door";return n.filter(r=>!r.contact&&(!l||r.type===l))}placeEntity(e,t,i,n,s,l){let r=this.level.devices??=[],c=s??ve(e,1,.5)[0];if(i==="light"&&r.push({id:k("light"),kind:"light",entity:t,at:c,radius:L}),i==="camera"&&r.push({id:k("camera"),kind:"camera",entity:t,at:c,heading:180,arc:ee,radius:W}),i==="alarm"&&r.push({id:k("sensor"),kind:"sensor",sensorType:"alarm",entity:t,at:c}),i==="presence"&&(e.occupancy=[...e.occupancy??[],t]),(i==="blind"||i==="gate")&&l&&(l.cover=t),i==="lock"&&l&&(l.lock=t),i==="contact"&&l&&(l.contact=t),i==="sensor"){let d=Ne(this._plan),h=n.entityDevice[t],f=Object.keys(n.entityArea).filter(g=>g!==t&&h&&n.entityDevice[g]===h&&wt(g,this.hass.states[g])==="sensor"&&!d.has(g)),b=this.hass.states[t]?.attributes.device_class;r.push({id:k("sensor"),kind:"sensor",sensorType:b==="temperature"?"temperature":b==="humidity"?"humidity":"generic",entity:t,at:c,...f.length?{secondary:f.slice(0,lt).map(g=>({entity:g}))}:{}})}}placeAll(e,t){this.change(()=>{let i=this.areaEntities(e,t).filter(d=>!d.used),n=i.filter(d=>d.kind==="light");ve(e,n.length,.5).forEach((d,h)=>this.placeEntity(e,n[h].entity,"light",t,d));let s=i.filter(d=>d.kind==="sensor").sort((d,h)=>+(this.hass.states[h.entity]?.attributes.device_class==="temperature")-+(this.hass.states[d.entity]?.attributes.device_class==="temperature")),l=()=>Ne(this._plan),r=s.filter(d=>!l().has(d.entity));for(let d of r)l().has(d.entity)||this.placeEntity(e,d.entity,"sensor",t,ve(e,1,.25)[0]);let c=i.filter(d=>d.kind==="alarm"||d.kind==="camera");ve(e,c.length,.75).forEach((d,h)=>this.placeEntity(e,c[h].entity,c[h].kind,t,d));for(let d of i.filter(h=>h.kind==="presence"))this.placeEntity(e,d.entity,"presence",t);for(let d of i.filter(h=>Ge.includes(h.kind))){let h=this.freeOpenings(e,d.entity,d.kind);h.length===1&&this.placeEntity(e,d.entity,d.kind,t,void 0,h[0])}})}areaSection(e){let t=this._registry;if(t===void 0)return queueMicrotask(()=>this.loadRegistry()),m;if(t==="loading")return u`<p class="muted">Reading the areas of Home Assistant…</p>`;if(t==="failed")return u`<p class="muted">The areas of Home Assistant could not be read.</p>`;let i=c=>c.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(),n=e.area===void 0?t.areas.find(c=>i(c.name)===i(e.name)):void 0,s=[...new Set(t.areas.map(c=>c.floor))],l=e.area?this.areaEntities(e,t):[],r=l.filter(c=>!c.used&&(!Ge.includes(c.kind)||this.freeOpenings(e,c.entity,c.kind).length===1));return u`
       <label class="field wide">
         <span>Area</span>
         <select @change=${c=>this.change(()=>e.area=c.target.value||null)}>
           <option value="" ?selected=${!e.area}>None</option>
-          ${s.map(c=>{let d=t.areas.filter(h=>h.floor===c).map(h=>p`<option value=${h.id} ?selected=${e.area===h.id}>${h.name}</option>`);return c?p`<optgroup label=${c}>${d}</optgroup>`:d})}
+          ${s.map(c=>{let d=t.areas.filter(h=>h.floor===c).map(h=>u`<option value=${h.id} ?selected=${e.area===h.id}>${h.name}</option>`);return c?u`<optgroup label=${c}>${d}</optgroup>`:d})}
         </select>
       </label>
-      ${n?p`<div class="row">
+      ${n?u`<div class="row">
             <button @click=${()=>this.change(()=>e.area=n.id)}>Use the area ${n.name}</button>
           </div>`:m}
-      ${e.area?p`${l.length?p`<div class="area-list">
-                  ${l.map(c=>{let d=this.hass.states[c.entity]?.attributes.friendly_name??c.entity,h=c.kind==="blind"||c.kind==="contact"?this.freeOpenings(e,c.entity,c.kind):[],f=c.used?p`<span class="muted">placed</span>`:c.kind==="blind"||c.kind==="contact"?h.length?p`<select
+      ${e.area?u`${l.length?u`<div class="area-list">
+                  ${l.map(c=>{let d=this.hass.states[c.entity]?.attributes.friendly_name??c.entity,h=Ge.includes(c.kind)?this.freeOpenings(e,c.entity,c.kind):[],f=c.used?u`<span class="muted">placed</span>`:Ge.includes(c.kind)?h.length?u`<select
                               @change=${b=>{let g=h[Number(b.target.value)];g&&this.change(()=>this.placeEntity(e,c.entity,c.kind,t,void 0,g))}}
                             >
                               <option value="">Put on…</option>
-                              ${h.map((b,g)=>p`<option value=${g}>${gn(this.level,e,b)}</option>`)}
-                            </select>`:p`<span class="muted">no free ${c.kind==="blind"?"window":"door or window"}</span>`:p`<button @click=${()=>this.change(()=>this.placeEntity(e,c.entity,c.kind,t))}>Place</button>`;return p`<div class="area-row">
+                              ${h.map((b,g)=>u`<option value=${g}>${wn(this.level,e,b)}</option>`)}
+                            </select>`:u`<span class="muted">no free ${c.kind==="blind"?"window":c.kind==="gate"?"gate":c.kind==="lock"?"door":"door or window"}</span>`:u`<button @click=${()=>this.change(()=>this.placeEntity(e,c.entity,c.kind,t))}>Place</button>`;return u`<div class="area-row">
                       <span class="area-name" title=${c.entity}>${d}</span>
-                      <span class="muted">${mn[c.kind]}</span>
+                      <span class="muted">${gn[c.kind]}</span>
                       ${f}
                     </div>`})}
-                </div>`:p`<p class="muted">The area has no lights, sensors, blinds or cameras the plan can show.</p>`}
-            ${r.length?p`<div class="row"><button @click=${()=>this.placeAll(e,t)}>Place all (${r.length})</button></div>
+                </div>`:u`<p class="muted">The area has no lights, sensors, blinds or cameras the plan can show.</p>`}
+            ${r.length?u`<div class="row"><button @click=${()=>this.placeAll(e,t)}>Place all (${r.length})</button></div>
                   <p class="muted">
                     Place all puts lights across the middle of the room, sensors above them and alarms and cameras below; drag them
                     where they are. A blind or contact goes on its own only where one door or window fits.
                   </p>`:m}`:m}
-    `}roomProperties(e){if(!e)return m;let t=bn(this.level,e),i=We(this.level,e),n=e.occupancy??[];return p`
+    `}roomProperties(e){if(!e)return m;let t=$n(this.level,e),i=ze(this.level,e),n=e.occupancy??[];return u`
       <h3>Room</h3>
       ${this.text("Name",e.name,s=>e.name=s)}
       ${this.areaSection(e)}
@@ -2256,7 +2338,7 @@ data:
         takes what stands in it. People are counted by the radars and cameras that see the room.
       </p>
       <h4>Presence sensors</h4>
-      ${n.map((s,l)=>p`<div class="pick">
+      ${n.map((s,l)=>u`<div class="pick">
             <span>Sensor ${l+1}</span>
             <floorcast-entity-picker
               .hass=${this.hass}
@@ -2275,39 +2357,39 @@ data:
         A motion, occupancy or presence sensor keeps the room occupied while it is on: the room's occupancy entity and the card
         follow it. It does not count people.
       </p>
-      ${this.hasRadar||n.length?this.number("Occupancy hold",e.hold??ot,s=>e.hold=Math.max(0,s),5,"s"):m}
+      ${this.hasRadar||n.length?this.number("Occupancy hold",e.hold??rt,s=>e.hold=Math.max(0,s),5,"s"):m}
       ${this.deleteButton()}
-    `}get hasRadar(){return(this.level.devices??[]).some(e=>e.kind==="radar"||e.kind==="camera"&&!!e.frigate&&(e.calibration?.length??0)>=4)}trackingProperties(e){let t=(e==="radar"?this._plan.tracking:this._plan.tracking?.camera)??{},i=(s,l)=>this._plan.tracking=e==="radar"?{...this._plan.tracking,[s]:l}:{...this._plan.tracking,camera:{...this._plan.tracking?.camera,[s]:l}};return p`<details class="settings">
+    `}get hasRadar(){return(this.level.devices??[]).some(e=>e.kind==="radar"||e.kind==="camera"&&!!e.frigate&&(e.calibration?.length??0)>=4)}trackingProperties(e){let t=(e==="radar"?this._plan.tracking:this._plan.tracking?.camera)??{},i=(s,l)=>this._plan.tracking=e==="radar"?{...this._plan.tracking,[s]:l}:{...this._plan.tracking,camera:{...this._plan.tracking?.camera,[s]:l}};return u`<details class="settings">
       <summary>${e==="radar"?"Radar tracking settings":"Camera tracking settings"}</summary>
-      ${[["Snap into rooms within","snap_distance",1,1,.1,"m",0,3],["Merge closer than","merge_distance",.8,.8,.1,"m",.1,3],["Smoothing (1 = none)","smoothing",.5,.6,.1,"",.1,1],["Count a new person after","confirm_delay",1,.5,.5,"s",0,30],["Longest step","jump_base",1.5,1.5,.1,"m",.5,10],["Walking speed","jump_speed",2.5,2.5,.1,"m/s",.5,10],["Keep a missed person","lost_hold",5,10,1,"s",0,120],["Resting place hold","stationary_hold",Se,Se,30,"s",0,3600],["Remember a lost person","sleep_hours",12,12,1,"h",0,48]].map(([s,l,r,c,d,h,f,b])=>this.number(s,t[l]??(e==="radar"?r:c),g=>i(l,Math.min(b,Math.max(f,g))),d,h))}
+      ${[["Snap into rooms within","snap_distance",1,1,.1,"m",0,3],["Merge closer than","merge_distance",.8,.8,.1,"m",.1,3],["Smoothing (1 = none)","smoothing",.5,.6,.1,"",.1,1],["Count a new person after","confirm_delay",1,.5,.5,"s",0,30],["Longest step","jump_base",1.5,1.5,.1,"m",.5,10],["Walking speed","jump_speed",2.5,2.5,.1,"m/s",.5,10],["Keep a missed person","lost_hold",5,10,1,"s",0,120],["Resting place hold","stationary_hold",Te,Te,30,"s",0,3600],["Remember a lost person","sleep_hours",12,12,1,"h",0,48]].map(([s,l,r,c,d,h,f,b])=>this.number(s,t[l]??(e==="radar"?r:c),g=>i(l,Math.min(b,Math.max(f,g))),d,h))}
       <p class="muted">
         A detection just outside the rooms its ${e} sees is moved inside, up to the snap distance;
         ${e==="radar"?"a radar target farther out is dropped.":"a camera keeps people farther out, in the garden."} A missed
         person stays where they were for a while; seen again within walking distance, it is the same person.
         ${e==="camera"?"A camera person next to a radar person counts once.":""}
       </p>
-    </details>`}zoneProperties(e){if(!e)return m;let t=e.kind==="stationary"?this._plan.tracking?.stationary_hold??Se:ot;return p`
+    </details>`}zoneProperties(e){if(!e)return m;let t=e.kind==="stationary"?this._plan.tracking?.stationary_hold??Te:rt;return u`
       <h3>Zone</h3>
       ${this.text("Name",e.name,i=>e.name=i)}
       <label class="field wide">
         <span>Use</span>
         <select @change=${i=>this.change(()=>e.kind=i.target.value)}>
-          ${Object.keys(Ct).map(i=>p`<option value=${i} ?selected=${i===e.kind}>${Ct[i]}</option>`)}
+          ${Object.keys(Ot).map(i=>u`<option value=${i} ?selected=${i===e.kind}>${Ot[i]}</option>`)}
         </select>
       </label>
       ${e.kind==="count"||e.kind==="stationary"?this.number(e.kind==="count"?"Occupancy hold":"Keeps a still person",e.hold??t,i=>e.hold=Math.max(0,i),5,"s"):m}
-      <p class="muted">${Li[e.kind]}</p>
+      <p class="muted">${Oi[e.kind]}</p>
       ${this.deleteButton()}
-    `}itemProperties(e){return e?p`
+    `}itemProperties(e){return e?u`
       <h3>Object</h3>
       <label class="field wide">
         <span>Type</span>
         <select @change=${t=>this.change(()=>this.retype(e,t.target.value))}>
-          ${Object.keys(H).map(t=>p`<option value=${t} ?selected=${t===e.type}>${H[t]}</option>`)}
+          ${Object.keys(N).map(t=>u`<option value=${t} ?selected=${t===e.type}>${N[t]}</option>`)}
         </select>
       </label>
       ${this.text("Name",e.name??"",t=>e.name=t||void 0)}
-      ${e.center?m:p`<label class="field wide">
+      ${e.center?m:u`<label class="field wide">
             <span>Corners</span>
             <select
               @change=${t=>this.change(()=>{let i=t.target.value;i==="round"||i==="square"?e.corners=i:delete e.corners})}
@@ -2317,29 +2399,29 @@ data:
               <option value="square" ?selected=${e.corners==="square"}>Square</option>
             </select>
           </label>`}
-      ${e.rect?p`${this.number("X",e.rect[0],t=>e.rect[0]=t)} ${this.number("Y",e.rect[1],t=>e.rect[1]=t)}
+      ${e.rect?u`${this.number("X",e.rect[0],t=>e.rect[0]=t)} ${this.number("Y",e.rect[1],t=>e.rect[1]=t)}
           ${this.number("Width",e.rect[2],t=>e.rect[2]=Math.max(.1,t))}
           ${this.number("Length",e.rect[3],t=>e.rect[3]=Math.max(.1,t))}
           ${this.number("Rotation",e.rotation??0,t=>e.rotation=t,5,"\xB0")}`:m}
-      ${e.center?p`${this.number("X",e.center[0],t=>e.center[0]=t)} ${this.number("Y",e.center[1],t=>e.center[1]=t)}
+      ${e.center?u`${this.number("X",e.center[0],t=>e.center[0]=t)} ${this.number("Y",e.center[1],t=>e.center[1]=t)}
           ${this.number("Diameter",e.diameter??1,t=>e.diameter=Math.max(.1,t))}`:m}
-      ${e.points?p`<p class="muted">Drag corners; drag the middle of an edge to add a corner.</p>`:m}
+      ${e.points?u`<p class="muted">Drag corners; drag the middle of an edge to add a corner.</p>`:m}
       <div class="row">
-        ${e.points?p`<button
+        ${e.points?u`<button
               title="Turns the shape back into a rectangle around it"
-              @click=${()=>this.change(()=>{let t=Dt(e);e.rect=[$(t.x),$(t.y),$(t.w),$(t.h)],e.rotation=0,delete e.points})}
+              @click=${()=>this.change(()=>{let t=It(e);e.rect=[$(t.x),$(t.y),$(t.w),$(t.h)],e.rotation=0,delete e.points})}
             >
               Rectangle
             </button>`:m}
-        ${e.rect?p`<button
+        ${e.rect?u`<button
               title="Turns the rectangle into a shape with free corners"
-              @click=${()=>this.change(()=>{e.points=be(e).map(t=>[$(t[0]),$(t[1])]),delete e.rect,delete e.rotation})}
+              @click=${()=>this.change(()=>{e.points=we(e).map(t=>[$(t[0]),$(t[1])]),delete e.rect,delete e.rotation})}
             >
               Free shape
             </button>`:m}
         ${this.deleteButton()}
       </div>
-    `:m}retype(e,t){let i=oe.includes(t);if(i&&!e.center){let n=Dt(e);e.center=[$(n.x+n.w/2),$(n.y+n.h/2)],e.diameter=$(Math.max(.2,Math.min(n.w,n.h))),delete e.rect,delete e.points,delete e.rotation}else if(!i&&e.center){let n=e.diameter??1;e.rect=[$(e.center[0]-n/2),$(e.center[1]-n/2),n,n],e.rotation=0,delete e.center,delete e.diameter}e.type=t}static{this.styles=[Hn,O`
+    `:m}retype(e,t){let i=ae.includes(t);if(i&&!e.center){let n=It(e);e.center=[$(n.x+n.w/2),$(n.y+n.h/2)],e.diameter=$(Math.max(.2,Math.min(n.w,n.h))),delete e.rect,delete e.points,delete e.rotation}else if(!i&&e.center){let n=e.diameter??1;e.rect=[$(e.center[0]-n/2),$(e.center[1]-n/2),n,n],e.rotation=0,delete e.center,delete e.diameter}e.type=t}static{this.styles=[Un,I`
       :host {
         display: flex;
         flex-direction: column;
@@ -3215,7 +3297,7 @@ data:
           border-top: 1px solid var(--divider-color);
         }
       }
-    `]}},Li={count:"Gets its own people count and occupancy sensors, like a room the radar sees.",entrance:"A person who appears here counts at once instead of after the confirm delay. Draw it at doors.",exclude:"Targets born here never count, and nobody is reported inside it.",stationary:"A person the radar loses here stays counted for the hold time, as someone lying still is often not seen."},jn={select:"Click to select, click again for what lies below. Drag the selected thing to move it, drag elsewhere to move the plan.",wall:"Click to start a wall and click again for each corner. Double click or Esc ends.",door:"Click on a wall to place a door.",window:"Click on a wall to place a window.",room:"Drag for a rectangular room, or click its corners one by one and close it on the first corner or with Enter.",zone:"Drag or click corners like a room; then choose what the zone does for the radars.",calibrate:"Click the same spot on the plan.",screen:"Drag along the screen, then choose its power entity and its remote.",sensor:"Click where the sensor is, then choose its type and what it shows, such as a temperature or the level of the septic tank.",item:"Choose the kind of object, then drag to draw it.",light:"Click where a light is, or choose Line and drag along a light strip; then choose its entity.",sprinkler:"Click where a sprinkler head is, then choose its valve, throw and arc.",mower:"Click on the lawn; the map of the mower appears there to be laid over the plan.",vacuum:"Click where the dock of the vacuum stands.",mark:"Click the spot where the vacuum stands now.",camera:"Click where the camera hangs, then aim it with the handle at the end of its view.",radar:"Click where the radar hangs, then aim it with the handle and check the dots follow people."};function Ri(a){return a.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")}function Dt(a){return mt({id:"",name:"",walls:[],openings:[],rooms:[],items:[a]},0)}ne("floorcast-panel",Ot);function Gn([a,o],e){let t=e.heading*Math.PI/180;return[e.at[0]+a*Math.cos(t)-o*Math.sin(t),e.at[1]+a*Math.sin(t)+o*Math.cos(t)]}function Ci(a,o){let e=o.heading*Math.PI/180,t=a[0]-o.at[0],i=a[1]-o.at[1];return[$(t*Math.cos(e)+i*Math.sin(e)),$(-t*Math.sin(e)+i*Math.cos(e))]}
+    `]}},Oi={count:"Gets its own people count and occupancy sensors, like a room the radar sees.",entrance:"A person who appears here counts at once instead of after the confirm delay. Draw it at doors.",exclude:"Targets born here never count, and nobody is reported inside it.",stationary:"A person the radar loses here stays counted for the hold time, as someone lying still is often not seen."},Bn={select:"Click to select, click again for what lies below. Drag the selected thing to move it, drag elsewhere to move the plan.",wall:"Click to start a wall and click again for each corner. Double click or Esc ends.",door:"Click on a wall to place a door.",window:"Click on a wall to place a window.",gate:"Click on a wall to place a garage door or a driveway gate, then choose its cover.",room:"Drag for a rectangular room, or click its corners one by one and close it on the first corner or with Enter.",zone:"Drag or click corners like a room; then choose what the zone does for the radars.",calibrate:"Click the same spot on the plan.",screen:"Drag along the screen, then choose its power entity and its remote.",sensor:"Click where the sensor is, then choose its type and what it shows, such as a temperature or the level of the septic tank.",item:"Choose the kind of object, then drag to draw it.",light:"Click where a light is, or choose Line and drag along a light strip; then choose its entity.",sprinkler:"Click where a sprinkler head is, then choose its valve, throw and arc.",mower:"Click on the lawn; the map of the mower appears there to be laid over the plan.",vacuum:"Click where the dock of the vacuum stands.",mark:"Click the spot where the vacuum stands now.",camera:"Click where the camera hangs, then aim it with the handle at the end of its view.",radar:"Click where the radar hangs, then aim it with the handle and check the dots follow people."};function Ii(a){return a.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")}function It(a){return gt({id:"",name:"",walls:[],openings:[],rooms:[],items:[a]},0)}ie("floorcast-panel",Ht);function Zn([a,o],e){let t=e.heading*Math.PI/180;return[e.at[0]+a*Math.cos(t)-o*Math.sin(t),e.at[1]+a*Math.sin(t)+o*Math.cos(t)]}function Hi(a,o){let e=o.heading*Math.PI/180,t=a[0]-o.at[0],i=a[1]-o.at[1];return[$(t*Math.cos(e)+i*Math.sin(e)),$(-t*Math.sin(e)+i*Math.cos(e))]}
 /*! Bundled license information:
 
 @lit/reactive-element/css-tag.js:
