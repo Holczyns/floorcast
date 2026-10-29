@@ -127,6 +127,11 @@
               temperature: thermostat ? 21 : 22.5,
               hvac_action: thermostat++ ? "idle" : "heating",
             });
+      // Indicators: a power sensor draws a few hundred watts, a switch is off.
+      for (const level of plan.levels)
+        for (const d of level.devices ?? [])
+          if (d.kind === "indicator" && d.entity && !states[d.entity])
+            set(d.entity, d.entity.startsWith("sensor.") ? "420" : "off", d.entity.startsWith("sensor.") ? { device_class: "power", unit_of_measurement: "W" } : {});
       // Locks of doors: locked; gates: closed.
       for (const level of plan.levels)
         for (const o of level.openings) {

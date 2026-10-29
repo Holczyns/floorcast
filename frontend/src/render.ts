@@ -612,6 +612,16 @@ export function renderAlarm(at: Point, kind: string, active: boolean, unknown: b
   </g>`;
 }
 
+/** An indicator: a dot that glows while the device runs, with its name and state beside it. */
+export function renderIndicator(at: Point, label: string, text: string | undefined, running: boolean, size: number): SVGTemplateResult {
+  const r = size / 2;
+  return svg`<g class="fc-indicator ${running ? "on" : ""}" transform="translate(${n(at[0])} ${n(at[1])})">
+    ${running ? svg`<circle class="halo" r=${n(r * 2.2)}></circle>` : nothing}
+    <circle class="dot" r=${n(r)}></circle>
+    <text x=${n(r * 1.8)} y="0" font-size=${n(size * 1.05)}>${label}${text ? svg`<tspan class="state"> · ${text}</tspan>` : nothing}</text>
+  </g>`;
+}
+
 /** Where the padlock of a door stands: beside its middle, on the face of the wall it opens to. */
 export function lockSpot(wall: Wall, opening: Opening, size: number): Point {
   const d = wallDirection(wall);
@@ -1106,6 +1116,30 @@ export const planStyles = css`
   }
   .fc-door.shut {
     opacity: 0.8;
+  }
+  .fc-indicator .dot {
+    fill: var(--fc-background);
+    stroke: var(--fc-label);
+    stroke-width: 0.03;
+  }
+  .fc-indicator.on .dot {
+    fill: var(--fc-light);
+    stroke: var(--fc-light);
+  }
+  .fc-indicator .halo {
+    fill: var(--fc-light);
+    opacity: 0.25;
+  }
+  .fc-indicator text {
+    fill: var(--fc-label);
+    dominant-baseline: central;
+    font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif);
+  }
+  .fc-indicator.on text {
+    fill: var(--fc-value);
+  }
+  .fc-indicator .state {
+    fill: var(--fc-label);
   }
   .fc-gate {
     stroke: var(--fc-wall);

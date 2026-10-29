@@ -28,6 +28,8 @@ import { type CameraObject, type StillImage, type Device, type Level, type Track
   heatColour,
   roomHeat,
   roomClimate,
+  indicatorState,
+  SWITCHABLE_DOMAINS,
   type HeatKind,
   withoutGarden,
 } from "./model";
@@ -47,6 +49,7 @@ import {
   renderAlarm,
   renderLock,
   lockSpot,
+  renderIndicator,
   trackHeading,
   renderScreen,
   renderScreenGlows,
@@ -845,7 +848,7 @@ class FloorCastCard extends LitElement {
           ${PLAN_DEFS} ${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}
           ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
           ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)} ${this.renderLocks(level, pxPerMetre)}
-          ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)}
+          ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)} ${this.renderIndicators(level, pxPerMetre)}
           ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}
         </svg>
         ${own ? this.renderZoomButtons(level) : nothing}
@@ -903,6 +906,36 @@ class FloorCastCard extends LitElement {
             @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
           <circle class="lamp-hit" cx=${at[0]} cy=${at[1]} r=${size}></circle>
           ${renderLock(at, state, size)}
+        </g>`;
+      });
+  }
+
+  /**
+   * Indicators: a tap switches a switch, input boolean or fan, after Yes when asked; any other one, and a hold,
+   * open its details.
+   */
+  private renderIndicators(level: Level, pxPerMetre: number) {
+    const size = Math.max(0.12, 9 / pxPerMetre);
+    return (level.devices ?? [])
+      .filter((device) => device.kind === "indicator" && device.entity)
+      .map((device) => {
+        const entity = device.entity!;
+        const stateObj = this.hass.states[entity];
+        const shown = indicatorState(device, stateObj);
+        const label = device.label || String(stateObj?.attributes.friendly_name ?? entity);
+        const switchable = SWITCHABLE_DOMAINS.includes(entity.split(".")[0]);
+        const on = stateObj?.state === "on";
+        return svg`<g class="mower-hit"
+            @pointerdown=${() => this.holdStart(() => this.openMoreInfo(entity))}
+            @pointerup=${() =>
+              this.holdEnd(() =>
+                switchable
+                  ? this.ask(device.confirm, entity, on ? "Turn off" : "Turn on", () => this.hass.callService("homeassistant", "toggle", { entity_id: entity }))
+                  : this.openMoreInfo(entity),
+              )}
+            @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
+          <circle class="lamp-hit" cx=${device.at[0]} cy=${device.at[1]} r=${size * 2}></circle>
+          ${renderIndicator(device.at, label, shown.text, shown.running, size)}
         </g>`;
       });
   }

@@ -42,6 +42,8 @@ import {
   type TrackingSettings,
   centroid,
   OPENING_NAMES,
+  indicatorState,
+  SWITCHABLE_DOMAINS,
   itemPoints,
   AREA_KIND_NAMES,
   areaKind,
@@ -104,6 +106,7 @@ import {
   renderAlarm,
   renderLock,
   lockSpot,
+  renderIndicator,
   renderScreen,
   renderScreenGlows,
   screenLight,
@@ -114,7 +117,7 @@ import {
   sprinklerArea,
 } from "./render";
 
-type Tool = "select" | "wall" | "door" | "window" | "gate" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "mark" | "calibrate";
+type Tool = "select" | "wall" | "door" | "window" | "gate" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "indicator" | "mark" | "calibrate";
 type Selection =
   | { kind: "wall"; id: string }
   | { kind: "opening"; id: string }
@@ -148,6 +151,7 @@ const TOOL_NAMES: Partial<Record<Tool, string>> = {
   vacuum: "Vacuum",
   sensor: "Sensor",
   screen: "Screen",
+  indicator: "Indicator",
   camera: "Camera",
   radar: "Radar",
   mark: "Mark the vacuum",
@@ -208,6 +212,7 @@ const MODE_TOOLS: Record<Mode, [Tool, string, string][]> = {
     ["light", "Light or strip", "L"],
     ["sensor", "Sensor or alarm", "S"],
     ["screen", "Screen", "T"],
+    ["indicator", "Indicator", "I"],
     ["sprinkler", "Sprinkler", "P"],
     ["camera", "Camera", "C"],
     ["mower", "Mower", "M"],
@@ -236,6 +241,7 @@ const DEVICE_LABELS: Record<Device["kind"], string> = {
   sensor: "Sensor",
   thermometer: "Thermometer",
   screen: "Screen",
+  indicator: "Indicator",
 };
 
 /** Areas of Home Assistant with their floor, and the area and device of each entity. */
@@ -244,6 +250,25 @@ interface Registry {
   entityArea: Record<string, string>;
   entityDevice: Record<string, string>;
 }
+
+/** Domains an indicator offers: anything with a state worth seeing on the plan. */
+const INDICATOR_DOMAINS = [
+  "switch",
+  "input_boolean",
+  "fan",
+  "sensor",
+  "binary_sensor",
+  "media_player",
+  "climate",
+  "water_heater",
+  "vacuum",
+  "lawn_mower",
+  "valve",
+  "cover",
+  "humidifier",
+  "select",
+  "input_select",
+];
 
 /** Kinds of entities of an area that go on a door, window or gate instead of standing in the room. */
 const ON_OPENING: AreaKind[] = ["blind", "gate", "lock", "contact"];
@@ -1023,6 +1048,13 @@ class FloorCastPanel extends LitElement {
       case "vacuum":
         this.addVacuum(this.snap(p, event));
         return;
+      case "indicator": {
+        const device: Device = { id: uid("indicator"), kind: "indicator", entity: null, at: this.snap(p, event) };
+        this.change(() => (this.level.devices ??= []).push(device));
+        this._selection = { kind: "device", id: device.id };
+        this._tool = "select";
+        return;
+      }
       case "sensor": {
         const device: Device = { id: uid("sensor"), kind: "sensor", sensorType: "generic", entity: null, at: this.snap(p, event) };
         this.change(() => (this.level.devices ??= []).push(device));
@@ -2155,6 +2187,16 @@ class FloorCastPanel extends LitElement {
                 ${renderScreen(device, this._live && isPowered(device.entity ? this.hass.states[device.entity]?.state : undefined))}
                 <path class="hit-line" stroke-width=${px * 14}
                   d="M${device.at[0]} ${device.at[1]}L${(device.to ?? device.at)[0]} ${(device.to ?? device.at)[1]}"></path>
+              </g>`
+            : device.kind === "indicator"
+            ? svg`<g data-device=${device.id} class="sensor-device">
+                <circle class="hit" cx=${device.at[0]} cy=${device.at[1]} r=${px * 10}></circle>
+                ${(() => {
+                  const stateObj = device.entity ? this.hass.states[device.entity] : undefined;
+                  const shown = indicatorState(device, this._live ? stateObj : undefined);
+                  const label = device.label || String(stateObj?.attributes.friendly_name ?? device.entity ?? "Indicator");
+                  return renderIndicator(device.at, label, shown.text, shown.running, px * 9);
+                })()}
               </g>`
             : device.kind === "sensor" && device.sensorType === "alarm"
             ? svg`<g data-device=${device.id} class="sensor-device">
@@ -3705,6 +3747,35 @@ class FloorCastPanel extends LitElement {
     `;
   }
 
+  /** An indicator: any entity, running by its state or power, switched on a tap when it is a switch. */
+  private indicatorProperties(device: Device) {
+    const stateObj = device.entity ? this.hass.states[device.entity] : undefined;
+    const shown = indicatorState(device, stateObj);
+    const switchable = !!device.entity && SWITCHABLE_DOMAINS.includes(device.entity.split(".")[0]);
+    return html`
+      <h3>Indicator</h3>
+      <div class="pick">
+        <span>Entity</span>
+        <floorcast-entity-picker
+          .hass=${this.hass}
+          .domains=${INDICATOR_DOMAINS}
+          .value=${device.entity ?? null}
+          optional
+          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
+        ></floorcast-entity-picker>
+      </div>
+      ${this.stateLine(device.entity)}
+      ${this.text("Name", device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
+      ${shown.power ? this.number("Running from", device.threshold ?? 5, (v) => (device.threshold = Math.max(0, v)), 1, "W") : nothing}
+      ${switchable ? this.confirmCheck(device) : nothing}
+      <p class="muted">
+        A dot with the name and state of any entity; it glows while the device runs: a state such as on, running, heating
+        or cleaning, or a power sensor above the watts set. ${switchable ? "A tap on the card switches it." : "A tap on the card opens it."}
+      </p>
+      ${this.deleteButton()}
+    `;
+  }
+
   /** An Alarm sensor: a smoke, gas, carbon monoxide or water sensor, or an alarm panel; it warns on the card. */
   private alarmProperties(device: Device) {
     const room = roomAt(this.level, device.at);
@@ -3917,6 +3988,7 @@ class FloorCastPanel extends LitElement {
     if (device.kind === "radar") return this.radarProperties(device);
     if (device.kind === "sensor") return this.sensorProperties(device);
     if (device.kind === "screen") return this.screenProperties(device);
+    if (device.kind === "indicator") return this.indicatorProperties(device);
     const room = roomAt(this.level, deviceCentre(device));
     const sharing = device.entity
       ? this._plan!.levels.flatMap((level) => level.devices ?? []).filter((other) => other.entity === device.entity).length
@@ -5305,6 +5377,7 @@ const HINTS: Record<Tool, string> = {
   screen: "Drag along the screen, then choose its power entity and its remote.",
   sensor: "Click where the sensor is, then choose its type and what it shows, such as a temperature or the level of the septic tank.",
   item: "Choose the kind of object, then drag to draw it.",
+  indicator: "Click where the device is: a washer, a pump, a heater, a socket. It glows while it runs.",
   light: "Click where a light is, or choose Line and drag along a light strip; then choose its entity.",
   sprinkler: "Click where a sprinkler head is, then choose its valve, throw and arc.",
   mower: "Click on the lawn; the map of the mower appears there to be laid over the plan.",

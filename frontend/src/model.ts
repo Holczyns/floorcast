@@ -245,7 +245,7 @@ export type PreviewMode = "window" | "ground" | "both";
 export interface Device {
   id: string;
   /** "thermometer" is the former kind of a temperature sensor; normalizeSensors turns it into a sensor. */
-  kind: "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "thermometer" | "screen";
+  kind: "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "thermometer" | "screen" | "indicator";
   /** Radar: name its target sensors start with, as in sensor.<source>_target_1_x. */
   source?: string | null;
   entity?: string | null;
@@ -298,6 +298,8 @@ export interface Device {
   frigate?: string | null;
   /** Camera: the same spots in its image (0..1 of width and height) and on the plan (m); four or more. */
   calibration?: { image: Point; plan: Point }[];
+  /** Indicator: watts from which a power sensor counts as running; 5 without it. */
+  threshold?: number;
   /** Camera: detect resolution of Frigate in pixels, when Frigate does not report it. */
   detect?: [number, number];
   /**
@@ -331,6 +333,45 @@ export function readingText(stateObj: Reading, value: SensorValue = {}): string 
   const unit = value.unit === "custom" ? (value.unitText ?? "") : value.unit === "entity" ? entityUnit : short;
   if (!unit) return shown;
   return unit === "°" || unit === "%" ? `${shown}${unit}` : `${shown} ${unit}`;
+}
+
+/** States in which an indicator counts as running, whatever the device. */
+const RUNNING_STATES = new Set([
+  "on",
+  "open",
+  "opening",
+  "closing",
+  "heat",
+  "cool",
+  "heating",
+  "cooling",
+  "running",
+  "cleaning",
+  "mowing",
+  "playing",
+  "printing",
+  "washing",
+  "drying",
+  "active",
+]);
+
+/** Domains an indicator switches on a tap; any other one opens its details. */
+export const SWITCHABLE_DOMAINS = ["switch", "input_boolean", "fan"];
+
+/**
+ * What an indicator shows: running by its state, or a power sensor above its threshold (5 W by default), and its
+ * state as short text.
+ */
+export function indicatorState(device: Device, stateObj: Reading): { running: boolean; text?: string; power: boolean } {
+  if (!stateObj || stateObj.state === "unavailable" || stateObj.state === "unknown") return { running: false, power: false };
+  const unit = stateObj.attributes.unit_of_measurement;
+  const power = unit === "W" || unit === "kW";
+  const value = Number.parseFloat(stateObj.state);
+  if (Number.isFinite(value)) {
+    const watts = unit === "kW" ? value * 1000 : value;
+    return { running: power && watts > (device.threshold ?? 5), text: readingText(stateObj), power };
+  }
+  return { running: RUNNING_STATES.has(stateObj.state), text: stateObj.state.replace(/_/g, " "), power };
 }
 
 /** Whether a projector, remote or media player is on; standby and unavailable count as off. */
