@@ -114,7 +114,8 @@ type Selection =
   | { kind: "device"; id: string };
 
 /** Tab of the side panel; it decides what can be picked and drawn on the plan. */
-type Mode = "general" | "building" | "objects" | "devices" | "radar" | "cameras" | "zones";
+/** Tabs of the editor: the layout, the devices, the people tracking and the settings. */
+type Mode = "plan" | "devices" | "people" | "settings";
 
 /** How far the pointer moves before a press is a drag and not a click, in pixels. */
 const DRAG_PX = 8;
@@ -176,36 +177,42 @@ function storeList(key: string, values: string[]): void {
 }
 
 const MODES: { mode: Mode; label: string }[] = [
-  { mode: "general", label: "General" },
-  { mode: "building", label: "Building" },
-  { mode: "objects", label: "Objects" },
+  { mode: "plan", label: "Plan" },
   { mode: "devices", label: "Devices" },
-  { mode: "radar", label: "Radars" },
-  { mode: "cameras", label: "Cameras" },
-  { mode: "zones", label: "Zones" },
+  { mode: "people", label: "People" },
+  { mode: "settings", label: "⚙ Settings" },
 ];
 
-const MODE_TOOLS: Record<Mode, [Tool, string][]> = {
-  general: [],
-  building: [
-    ["wall", "Wall"],
-    ["door", "Door"],
-    ["window", "Window"],
-    ["room", "Room"],
+/** What + Add offers in each tab, with the key that starts it. */
+const MODE_TOOLS: Record<Mode, [Tool, string, string][]> = {
+  plan: [
+    ["wall", "Wall", "W"],
+    ["door", "Door", "D"],
+    ["window", "Window", "N"],
+    ["room", "Room", "R"],
+    ["item", "Garden or furniture", "O"],
   ],
-  objects: [["item", "Object"]],
   devices: [
-    ["light", "Light"],
-    ["sprinkler", "Sprinkler"],
-    ["mower", "Mower"],
-    ["vacuum", "Vacuum"],
-    ["sensor", "Sensor"],
-    ["screen", "Screen"],
+    ["light", "Light or strip", "L"],
+    ["sensor", "Sensor or alarm", "S"],
+    ["screen", "Screen", "T"],
+    ["sprinkler", "Sprinkler", "P"],
+    ["camera", "Camera", "C"],
+    ["mower", "Mower", "M"],
+    ["vacuum", "Vacuum", "V"],
   ],
-  radar: [["radar", "Radar"]],
-  cameras: [["camera", "Camera"]],
-  zones: [["zone", "Zone"]],
+  people: [
+    ["radar", "Radar", "A"],
+    ["zone", "Zone", "Z"],
+  ],
+  settings: [],
 };
+
+/** The tab a tool works in, and the tool a key starts. */
+const TOOL_MODE = new Map<Tool, Mode>(
+  (Object.entries(MODE_TOOLS) as [Mode, [Tool, string, string][]][]).flatMap(([mode, tools]) => tools.map(([tool]) => [tool, mode] as [Tool, Mode])),
+);
+const KEY_TOOLS = new Map<string, Tool>(Object.values(MODE_TOOLS).flatMap((tools) => tools.map(([tool, , key]) => [key.toLowerCase(), tool] as [string, Tool])));
 
 const DEVICE_LABELS: Record<Device["kind"], string> = {
   light: "Light",
@@ -302,6 +309,7 @@ class FloorCastPanel extends LitElement {
     _view: { state: true },
     _draft: { state: true },
     _cursor: { state: true },
+    _addOpen: { state: true },
     _locked: { state: true },
     _toast: { state: true },
     _find: { state: true },
@@ -335,7 +343,9 @@ class FloorCastPanel extends LitElement {
   private _saved = "";
   private _levelId = "";
   private _tool: Tool = "select";
-  private _mode: Mode = "building";
+  private _mode: Mode = "plan";
+  /** The palette of + Add is open. */
+  private _addOpen = false;
   /** Text the lists of the panel are narrowed to. */
   private _filter = "";
   /** Spot clicked in the camera image, waiting for the same spot on the plan. */
@@ -392,9 +402,9 @@ class FloorCastPanel extends LitElement {
   private _lastClick?: Point;
   private _history: string[] = [];
   private _loaded = false;
-  /** People the integration tracks, per level, shown in the Radars tab; undefined without the tracking. */
+  /** People the integration tracks, per level, shown in People; undefined without the tracking. */
   private _people?: Record<string, TrackedPerson[]>;
-  /** Where people walked on this level in the chosen hours, while shown in the Zones tab. */
+  /** Where people walked on this level in the chosen hours, while shown in People. */
   private _walks?: Point[][];
   private _walkHours = 24;
   /** Camera people before the rules, per level and camera. */
@@ -565,11 +575,9 @@ class FloorCastPanel extends LitElement {
 
   /** The tab that edits a thing. */
   private modeFor(s: Selection): Mode {
-    if (s.kind === "wall" || s.kind === "opening" || s.kind === "room") return "building";
-    if (s.kind === "item") return "objects";
-    if (s.kind === "zone") return "zones";
-    const kind = this.findDevice(s.id)?.kind;
-    return kind === "radar" ? "radar" : kind === "camera" ? "cameras" : "devices";
+    if (s.kind === "wall" || s.kind === "opening" || s.kind === "room" || s.kind === "item") return "plan";
+    if (s.kind === "zone") return "people";
+    return this.findDevice(s.id)?.kind === "radar" ? "people" : "devices";
   }
 
   /** Selects a thing and opens the tab that edits it. */
@@ -791,17 +799,15 @@ class FloorCastPanel extends LitElement {
 
   /** Whether the open tab edits the selection; others stay on the plan but cannot be picked. */
   private editable(s: Selection, mode = this._mode): boolean {
-    if (mode === "building") return s.kind === "wall" || s.kind === "opening" || s.kind === "room";
-    if (mode === "objects") return s.kind === "item";
+    if (mode === "plan") return s.kind === "wall" || s.kind === "opening" || s.kind === "room" || s.kind === "item";
     const kind = s.kind === "device" ? this.findDevice(s.id)?.kind : undefined;
-    if (mode === "radar") return kind === "radar";
-    if (mode === "cameras") return kind === "camera";
-    if (mode === "zones") return s.kind === "zone";
-    if (mode === "devices") return !!kind && kind !== "radar" && kind !== "camera";
+    // A camera shows stills in Devices and is calibrated to count people in People.
+    if (mode === "people") return kind === "radar" || kind === "camera" || s.kind === "zone";
+    if (mode === "devices") return !!kind && kind !== "radar";
     return false;
   }
 
-  /** The topmost thing under the pointer the open tab edits; a lamp over a room lets the room be picked in Building. */
+  /** The topmost thing under the pointer the open tab edits; a lamp over a room lets the room be picked in Plan. */
   /** Every thing under the pointer, topmost first, whatever tab edits it. */
   private hitAll(event: PointerEvent): Selection[] {
     const stack = (this.renderRoot as ShadowRoot).elementsFromPoint(event.clientX, event.clientY);
@@ -1315,6 +1321,11 @@ class FloorCastPanel extends LitElement {
     if (event.key.toLowerCase() === "d" && (event.ctrlKey || event.metaKey) && this._selection) {
       event.preventDefault();
       this.duplicateSelection();
+      return;
+    }
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && KEY_TOOLS.has(event.key.toLowerCase()) && !this._draft.length) {
+      event.preventDefault();
+      this.startTool(KEY_TOOLS.get(event.key.toLowerCase())!);
       return;
     }
     if (event.key === "/") {
@@ -1869,6 +1880,21 @@ class FloorCastPanel extends LitElement {
     this._message = "";
   }
 
+  /** Starts a tool in its tab, from the palette or its key. */
+  private startTool(tool: Tool): void {
+    if (this._locked && LAYOUT_TOOLS.includes(tool)) {
+      this.notify("The layout is locked");
+      return;
+    }
+    const mode = TOOL_MODE.get(tool);
+    if (mode && mode !== this._mode) this.setMode(mode);
+    this._tool = tool;
+    this._draft = [];
+    this._message = "";
+    this._selection = undefined;
+    this._addOpen = false;
+  }
+
   private toolButton(tool: Tool, label: string) {
     const locked = this._locked && LAYOUT_TOOLS.includes(tool);
     return html`<button
@@ -1889,7 +1915,7 @@ class FloorCastPanel extends LitElement {
   /** While a tool places something: what a click does, and how to stop. */
   /** A device left off the plan by the Devices layer; the tab that edits it always shows it. */
   private hiddenDevice(device: Device): boolean {
-    return this._hidden.has("devices") && this.modeFor({ kind: "device", id: device.id }) !== this._mode;
+    return this._hidden.has("devices") && !this.editable({ kind: "device", id: device.id });
   }
 
   private renderPlacing() {
@@ -2066,12 +2092,12 @@ class FloorCastPanel extends LitElement {
             const [cx, cy] = centroid(room.points);
             return room.stairs ? nothing : svg`<text class="fc-label" x=${cx} y=${cy}>${room.name}</text>`;
           })}
-      ${this._mode === "radar" || this._mode === "cameras"
+      ${this._mode === "people"
         ? (this.shown.devices ?? [])
-            .filter((d) => (this._mode === "radar" ? d.kind === "radar" : d.kind === "camera"))
+            .filter((d) => d.kind === "radar" || (d.kind === "camera" && !!d.frigate))
             .map((d) => svg`<path class="radar-range ${d.kind}" d=${d.kind === "radar" ? radarView(d) : cameraView(d)}></path>`)
         : nothing}
-      ${(this._mode === "zones" || !this._hidden.has("zones") ? (this.shown.zones ?? []) : []).map((zone) => {
+      ${(this._mode === "people" || !this._hidden.has("zones") ? (this.shown.zones ?? []) : []).map((zone) => {
         const d = zone.points.map((q, i) => `${i ? "L" : "M"}${q[0]} ${q[1]}`).join("") + "Z";
         const [cx, cy] = centroid(zone.points);
         return svg`<g data-zone=${zone.id} class="zone ${zone.kind}">
@@ -2086,7 +2112,7 @@ class FloorCastPanel extends LitElement {
             ? svg`<g data-device=${device.id} class="camera-device">
                 <circle class="hit" cx=${device.at[0]} cy=${device.at[1]} r=${px * 9}></circle>
                 ${renderRadarIcon(device, px * 5)}
-                ${this._live && this.showsRawTargets(device) ? radarTargets(device, this.hass.states).map((person) => renderPerson(person, this._mode === "radar" ? "raw" : "seen")) : nothing}
+                ${this._live && this.showsRawTargets(device) ? radarTargets(device, this.hass.states).map((person) => renderPerson(person, this._mode === "people" ? "raw" : "seen")) : nothing}
               </g>`
             : device.kind === "camera"
             ? svg`<g data-device=${device.id} class="camera-device">
@@ -2151,7 +2177,7 @@ class FloorCastPanel extends LitElement {
               </g>`
         }</g>`,
       )}
-      ${this._mode === "zones" && this._walks
+      ${this._mode === "people" && this._walks
         ? this._walks.map((walk) => svg`<polyline class="walk" points=${walk.map((p) => `${p[0]},${p[1]}`).join(" ")}></polyline>`)
         : nothing}
       ${this.trackedPeople()}
@@ -2159,30 +2185,28 @@ class FloorCastPanel extends LitElement {
     </svg>`;
   }
 
-  /** In the Radars tab with a radar selected, only its own targets; otherwise the targets of every radar. */
+  /**
+   * Raw targets of the radars: in People those of every radar, or only of the selected one; none while a camera
+   * or zone is selected there, which shows people after the rules.
+   */
   private showsRawTargets(radar: Device): boolean {
-    // The Cameras and Zones tabs show people after the rules only.
-    if (this._mode === "cameras" || this._mode === "zones") return false;
-    if (this._mode !== "radar") return true;
+    if (this._mode !== "people") return true;
+    if (this._selection?.kind === "zone") return false;
     const selected = this._selection?.kind === "device" ? this.findDevice(this._selection.id) : undefined;
+    if (selected?.kind === "camera") return false;
     return selected?.kind !== "radar" || selected.id === radar.id;
   }
 
-  /** People after merging and tracking, in the Radars tab while no radar is selected. */
   /**
-   * People after the rules: everyone in the Zones tab, the radar or camera people in their tabs. With a
-   * radar or camera selected, only the people it sees, over the raw detections of that camera in grey.
+   * People after the rules, in People. With a radar or camera selected, only the people it sees, over the raw
+   * detections of that camera in grey.
    */
   private trackedPeople() {
-    if (!this._live || !this._people || !["radar", "cameras", "zones"].includes(this._mode)) return nothing;
+    if (!this._live || !this._people || this._mode !== "people") return nothing;
     const selected = this._selection?.kind === "device" ? this.findDevice(this._selection.id) : undefined;
     const name = selected?.kind === "radar" ? selected.source : selected?.kind === "camera" ? selected.frigate : undefined;
     const raw = selected?.kind === "camera" && selected.frigate ? (this._raw[this.level.id]?.[selected.frigate] ?? []) : [];
-    const people = (this._people[this.level.id] ?? []).filter((person) => {
-      if (this._mode === "cameras" && person.source !== "camera") return false;
-      if (this._mode === "radar" && person.source === "camera") return false;
-      return !name || !!person.sources?.includes(name);
-    });
+    const people = (this._people[this.level.id] ?? []).filter((person) => !name || !!person.sources?.includes(name));
     return svg`${raw.map((p) => renderPerson(p, "raw"))}
       ${people.map((person) => renderPerson([person.x, person.y], `${person.status} ${person.source ?? ""}`))}`;
   }
@@ -2404,8 +2428,21 @@ class FloorCastPanel extends LitElement {
       </nav>
       ${tools.length
         ? html`<div class="tools">
-            ${this.toolButton("select", "Select")} ${tools.map(([tool, label]) => this.toolButton(tool, label))} ${this.toolOptions()}
-          </div>`
+              ${this.toolButton("select", "Select")}
+              <button class="add ${this._addOpen ? "on" : ""}" @click=${() => (this._addOpen = !this._addOpen)}>+ Add ▾</button>
+              ${this._tool !== "select" ? html`<span class="tool-now">${TOOL_NAMES[this._tool] ?? ""}</span>` : nothing}
+              ${this.toolOptions()}
+            </div>
+            ${this._addOpen
+              ? html`<div class="palette">
+                  ${tools.map(([tool, label, key]) => {
+                    const locked = this._locked && LAYOUT_TOOLS.includes(tool);
+                    return html`<button ?disabled=${locked} title=${locked ? "Unlock the layout to draw" : HINTS[tool]} @click=${() => this.startTool(tool)}>
+                      <span>${label}</span><kbd>${key}</kbd>
+                    </button>`;
+                  })}
+                </div>`
+              : nothing}`
         : nothing}
       ${this._selection
         ? html`<button class="back" @click=${() => (this._selection = undefined)}>‹ ${MODES.find((m) => m.mode === this._mode)!.label}</button>
@@ -2439,13 +2476,10 @@ class FloorCastPanel extends LitElement {
 
   /** Content of the tab when nothing is selected. */
   private renderList() {
-    if (this._mode === "general") return this.levelProperties();
-    if (this._mode === "building") return this.buildingList();
-    if (this._mode === "objects") return this.objectList();
+    if (this._mode === "settings") return this.levelProperties();
+    if (this._mode === "plan") return html`${this.filterBox()} ${this.buildingList()} ${this.objectList()}`;
     if (this._mode === "devices") return this.deviceList();
-    if (this._mode === "cameras") return this.cameraList();
-    if (this._mode === "zones") return this.zoneList();
-    return this.radarList();
+    return html`${this.radarList()} ${this.cameraList()} ${this.zoneList()}`;
   }
 
   private filterBox() {
@@ -2490,7 +2524,6 @@ class FloorCastPanel extends LitElement {
         ${level.openings.filter((o) => o.type === "window").length} windows. Click a wall, door or window on the plan to edit it.
       </p>
       <h3>Rooms</h3>
-      ${this.filterBox()}
       ${rooms.map((room) =>
         this.listRow(
           room.name,
@@ -2514,39 +2547,47 @@ class FloorCastPanel extends LitElement {
       return [b.x + b.w / 2, b.y + b.h / 2];
     };
     return html`
-      <h3>Objects</h3>
-      ${this.filterBox()}
+      <h3>Garden and furniture</h3>
       ${items.map((item) =>
         this.listRow(item.name || ITEM_LABELS[item.type], size(item), () => this.pick({ kind: "item", id: item.id }, centre(item))),
       )}
-      ${items.length ? nothing : html`<p class="muted">No objects. Choose Object above and drag on the plan.</p>`}
+      ${items.length ? nothing : html`<p class="muted">No objects. Choose + Add, Garden or furniture, and drag on the plan.</p>`}
     `;
   }
 
+  /** Devices by the room they stand in, then those outside the rooms; a device without an entity is marked. */
   private deviceList() {
-    const devices = (this.shown.devices ?? []).filter(
-      (device) =>
-        device.kind !== "radar" &&
-        device.kind !== "camera" &&
-        this.passesFilter(DEVICE_LABELS[device.kind], device.entity, this.entityName(device.entity)),
+    const level = this.shown;
+    const kindName = (device: Device) => (device.kind === "sensor" && device.sensorType === "alarm" ? "Alarm" : DEVICE_LABELS[device.kind]);
+    const devices = (level.devices ?? []).filter(
+      (device) => device.kind !== "radar" && this.passesFilter(kindName(device), device.entity, this.entityName(device.entity), device.label),
     );
-    const kinds = (Object.keys(DEVICE_LABELS) as Device["kind"][]).filter((kind) => kind !== "radar" && kind !== "camera");
+    const byRoom = new Map<string, Device[]>();
+    for (const device of devices) {
+      const key = roomAt(level, deviceCentre(device))?.id ?? "";
+      byRoom.set(key, [...(byRoom.get(key) ?? []), device]);
+    }
+    const unset = devices.filter((device) => !device.entity).length;
+    const rows = (list: Device[]) =>
+      list.map((device) =>
+        this.listRow(
+          this.entityName(device.entity) ?? device.label ?? `${kindName(device)} without entity`,
+          device.entity ? `${kindName(device)} · ${this.shortState(device.entity)}` : kindName(device),
+          () => this.pick({ kind: "device", id: device.id }, deviceCentre(device)),
+          device.entity ? "" : "unset",
+        ),
+      );
     return html`
       ${this.filterBox()}
-      ${kinds.map((kind) => {
-        const ofKind = devices.filter((device) => device.kind === kind);
-        if (!ofKind.length) return nothing;
-        return html`<h3>${DEVICE_LABELS[kind]}s</h3>
-          ${ofKind.map((device) =>
-            this.listRow(
-              this.entityName(device.entity) ?? `${DEVICE_LABELS[kind]} without entity`,
-              this.shortState(device.entity),
-              () => this.pick({ kind: "device", id: device.id }, deviceCentre(device)),
-              device.entity ? "" : "unset",
-            ),
-          )}`;
-      })}
-      ${devices.length ? nothing : html`<p class="muted">No devices. Choose one above and click on the plan.</p>`}
+      ${unset ? html`<p class="muted warn">${unset} without an entity: they are marked below.</p>` : nothing}
+      ${level.rooms
+        .filter((room) => byRoom.has(room.id))
+        .map(
+          (room) => html`<h3 class="link" @click=${() => this.pick({ kind: "room", id: room.id }, centroid(room.points))}>${room.name}</h3>
+            ${rows(byRoom.get(room.id)!)}`,
+        )}
+      ${byRoom.has("") ? html`<h3>Outside the rooms</h3>${rows(byRoom.get("")!)}` : nothing}
+      ${devices.length ? nothing : html`<p class="muted">No devices. Choose + Add and click on the plan, or link a room to its area.</p>`}
     `;
   }
 
@@ -2564,11 +2605,11 @@ class FloorCastPanel extends LitElement {
           online ? "" : "unset",
         );
       })}
-      ${radars.length ? nothing : html`<p class="muted">No radars on this level. Choose Radar above and click where one hangs.</p>`}
+      ${radars.length ? nothing : html`<p class="muted">No radars on this level. Choose + Add, Radar, and click where one hangs.</p>`}
       ${radars.length ? this.trackingProperties("radar") : nothing}
       <p class="muted">
         Blue dots are people after the rules, grey dots the raw targets of the radars. Select a radar to see only its own targets and
-        the people it sees. Zones are drawn in the Zones tab and work the same for radars and cameras.
+        the people it sees. Zones work the same for radars and cameras.
       </p>
     `;
   }
@@ -2590,7 +2631,7 @@ class FloorCastPanel extends LitElement {
           camera.frigate && spots >= 4 ? "" : "unset",
         );
       })}
-      ${cameras.length ? nothing : html`<p class="muted">No cameras on this level. Choose Camera above and click where one hangs.</p>`}
+      ${cameras.length ? nothing : html`<p class="muted">No cameras on this level. Add one in Devices, then calibrate it here to count people.</p>`}
       ${cameras.some((camera) => camera.frigate && (camera.calibration?.length ?? 0) >= 4) ? this.trackingProperties("camera") : nothing}
       <p class="muted">
         Select a camera to choose its Frigate camera and calibrate it: four spots on the ground, in the image and on the plan. People a
@@ -3925,7 +3966,7 @@ class FloorCastPanel extends LitElement {
       >
       <p class="muted">
         Lights: ${lights.length ? lights.join(", ") : "none"}. Thermometers:
-        ${thermometers.length ? thermometers.map((t) => t.entity).join(", ") : "none"}. Place both in the Devices tab; the room
+        ${thermometers.length ? thermometers.map((t) => t.entity).join(", ") : "none"}. Place both in Devices; the room
         takes what stands in it. People are counted by the radars and cameras that see the room.
       </p>
       <h4>Presence sensors</h4>
@@ -3990,8 +4031,9 @@ class FloorCastPanel extends LitElement {
       ["Resting place hold", "stationary_hold", DEFAULT_STATIONARY_HOLD, DEFAULT_STATIONARY_HOLD, 30, "s", 0, 3600],
       ["Remember a lost person", "sleep_hours", 12, 12, 1, "h", 0, 48],
     ];
-    return html`
-      <h3>${kind === "radar" ? "Radar tracking" : "Camera tracking"}</h3>
+    // Folded: set once, then rarely touched; the lists of radars, cameras and zones stay in view.
+    return html`<details class="settings">
+      <summary>${kind === "radar" ? "Radar tracking settings" : "Camera tracking settings"}</summary>
       ${rows.map(([label, key, radarDefault, cameraDefault, step, unit, min, max]) =>
         this.number(label, values[key] ?? (kind === "radar" ? radarDefault : cameraDefault), (v) => set(key, Math.min(max, Math.max(min, v))), step, unit),
       )}
@@ -4001,7 +4043,7 @@ class FloorCastPanel extends LitElement {
         person stays where they were for a while; seen again within walking distance, it is the same person.
         ${kind === "camera" ? "A camera person next to a radar person counts once." : ""}
       </p>
-    `;
+    </details>`;
   }
 
   private zoneProperties(zone?: Zone) {
@@ -4347,25 +4389,18 @@ class FloorCastPanel extends LitElement {
         color: var(--warning-color, #ffa600);
       }
       /* What the open tab does not edit stays on the plan, dimmed. */
-      .mode-general .kind,
-      .mode-building .kind,
-      .mode-objects .kind,
-      .mode-zones .kind,
+      .mode-plan .kind,
+      .mode-settings .kind,
       .mode-devices .kind-radar,
-      .mode-devices .kind-camera,
-      .mode-radar .kind:not(.kind-radar),
-      .mode-cameras .kind:not(.kind-camera) {
+      .mode-people .kind:not(.kind-radar):not(.kind-camera) {
         opacity: 0.3;
       }
       .mode-devices [data-item],
-      .mode-radar [data-item],
-      .mode-cameras [data-item],
-      .mode-zones [data-item],
-      .mode-building [data-item] {
+      .mode-people [data-item] {
         opacity: 0.55;
       }
       /* Zones are edited in their tab; in the other tabs they show dimmed, unless the Zones layer is off. */
-      .plan:not(.mode-zones) .zone {
+      .plan:not(.mode-people) .zone {
         opacity: 0.45;
       }
       .list-row.people em {
@@ -4672,7 +4707,51 @@ class FloorCastPanel extends LitElement {
         font-size: 11px;
         color: var(--secondary-text-color);
       }
-            .area-list {
+            .tools .add {
+        font-weight: 500;
+      }
+      .tool-now {
+        font-size: 13px;
+        color: var(--primary-color);
+      }
+      .palette {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin: 0 0 10px;
+      }
+      .palette button {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+      }
+      .palette kbd {
+        font: inherit;
+        font-size: 11px;
+        padding: 0 5px;
+        border-radius: 4px;
+        border: 1px solid var(--divider-color);
+        color: var(--secondary-text-color);
+      }
+      details.settings {
+        margin: 8px 0;
+      }
+      details.settings summary {
+        cursor: pointer;
+        font-weight: 500;
+        padding: 4px 0;
+      }
+      h3.link {
+        cursor: pointer;
+      }
+      h3.link:hover {
+        color: var(--primary-color);
+      }
+      .muted.warn {
+        color: var(--warning-color, #ffa600);
+      }
+      .area-list {
         display: flex;
         flex-direction: column;
         gap: 4px;

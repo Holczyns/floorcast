@@ -37,9 +37,9 @@ const SECTIONS: Section[] = [
     title: "First steps",
     body: html`
       <ol>
-        <li>In <b>General</b>, name the level (for example <i>Ground floor</i>) and set the wall types you build with.</li>
+        <li>In <b>⚙ Settings</b>, name the level (for example <i>Ground floor</i>) and set the wall types you build with.</li>
         <li>
-          In <b>Building</b>, draw the outer walls with <b>Wall</b>, then the inner walls. Place doors and windows on them and
+          In <b>Plan</b>, draw the outer walls with <b>+ Add → Wall</b> (key W), then the inner walls. Place doors and windows on them and
           draw the rooms.
         </li>
         <li>
@@ -47,7 +47,7 @@ const SECTIONS: Section[] = [
           cameras of the area. <b>Place all</b> puts them in the room at once; drag them where they are. A blind or contact goes
           on a door or window you choose.
         </li>
-        <li>In <b>Objects</b>, draw the lawn, paving, terrace and furniture you want to see.</li>
+        <li>In <b>Plan</b>, <b>+ Add → Garden or furniture</b> draws the lawn, paving, terrace and furniture you want to see.</li>
         <li>In <b>Devices</b>, place the rest: sprinklers, screens, the mower and the vacuum, and lights without an area.</li>
         <li>Optional: radars, cameras and zones to count people.</li>
         <li>Press <b>Save</b>. The plan is stored in Home Assistant.</li>
@@ -87,7 +87,7 @@ const SECTIONS: Section[] = [
         <li>Joined wall ends move together; hold <b>Shift</b> while dragging an end to detach it.</li>
         <li>On a touch screen two fingers zoom and move the plan.</li>
         <li>
-          <b>Export</b> in General saves the plan as a JSON file; <b>Import</b> loads one. Use it as a backup before large
+          <b>Export</b> in ⚙ Settings saves the plan as a JSON file; <b>Import</b> loads one. Use it as a backup before large
           changes.
         </li>
       </ul>
@@ -99,11 +99,11 @@ const SECTIONS: Section[] = [
     body: html`
       <ul>
         <li>
-          <b>Wall types</b> (General) give the thickness of every wall of the type, for example <i>Outer wall 27.5 cm</i>,
+          <b>Wall types</b> (⚙ Settings) give the thickness of every wall of the type, for example <i>Outer wall 27.5 cm</i>,
           <i>Partition 12 cm</i>. Changing a type changes all its walls. A wall can also have its own thickness.
         </li>
         <li>
-          <b>Rounded corners</b> (General) rounds the corners of lawns, paving and other objects, with the radius set below
+          <b>Rounded corners</b> (⚙ Settings) rounds the corners of lawns, paving and other objects, with the radius set below
           it. An object can still choose rounded or square corners for itself.
         </li>
         <li>
@@ -132,7 +132,7 @@ const SECTIONS: Section[] = [
     title: "Garden and objects",
     body: html`
       <p>
-        Objects are drawn in <b>Objects</b>: choose a kind, then drag. Garden kinds are lawn, paving, terrace, flower bed,
+        Objects are drawn in <b>Plan</b> with <b>+ Add → Garden or furniture</b>: choose a kind, then drag. Garden kinds are lawn, paving, terrace, flower bed,
         hedge, vegetable garden, greenhouse, shelter, garden house, trampoline and manhole. Furniture is drawn as an
         obstacle or a round obstacle.
       </p>
@@ -282,7 +282,7 @@ const SECTIONS: Section[] = [
         <code>_y</code> and so on for up to three targets, and the target count.
       </p>
       <ol>
-        <li>In <b>Radars</b>, click where the radar hangs and choose its sensors.</li>
+        <li>In <b>People</b>, <b>+ Add → Radar</b> (key A): click where the radar hangs and choose its sensors.</li>
         <li>Aim it with the handle. Set <i>View</i> (120° for the LD2450) and <i>Range</i>.</li>
         <li>
           Walk across the room and watch the grey dot. Turn the radar until the dot follows you; tick <i>Mirror</i> if it goes
@@ -309,11 +309,11 @@ filters:
     body: html`
       <ul>
         <li>
-          In <b>Cameras</b>, click where the camera hangs, aim it with the handle and choose its camera entity. On the card a
+          In <b>Devices</b>, <b>+ Add → Camera</b> (key C): click where the camera hangs, aim it with the handle and choose its camera entity. On the card a
           tap opens a still that refreshes every second, holding opens the live view.
         </li>
         <li>
-          With Frigate, choose its Frigate camera and calibrate it: click a spot on the ground in the image, then the same spot
+          With Frigate, select the camera (in Devices, or in People to watch the people it counts), choose its Frigate camera and calibrate it: click a spot on the ground in the image, then the same spot
           on the plan, at least four times, spread as wide as the camera sees (corners of the terrace, a post, the edge of the
           paving).
         </li>
@@ -347,7 +347,7 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   occupied, w
         know how many people are there. The <code>sources</code> attribute of the occupancy entity names what occupies it now:
         <code>radar</code>, <code>camera</code> or <code>sensor</code>.
       </p>
-      <p>Zones are drawn in <b>Zones</b> like rooms. Their use:</p>
+      <p>Zones are drawn in <b>People</b> with <b>+ Add → Zone</b> (key Z), like rooms. Their use:</p>
       <table>
         <tr>
           <th>Use</th>
@@ -376,7 +376,7 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   occupied, w
         </tr>
       </table>
       <p>
-        <i>Radar tracking</i> and <i>Camera tracking</i> (in their tabs) tune how people are followed: snap distance into
+        <i>Radar tracking</i> and <i>Camera tracking</i> (folded in <b>People</b>) tune how people are followed: snap distance into
         rooms, merge distance, smoothing, the delay before a new person counts, the longest step, walking speed, how long a
         missed person is kept and how long a lost one is remembered.
       </p>
@@ -542,7 +542,7 @@ data:
         <li><b>The card does not change after editing</b>: the card draws the saved plan; press Save.</li>
         <li>
           <b>A person dot stays where nobody is</b>: the radar firmware lost the final empty value; use
-          <code>throttle_with_priority</code> as shown under Radars.
+          <code>throttle_with_priority</code> as shown under Radars above.
         </li>
         <li><b>Dots move the wrong way</b>: tick <i>Mirror</i> on the radar or turn it until a dot follows you.</li>
         <li><b>A reflection is counted</b>: draw an <i>Ignore</i> zone over it.</li>
