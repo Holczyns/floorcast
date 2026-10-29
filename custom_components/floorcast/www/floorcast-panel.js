@@ -2911,7 +2911,9 @@ data:
       .mower-device .anchor.vacuum {
         fill: var(--fc-water);
       }
+      /* Only the head takes clicks; the water it throws lets the mower and the lawn below be picked. */
       .nozzle .area {
+        pointer-events: none;
         fill: var(--fc-water);
         fill-opacity: 0.08;
         stroke: var(--fc-water);
