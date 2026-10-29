@@ -299,6 +299,22 @@
             const on = lights.some((id) => states[id]?.state === "on");
             return callService("homeassistant", on ? "turn_off" : "turn_on", { entity_id: lights });
           }
+          // A window: its blind stops while moving, closes when open, opens when closed.
+          const opening = data.opening && plan.levels.flatMap((l) => l.openings).find((o) => o.id === data.opening);
+          const blind = opening?.cover && states[opening.cover];
+          if (blind) {
+            const open = (blind.attributes.current_position ?? (blind.state === "open" ? 100 : 0)) > 0;
+            states[opening.cover] = { ...blind, state: open ? "closed" : "open", attributes: { ...blind.attributes, current_position: open ? 0 : 100 } };
+          }
+          // A screen switches its power entity.
+          const screen = data.device && plan.levels.flatMap((l) => l.devices ?? []).find((d) => d.id === data.device);
+          if (screen?.entity && states[screen.entity]) {
+            const on = !["off", "standby"].includes(states[screen.entity].state);
+            states[screen.entity] = { ...states[screen.entity], state: on ? "off" : "on" };
+          }
+          hass.states = { ...states };
+          const next = { ...hass };
+          for (const element of elements) element.hass = next;
           return null;
         }
         const ids = [data.entity_id ?? []].flat();

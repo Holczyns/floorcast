@@ -36,7 +36,8 @@ someone to the kitchen counter.
 - **Doors, windows and blinds** following their contact sensors and covers.
 - **Sensors** written where they stand: a header, the main value and up to two secondary values.
 - **Screens** (projector, TV) with the light they throw and a remote control on the card.
-- **Sprinklers** with their throw and arc, showing the water while the valve is open.
+- **Sprinklers** with their throw and arc, showing the water while the valve is open; a tap opens or closes the
+  valve after a question.
 - **People** from HLK-LD2450 radars and Frigate cameras, joined by one tracker, with entrance, ignore and resting place
   zones and the paths they walked during the last day.
 - **Counting**: a count and an occupancy entity for every room and counting zone, ready for automations; motion and

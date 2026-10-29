@@ -295,7 +295,10 @@ export interface Device {
   calibration?: { image: Point; plan: Point }[];
   /** Camera: detect resolution of Frigate in pixels, when Frigate does not report it. */
   detect?: [number, number];
-  /** Light or screen: the card asks before a tap switches it, and a tap on its room leaves it out. */
+  /**
+   * Light, screen or sprinkler: the card asks before a tap switches it, and a tap on its room leaves a light out.
+   * A sprinkler asks unless this is false.
+   */
   confirm?: boolean;
 }
 
@@ -734,6 +737,10 @@ export function levelBounds(level: Level, margin = 0.4): Bounds {
 }
 
 /** Bounds of what is drawn of the level: walls with their thickness, rooms and objects, with a small margin. */
+/** How far outside the walls a device still widens the plan, and the room left around its symbol, in metres. */
+const NEAR_DEVICE = 1.5;
+const DEVICE_PAD = 0.35;
+
 export function drawnBounds(level: Level, margin = 0.1): Bounds {
   const points: Point[] = [];
   for (const wall of level.walls) {
@@ -746,9 +753,16 @@ export function drawnBounds(level: Level, margin = 0.1): Bounds {
   if (!points.length) return levelBounds(level, margin);
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
-  const x = Math.min(...xs) - margin;
-  const y = Math.min(...ys) - margin;
-  return { x, y, w: Math.max(...xs) + margin - x, h: Math.max(...ys) + margin - y };
+  let [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  // A camera or sensor hung just outside the walls stays on the plan with its symbol; robots and
+  // sprinklers far out in a hidden garden do not stretch it.
+  for (const device of level.devices ?? []) {
+    if (["sprinkler", "mower", "vacuum"].includes(device.kind)) continue;
+    const [x, y] = device.at;
+    if (x < x0 - NEAR_DEVICE || x > x1 + NEAR_DEVICE || y < y0 - NEAR_DEVICE || y > y1 + NEAR_DEVICE) continue;
+    [x0, x1, y0, y1] = [Math.min(x0, x - DEVICE_PAD), Math.max(x1, x + DEVICE_PAD), Math.min(y0, y - DEVICE_PAD), Math.max(y1, y + DEVICE_PAD)];
+  }
+  return { x: x0 - margin, y: y0 - margin, w: x1 - x0 + 2 * margin, h: y1 - y0 + 2 * margin };
 }
 
 export const DEFAULT_CORNER_RADIUS = 0.1;

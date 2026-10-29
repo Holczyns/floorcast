@@ -1008,14 +1008,23 @@ class FloorCastCard extends LitElement {
       .map((device) => renderSpray(device, this.isWatering(device.entity)));
   }
 
-  /** Sprinkler heads; a tap only opens the valve, so a stray tap never starts the water. */
+  /** Sprinkler heads: a tap opens or closes the valve after Yes unless Ask before switching is off, holding opens it. */
   private renderNozzles(level: Level, pxPerMetre: number) {
     const r = Math.max(0.1, 6 / pxPerMetre);
     return (level.devices ?? [])
       .filter((device) => device.kind === "sprinkler")
       .map(
         (device) => svg`<g class="nozzle ${this.isWatering(device.entity) ? "on" : ""}"
-            @click=${() => device.entity && this.openMoreInfo(device.entity)}>
+            @pointerdown=${() => this.holdStart(() => device.entity && this.openMoreInfo(device.entity))}
+            @pointerup=${() =>
+              this.holdEnd(
+                () =>
+                  device.entity &&
+                  this.ask(device.confirm !== false, device.entity, this.isWatering(device.entity) ? "Close" : "Open", () =>
+                    this.hass.callService("homeassistant", "toggle", { entity_id: device.entity }),
+                  ),
+              )}
+            @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
           <circle class="lamp-hit" cx=${device.at[0]} cy=${device.at[1]} r=${r * 2.2}></circle>
           <circle cx=${device.at[0]} cy=${device.at[1]} r=${r}></circle>
         </g>`,
@@ -1313,6 +1322,8 @@ class FloorCastCard extends LitElement {
         color: var(--secondary-text-color);
       }
       .alarm-bar {
+        position: relative;
+        z-index: 2;
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
@@ -1333,9 +1344,14 @@ class FloorCastCard extends LitElement {
       .tabs {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 6px;
         padding: 6px 6px 0;
         font-size: 13px;
+        /* Above the plan, whose camera views may reach past its top. */
+        position: relative;
+        z-index: 2;
+        background: var(--fc-background);
       }
       .switch {
         display: inline-flex;

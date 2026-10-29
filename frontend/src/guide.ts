@@ -149,7 +149,7 @@ const SECTIONS: Section[] = [
       </ul>
       <p>On the card: a tap on a light switches it, a tap on a room switches all lights in the room, holding opens details.</p>
       <p>
-        <i>Ask before switching</i> (lights, screens and windows with a blind) makes the card ask <b>Yes</b> or <b>No</b> before
+        <i>Ask before switching</i> (lights, screens, windows with a blind, and sprinklers, which ask by default) makes the card ask <b>Yes</b> or <b>No</b> before
         a tap switches it, for a pump, a server or a gate. A tap on its room leaves such a light out.
       </p>
     `,
@@ -229,6 +229,10 @@ const SECTIONS: Section[] = [
         Click where a sprinkler head stands and choose its valve (a valve or switch entity) and nozzle. <i>Throw</i> is the
         radius, <i>Start</i> the compass bearing where the arc begins (0 north, 90 east) and <i>Arc</i> its width. Drag the
         white handle to turn the arc and the blue one to widen it. While the valve is open the card shows the water.
+      </p>
+      <p>
+        On the card a tap opens or closes the valve after <b>Yes</b>, holding opens its details. Untick <i>Ask before
+        switching</i> to switch it with one tap.
       </p>
     `,
   },

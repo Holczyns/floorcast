@@ -3267,7 +3267,11 @@ class FloorCastPanel extends LitElement {
       ${this.number("Throw", device.radius ?? DEFAULT_THROW, (v) => (device.radius = Math.max(0.5, v)), 0.5, "m")}
       ${this.number("Start", device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 5, "°")}
       ${this.number("Arc", device.arc ?? 360, (v) => (device.arc = Math.min(360, Math.max(5, v))), 5, "°")}
-      <p class="muted">Start is a compass bearing: 0 north, 90 east. Drag the white handle to turn the arc and the blue one to widen it.</p>
+      ${this.confirmCheck(device, true)}
+      <p class="muted">
+        Start is a compass bearing: 0 north, 90 east. Drag the white handle to turn the arc and the blue one to widen it. On the
+        card a tap opens or closes the valve, holding opens its details.
+      </p>
       ${this.deleteButton()}
     `;
   }
@@ -3315,12 +3319,17 @@ class FloorCastPanel extends LitElement {
   }
 
   /** Ask before switching: the card asks before a tap switches the device or moves the blind. */
-  private confirmCheck(target: { confirm?: boolean }) {
+  private confirmCheck(target: { confirm?: boolean }, askByDefault = false) {
+    const asks = askByDefault ? target.confirm !== false : !!target.confirm;
     return html`<label class="check"
         ><input
           type="checkbox"
-          .checked=${!!target.confirm}
-          @change=${(e: Event) => this.change(() => (target.confirm = (e.target as HTMLInputElement).checked || undefined))}
+          .checked=${asks}
+          @change=${(e: Event) =>
+            this.change(() => {
+              const checked = (e.target as HTMLInputElement).checked;
+              target.confirm = checked === askByDefault ? undefined : checked;
+            })}
         />
         Ask before switching</label
       >`;
