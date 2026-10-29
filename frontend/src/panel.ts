@@ -310,6 +310,7 @@ class FloorCastPanel extends LitElement {
     _draft: { state: true },
     _cursor: { state: true },
     _addOpen: { state: true },
+    _confirmDelete: { state: true },
     _locked: { state: true },
     _toast: { state: true },
     _find: { state: true },
@@ -346,6 +347,9 @@ class FloorCastPanel extends LitElement {
   private _mode: Mode = "plan";
   /** The palette of + Add is open. */
   private _addOpen = false;
+  /** Delete was pressed once: a second press within a few seconds deletes. */
+  private _confirmDelete = false;
+  private _confirmTimer?: number;
   /** Text the lists of the panel are narrowed to. */
   private _filter = "";
   /** Spot clicked in the camera image, waiting for the same spot on the plan. */
@@ -582,6 +586,7 @@ class FloorCastPanel extends LitElement {
 
   /** Selects a thing and opens the tab that edits it. */
   private select(s: Selection | undefined): void {
+    this._confirmDelete = false;
     const message = this._message;
     if (s && !this.editable(s)) this.setMode(this.modeFor(s));
     this._selection = s;
@@ -2731,7 +2736,7 @@ class FloorCastPanel extends LitElement {
               : s?.kind === "device"
                 ? this.deviceProperties(this.findDevice(s.id))
                 : this.levelProperties();
-    return body;
+    return html`${this.breadcrumb()} ${body}`;
   }
 
   private number(label: string, value: number, apply: (v: number) => void, step = 0.05, unit = "m") {
@@ -2757,11 +2762,84 @@ class FloorCastPanel extends LitElement {
     </label>`;
   }
 
+  /**
+   * The end of every form: the position of a device typed in metres, then Duplicate and Delete. Delete asks for a
+   * second press, so a stray click removes nothing.
+   */
   private deleteButton() {
-    return html`<div class="row">
-      <button title="Copy (Ctrl+D)" @click=${() => this.duplicateSelection()}>Duplicate</button>
-      <button class="danger" @click=${() => this.deleteSelection()}>Delete</button>
-    </div>`;
+    const s = this._selection;
+    const device = s?.kind === "device" ? this.findDevice(s.id) : undefined;
+    const locked = this.lockedKind(s);
+    return html`
+      ${device ? this.positionFields(device) : nothing}
+      <div class="row end">
+        <button title="Copy (Ctrl+D)" ?disabled=${locked} @click=${() => this.duplicateSelection()}>Duplicate</button>
+        <button
+          class="danger ${this._confirmDelete ? "armed" : ""}"
+          ?disabled=${locked}
+          title=${locked ? "Unlock the layout to delete" : "Delete (Del)"}
+          @click=${() => {
+            if (!this._confirmDelete) {
+              this._confirmDelete = true;
+              window.clearTimeout(this._confirmTimer);
+              this._confirmTimer = window.setTimeout(() => (this._confirmDelete = false), 3000);
+              return;
+            }
+            this._confirmDelete = false;
+            this.deleteSelection();
+          }}
+        >
+          ${this._confirmDelete ? "Click again to delete" : "Delete"}
+        </button>
+      </div>
+    `;
+  }
+
+  /** Where a device stands, typed in metres; a strip or screen moves with both its ends. */
+  private positionFields(device: Device) {
+    const move = (axis: 0 | 1, value: number) => {
+      const delta = value - device.at[axis];
+      device.at = axis === 0 ? [fix(value), device.at[1]] : [device.at[0], fix(value)];
+      if (device.to) device.to = axis === 0 ? [fix(device.to[0] + delta), device.to[1]] : [device.to[0], fix(device.to[1] + delta)];
+    };
+    return html`<details class="settings">
+      <summary>Position</summary>
+      ${this.number("x (east)", device.at[0], (v) => move(0, v))} ${this.number("y (south)", device.at[1], (v) => move(1, v))}
+    </details>`;
+  }
+
+  /** Where the selection is: the level, the room it stands in, and what it is; the room can be picked from here. */
+  private breadcrumb() {
+    const s = this._selection;
+    if (!s) return nothing;
+    const level = this.level;
+    let at: Point | undefined;
+    let what = "";
+    if (s.kind === "device") {
+      const device = this.findDevice(s.id);
+      at = device && deviceCentre(device);
+      what = device ? (device.kind === "sensor" && device.sensorType === "alarm" ? "Alarm" : DEVICE_LABELS[device.kind]) : "";
+    } else if (s.kind === "opening") {
+      const opening = this.findOpening(s.id);
+      const wall = opening && this.findWall(opening.wall);
+      at = opening && wall ? pointOnWall(wall, opening.at) : undefined;
+      what = opening?.type === "door" ? "Door" : "Window";
+    } else if (s.kind === "item") {
+      const item = this.findItem(s.id);
+      at = item ? (item.center ?? centroid(itemPoints(item))) : undefined;
+      what = item ? item.name || ITEM_LABELS[item.type] : "";
+    } else if (s.kind === "wall") what = "Wall";
+    else if (s.kind === "zone") what = "Zone";
+    const room = s.kind === "room" ? this.findRoom(s.id) : at ? roomAt(level, at) : undefined;
+    return html`<nav class="crumbs">
+      <span>${level.name}</span>
+      ${room
+        ? html`› ${s.kind === "room"
+              ? html`<span>${room.name}</span>`
+              : html`<a @click=${() => this.select({ kind: "room", id: room.id })}>${room.name}</a>`}`
+        : nothing}
+      ${what ? html`› <span>${what}</span>` : nothing}
+    </nav>`;
   }
 
   private levelProperties() {
@@ -4741,6 +4819,24 @@ class FloorCastPanel extends LitElement {
         cursor: pointer;
         font-weight: 500;
         padding: 4px 0;
+      }
+      .crumbs {
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        margin: 2px 0 4px;
+      }
+      .crumbs a {
+        color: var(--primary-color);
+        cursor: pointer;
+      }
+      .row.end {
+        margin-top: 14px;
+        padding-top: 10px;
+        border-top: 1px solid var(--divider-color);
+      }
+      .danger.armed {
+        background: var(--error-color, #db4437);
+        color: #fff;
       }
       h3.link {
         cursor: pointer;
