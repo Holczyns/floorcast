@@ -198,7 +198,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: "settings", label: "⚙ Settings" },
 ];
 
-/** What + Add offers in each tab, with the key that starts it. */
+/** What the Add section offers in each tab, with the key that starts it. */
 const MODE_TOOLS: Record<Mode, [Tool, string, string][]> = {
   plan: [
     ["wall", "Wall", "W"],
@@ -206,7 +206,7 @@ const MODE_TOOLS: Record<Mode, [Tool, string, string][]> = {
     ["window", "Window", "N"],
     ["gate", "Gate", "G"],
     ["room", "Room", "R"],
-    ["item", "Garden or furniture", "O"],
+    ["item", "Garden, furniture", "O"],
   ],
   devices: [
     ["light", "Light or strip", "L"],
@@ -246,7 +246,8 @@ const DEVICE_LABELS: Record<Device["kind"], string> = {
 
 /** Areas of Home Assistant with their floor, and the area and device of each entity. */
 interface Registry {
-  areas: { id: string; name: string; floor?: string }[];
+  areas: { id: string; name: string; floor?: string; floorId?: string }[];
+  floors: { id: string; name: string }[];
   entityArea: Record<string, string>;
   entityDevice: Record<string, string>;
 }
@@ -2613,7 +2614,7 @@ class FloorCastPanel extends LitElement {
       ${items.map((item) =>
         this.listRow(item.name || ITEM_LABELS[item.type], size(item), () => this.pick({ kind: "item", id: item.id }, centre(item))),
       )}
-      ${items.length ? nothing : html`<p class="muted">No objects. Choose + Add, Garden or furniture, and drag on the plan.</p>`}
+      ${items.length ? nothing : html`<p class="muted">No objects. Choose Garden, furniture under Add and drag on the plan.</p>`}
     `;
   }
 
@@ -2649,7 +2650,7 @@ class FloorCastPanel extends LitElement {
             ${rows(byRoom.get(room.id)!)}`,
         )}
       ${byRoom.has("") ? html`<h3>Outside the rooms</h3>${rows(byRoom.get("")!)}` : nothing}
-      ${devices.length ? nothing : html`<p class="muted">No devices. Choose + Add and click on the plan, or link a room to its area.</p>`}
+      ${devices.length ? nothing : html`<p class="muted">No devices. Choose one under Add and click on the plan, or link a room to its area.</p>`}
     `;
   }
 
@@ -2667,7 +2668,7 @@ class FloorCastPanel extends LitElement {
           online ? "" : "unset",
         );
       })}
-      ${radars.length ? nothing : html`<p class="muted">No radars on this level. Choose + Add, Radar, and click where one hangs.</p>`}
+      ${radars.length ? nothing : html`<p class="muted">No radars on this level. Choose Radar under Add and click where one hangs.</p>`}
       ${radars.length ? this.trackingProperties("radar") : nothing}
       <p class="muted">
         Blue dots are people after the rules, grey dots the raw targets of the radars. Select a radar to see only its own targets and
@@ -2899,9 +2900,19 @@ class FloorCastPanel extends LitElement {
     </nav>`;
   }
 
-  /** The levels of the plan, in the Plan tab: their names, order, adding and deleting. */
+  /** The levels of the plan, in the Plan tab: their names, order, floor of Home Assistant, adding and deleting. */
   private levelsSection() {
     const levels = this._plan!.levels;
+    if (this._registry === undefined) queueMicrotask(() => this.loadRegistry());
+    const registry = typeof this._registry === "object" ? this._registry : undefined;
+    const missing = registry?.floors.filter((floor) => !levels.some((level) => level.floor === floor.id)) ?? [];
+    const addLevel = (name: string, floor?: string) => {
+      const level = emptyLevel(name);
+      if (floor) level.floor = floor;
+      this.change(() => this._plan!.levels.push(level));
+      this._levelId = level.id;
+      this.fit();
+    };
     const moveLevel = (index: number, by: number) =>
       this.change(() => {
         const list = [...levels];
@@ -2940,18 +2951,28 @@ class FloorCastPanel extends LitElement {
             ${this._deleteLevel === level.id ? "Delete?" : "×"}
           </button>
           <em class="muted">${level.rooms.length} rooms · ${(level.devices ?? []).length} devices</em>
+          ${registry?.floors.length
+            ? html`<select
+                class="floor"
+                title="The floor of Home Assistant this level is"
+                @change=${(e: Event) =>
+                  this.change(() => {
+                    const id = (e.target as HTMLSelectElement).value || null;
+                    const floor = registry.floors.find((f) => f.id === id);
+                    level.floor = id;
+                    // A level still named as it was added takes the name of its floor.
+                    if (floor && /^Level \d+$/.test(level.name)) level.name = floor.name;
+                  })}
+              >
+                <option value="" ?selected=${!level.floor}>No floor of Home Assistant</option>
+                ${registry.floors.map((f) => html`<option value=${f.id} ?selected=${level.floor === f.id}>Floor: ${f.name}</option>`)}
+              </select>`
+            : nothing}
         </div>`,
       )}
       <div class="row">
-        <button
-          @click=${() => {
-            const level = emptyLevel(`Level ${levels.length + 1}`);
-            this.change(() => this._plan!.levels.push(level));
-            this._levelId = level.id;
-          }}
-        >
-          Add level
-        </button>
+        <button @click=${() => addLevel(`Level ${levels.length + 1}`)}>Add level</button>
+        ${missing.map((floor) => html`<button title="A level for this floor of Home Assistant" @click=${() => addLevel(floor.name, floor.id)}>Add ${floor.name}</button>`)}
       </div>
     `;
   }
@@ -4116,10 +4137,16 @@ class FloorCastPanel extends LitElement {
       }
       this._registry = {
         areas: areas
-          .map((area) => ({ id: area.area_id, name: area.name, floor: area.floor_id ? floorNames.get(area.floor_id) : undefined }))
+          .map((area) => ({
+            id: area.area_id,
+            name: area.name,
+            floor: area.floor_id ? floorNames.get(area.floor_id) : undefined,
+            floorId: area.floor_id ?? undefined,
+          }))
           .sort((a, b) => (a.floor ?? "~").localeCompare(b.floor ?? "~") || a.name.localeCompare(b.name)),
         entityArea,
         entityDevice,
+        floors: floors.map((floor) => ({ id: floor.floor_id, name: floor.name })),
       };
     } catch {
       this._registry = "failed";
@@ -4224,7 +4251,8 @@ class FloorCastPanel extends LitElement {
     if (registry === "failed") return html`<p class="muted">The areas of Home Assistant could not be read.</p>`;
     const normal = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     const match = room.area === undefined ? registry.areas.find((area) => normal(area.name) === normal(room.name)) : undefined;
-    const floors = [...new Set(registry.areas.map((area) => area.floor))];
+    const own = registry.floors.find((floor) => floor.id === this.level.floor)?.name;
+    const floors = [...new Set(registry.areas.map((area) => area.floor))].sort((a, b) => Number(b === own) - Number(a === own));
     const rows = room.area ? this.areaEntities(room, registry) : [];
     // Place all leaves a blind or contact that fits more than one door or window for the list.
     const free = rows.filter(
@@ -5130,6 +5158,11 @@ class FloorCastPanel extends LitElement {
         gap: 6px;
         align-items: center;
         margin: 4px 0 0;
+      }
+      .level-row select.floor {
+        grid-column: 1 / -1;
+        font-size: 12px;
+        margin: 0 0 6px;
       }
       .level-row em {
         grid-column: 1 / -1;

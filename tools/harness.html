@@ -387,7 +387,11 @@
             return { walks: msg.level !== ground.id ? [] : centres.slice(1).map((c, i) => [centres[i], c]) };
           }
           if (msg.type === "floorcast/history/clear") return null;
-          if (msg.type === "config/floor_registry/list") return [{ floor_id: "ground", name: ground.name }];
+          if (msg.type === "config/floor_registry/list")
+            return [
+              { floor_id: "ground", name: ground.name },
+              { floor_id: "first", name: "First floor" },
+            ];
           if (msg.type === "config/area_registry/list")
             return (ground.rooms ?? []).filter((r) => !r.outdoor).map((r) => ({ area_id: r.id, name: r.name, floor_id: "ground" }));
           if (msg.type === "config/device_registry/list") return [{ id: "kitchen_climate", area_id: "kitchen" }];

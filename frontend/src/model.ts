@@ -606,6 +606,8 @@ export const DEFAULT_GLOW = 2;
 export interface Level {
   id: string;
   name: string;
+  /** Floor of Home Assistant the level is: its areas come first when a room picks its area. */
+  floor?: string | null;
   walls: Wall[];
   openings: Opening[];
   rooms: Room[];

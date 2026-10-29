@@ -39,7 +39,7 @@ const SECTIONS: Section[] = [
       <ol>
         <li>In <b>Plan</b>, under <b>Levels</b>, name the level (for example <i>Ground floor</i>); in <b>⚙ Settings</b> set the wall types you build with.</li>
         <li>
-          In <b>Plan</b>, draw the outer walls with <b>+ Add → Wall</b> (key W), then the inner walls. Place doors and windows on them and
+          In <b>Plan</b>, draw the outer walls with <b>Add → Wall</b> (key W), then the inner walls. Place doors and windows on them and
           draw the rooms.
         </li>
         <li>
@@ -47,7 +47,7 @@ const SECTIONS: Section[] = [
           cameras of the area. <b>Place all</b> puts them in the room at once; drag them where they are. A blind or contact goes
           on a door or window you choose.
         </li>
-        <li>In <b>Plan</b>, <b>+ Add → Garden or furniture</b> draws the lawn, paving, terrace and furniture you want to see.</li>
+        <li>In <b>Plan</b>, <b>Add → Garden, furniture</b> draws the lawn, paving, terrace and furniture you want to see.</li>
         <li>In <b>Devices</b>, place the rest: sprinklers, screens, the mower and the vacuum, and lights without an area.</li>
         <li>Optional: radars, cameras and zones to count people.</li>
         <li>Press <b>Save</b>. The plan is stored in Home Assistant.</li>
@@ -136,7 +136,7 @@ const SECTIONS: Section[] = [
     title: "Garden and objects",
     body: html`
       <p>
-        Objects are drawn in <b>Plan</b> with <b>+ Add → Garden or furniture</b>: choose a kind, then drag. Garden kinds are lawn, paving, terrace, flower bed,
+        Objects are drawn in <b>Plan</b> with <b>Add → Garden, furniture</b>: choose a kind, then drag. Garden kinds are lawn, paving, terrace, flower bed,
         hedge, vegetable garden, greenhouse, shelter, garden house, trampoline and manhole. Furniture is drawn as an
         obstacle or a round obstacle.
       </p>
@@ -286,7 +286,7 @@ const SECTIONS: Section[] = [
         <code>_y</code> and so on for up to three targets, and the target count.
       </p>
       <ol>
-        <li>In <b>People</b>, <b>+ Add → Radar</b> (key A): click where the radar hangs and choose its sensors.</li>
+        <li>In <b>People</b>, <b>Add → Radar</b> (key A): click where the radar hangs and choose its sensors.</li>
         <li>Aim it with the handle. Set <i>View</i> (120° for the LD2450) and <i>Range</i>.</li>
         <li>
           Walk across the room and watch the grey dot. Turn the radar until the dot follows you; tick <i>Mirror</i> if it goes
@@ -313,7 +313,7 @@ filters:
     body: html`
       <ul>
         <li>
-          In <b>Devices</b>, <b>+ Add → Camera</b> (key C): click where the camera hangs, aim it with the handle and choose its camera entity. On the card a
+          In <b>Devices</b>, <b>Add → Camera</b> (key C): click where the camera hangs, aim it with the handle and choose its camera entity. On the card a
           tap opens a still that refreshes every second, holding opens the live view.
         </li>
         <li>
@@ -351,7 +351,7 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   occupied, w
         know how many people are there. The <code>sources</code> attribute of the occupancy entity names what occupies it now:
         <code>radar</code>, <code>camera</code> or <code>sensor</code>.
       </p>
-      <p>Zones are drawn in <b>People</b> with <b>+ Add → Zone</b> (key Z), like rooms. Their use:</p>
+      <p>Zones are drawn in <b>People</b> with <b>Add → Zone</b> (key Z), like rooms. Their use:</p>
       <table>
         <tr>
           <th>Use</th>
