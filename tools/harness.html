@@ -78,7 +78,8 @@
       const paving = (ground.items ?? []).find((i) => i.type === "paving");
       // A walk between the rooms of the first two radars, or the first two rooms.
       const walkRooms = [...new Set([...radars.map((r) => roomOf(r.at)).filter(Boolean), ...rooms])].slice(0, 2);
-      const walkFrom = centre(walkRooms[0].points), walkTo = centre((walkRooms[1] ?? walkRooms[0]).points);
+      // An empty plan has no rooms: the walk stays at the origin.
+      const walkFrom = walkRooms[0] ? centre(walkRooms[0].points) : [0, 0], walkTo = walkRooms[0] ? centre((walkRooms[1] ?? walkRooms[0]).points) : [0, 0];
       const sofa = (ground.zones ?? []).find((z) => z.kind === "stationary");
 
       // ---- states ----
@@ -262,8 +263,10 @@
           const [sx, sy] = centre(sofa.points);
           people.push({ id: "r2", x: sx, y: sy, status: "held", source: "radar" });
         }
-        const [ux, uy] = centre(rooms.at(-1).points);
-        people.push({ id: "r3", x: ux, y: uy, status: "unconfirmed", source: "radar" });
+        if (rooms.length) {
+          const [ux, uy] = centre(rooms.at(-1).points);
+          people.push({ id: "r3", x: ux, y: uy, status: "unconfirmed", source: "radar" });
+        }
         // Someone the first calibrated camera sees, walking towards it.
         const camera = cameras.find((c) => c.frigate && (c.calibration?.length ?? 0) >= 4);
         const raw = {};

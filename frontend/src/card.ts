@@ -3,6 +3,8 @@ import { defineElement } from "./define";
 import "./card-editor";
 import { type CardConfig } from "./card-config";
 import { GroundFeed } from "./ground";
+import { pickLanguage, t, useDictionary } from "./i18n";
+import { CARD_LANGUAGES } from "./i18n/card-languages";
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { type HomeAssistant, fireEvent, isOn } from "./ha";
@@ -262,6 +264,12 @@ class FloorCastCard extends LitElement {
     this._groundFeeds.clear();
     this._stillFeeds.forEach((feed) => feed.unsubscribe.then((unsubscribe) => unsubscribe()).catch(() => undefined));
     this._stillFeeds.clear();
+  }
+
+  protected willUpdate(changed: PropertyValues): void {
+    // The language before drawing: the plan's choice, else the user's language in Home Assistant.
+    if (changed.has("hass") || changed.has("_plan"))
+      useDictionary(CARD_LANGUAGES[pickLanguage(this._plan?.language, this.hass?.language, Object.keys(CARD_LANGUAGES))]);
   }
 
   protected updated(changed: PropertyValues): void {

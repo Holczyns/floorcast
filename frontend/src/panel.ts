@@ -4,6 +4,9 @@ import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import "./entity-picker";
 import "./guide";
 import { GroundFeed } from "./ground";
+import { LANGUAGE_NAMES, pickLanguage, t, useDictionary } from "./i18n";
+import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
+import examplePlan from "../../tools/example_plan.json";
 import { type HomeAssistant } from "./ha";
 import {
   CIRCLE_TYPES,
@@ -353,6 +356,8 @@ class FloorCastPanel extends LitElement {
     _confirmDelete: { state: true },
     _paletteMode: { state: true },
     _deleteLevel: { state: true },
+    _startClosed: { state: true },
+    _wipeText: { state: true },
     _locked: { state: true },
     _toast: { state: true },
     _find: { state: true },
@@ -389,6 +394,10 @@ class FloorCastPanel extends LitElement {
   private _mode: Mode = "plan";
   /** The palette edited in Settings, dark or light; the one the plan shows without a choice. */
   private _paletteMode?: "dark" | "light";
+  /** The start screen of an empty plan was closed to draw from scratch. */
+  private _startClosed = false;
+  /** What was typed to confirm Delete everything. */
+  private _wipeText = "";
   /** A level whose delete was pressed once; a second press within a few seconds deletes it. */
   private _deleteLevel?: string;
   /** Delete was pressed once: a second press within a few seconds deletes. */
@@ -458,6 +467,11 @@ class FloorCastPanel extends LitElement {
   /** Camera people before the rules, per level and camera. */
   private _raw: Record<string, Record<string, Point[]>> = {};
   private _unsubscribePeople?: Promise<() => void>;
+
+  protected willUpdate(): void {
+    // The language before drawing: the plan's choice, else the user's language in Home Assistant.
+    useDictionary(EDITOR_LANGUAGES[pickLanguage(this._plan?.language, this.hass?.language, Object.keys(EDITOR_LANGUAGES))]);
+  }
 
   protected updated(changed: PropertyValues): void {
     // The plan shows its colours; in Settings the palette being edited, to see it while choosing.
@@ -1923,7 +1937,7 @@ class FloorCastPanel extends LitElement {
       <div class="main">
         ${this._guide ? html`<floorcast-guide class="guide"></floorcast-guide>` : nothing}
         <div class="canvas" ?hidden=${this._guide}>
-          ${this.renderCanvas()} ${this.renderBigImage()} ${this.renderPlacing()} ${this.renderToast()}
+          ${this.renderCanvas()} ${this.renderBigImage()} ${this.renderPlacing()} ${this.renderToast()} ${this.renderStart()}
           <div class="view-buttons">
             <button title="Zoom in" @click=${() => this.zoom(1 / 1.3)}>+</button>
             <button title="Zoom out" @click=${() => this.zoom(1.3)}>−</button>
@@ -1956,6 +1970,58 @@ class FloorCastPanel extends LitElement {
   }
 
 
+
+  /** A plan with nothing drawn yet: on no level a wall, room, object or device. */
+  private get emptyPlan(): boolean {
+    return this._plan!.levels.every((l) => !l.walls.length && !l.rooms.length && !l.items.length && !(l.devices ?? []).length);
+  }
+
+  /** The start of an empty plan: the example house to look around in, a plan file, or a clean sheet. */
+  private renderStart() {
+    if (!this.emptyPlan || this._startClosed || this._guide) return nothing;
+    return html`<div class="start">
+      <h2>${t("Start your plan")}</h2>
+      <button class="primary" @click=${() => this.loadExample()}>
+        <b>${t("Load the example house")}</b>
+        <span>${t("A small house with a garden and every kind of device, to see what FloorCast does. Delete everything in Settings when done.")}</span>
+      </button>
+      <label class="button">
+        <b>${t("Import a plan file")}</b>
+        <span>${t("A plan exported from FloorCast before.")}</span>
+        <input type="file" accept="application/json,.json" hidden @change=${this.importPlan} />
+      </label>
+      <button
+        @click=${() => {
+          this._startClosed = true;
+          this.setMode("plan");
+          this.startTool("wall");
+        }}
+      >
+        <b>${t("Draw from scratch")}</b>
+        <span>${t("Start with the outer walls; the Guide shows every step.")}</span>
+      </button>
+    </div>`;
+  }
+
+  /** The example house in place of the empty plan; its entities are invented, so it shows no live states. */
+  private loadExample(): void {
+    const before = this.snapshot();
+    this.setPlan(structuredClone(examplePlan) as Plan, false);
+    this.remember(before);
+    this.notify(t("The example house is loaded. Save to keep it."));
+  }
+
+  /** Delete everything: one empty level instead of the whole plan, after the word is typed. */
+  private wipePlan(): void {
+    const level = emptyLevel(t("Ground floor"));
+    this.change(() => (this._plan = { levels: [level] }));
+    this._levelId = level.id;
+    this._selection = undefined;
+    this._wipeText = "";
+    this._startClosed = false;
+    this.notify(t("The plan is empty. Save to keep it, or Undo."));
+    this.fit();
+  }
 
   /** While a tool places something: what a click does, and how to stop. */
   /** A device left off the plan by the Devices layer; the tab that edits it always shows it. */
@@ -3037,10 +3103,34 @@ class FloorCastPanel extends LitElement {
           )
         : nothing}
       ${this.appearanceProperties()}
+      <h3>${t("Language")}</h3>
+      <label class="field wide">
+        <span>${t("Language")}</span>
+        <select @change=${(e: Event) => this.change(() => (this._plan!.language = (e.target as HTMLSelectElement).value))}>
+          <option value="auto" ?selected=${(this._plan!.language ?? "auto") === "auto"}>${t("As each user in Home Assistant")}</option>
+          ${Object.keys(EDITOR_LANGUAGES).map(
+            (code) => html`<option value=${code} ?selected=${this._plan!.language === code}>${LANGUAGE_NAMES[code] ?? code}</option>`,
+          )}
+        </select>
+      </label>
+      <p class="muted">${t("For the editor and every card. A text without a translation shows in English.")}</p>
       <h3>Plan file</h3>
       <div class="row">
         <button @click=${() => this.exportPlan()}>Export</button>
         <label class="button">Import<input type="file" accept="application/json,.json" hidden @change=${this.importPlan} /></label>
+      </div>
+      <h3 class="danger-title">${t("Delete everything")}</h3>
+      <p class="muted">
+        ${t("Removes every level with its walls, rooms, objects, devices and zones, and the colours. Export the plan first to keep a copy. Until you save, Undo brings it back.")}
+      </p>
+      <label class="field wide">
+        <span>${t("Type {word}", { word: t("DELETE") })}</span>
+        <input type="text" .value=${this._wipeText} @input=${(e: Event) => (this._wipeText = (e.target as HTMLInputElement).value)} />
+      </label>
+      <div class="row">
+        <button class="danger" ?disabled=${this._wipeText.trim() !== t("DELETE")} @click=${() => this.wipePlan()}>
+          ${t("Delete everything")}
+        </button>
       </div>
     `;
   }
@@ -5175,6 +5265,42 @@ class FloorCastPanel extends LitElement {
       }
       .level-row.current input {
         border-color: var(--primary-color);
+      }
+      .start {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(420px, calc(100% - 32px));
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 20px;
+        border-radius: 16px;
+        background: var(--card-background-color, #1c1f24);
+        border: 1px solid var(--divider-color);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      .start h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 500;
+      }
+      .start button,
+      .start label.button {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        text-align: left;
+        padding: 10px 12px;
+      }
+      .start span {
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .danger-title {
+        color: var(--error-color, #db4437);
       }
       .colour-row {
         display: grid;

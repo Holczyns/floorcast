@@ -654,6 +654,8 @@ export interface Appearance {
 export interface Plan {
   levels: Level[];
   appearance?: Appearance;
+  /** Language of the editor and every card: a language code, or auto for the language of each user in Home Assistant. */
+  language?: string;
   tracking?: TrackingSettings;
   wallTypes?: WallType[];
   /** Corners of walls, rooms and objects drawn round instead of square. */
