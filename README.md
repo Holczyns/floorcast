@@ -51,6 +51,7 @@ someone to the kitchen counter.
 - **Alarms**: smoke, gas, carbon monoxide and water sensors pulse their room red and name it at the top of the card.
 - **Heat map**: rooms coloured by temperature, humidity or CO₂, with a switch on the card.
 - **Ask before switching** for a pump, a server or a gate.
+- **Dark and light**: the plan follows the theme of Home Assistant, and every colour can be changed in the editor.
 - **Built-in guide** in the editor, explaining every part with examples.
 - **Service `floorcast.press`** doing what a tap does, for automations and buttons.
 - **Local**: everything is computed inside Home Assistant, the card only draws. No extra Python packages, no

@@ -49,6 +49,8 @@ import {
   renderScreenGlows,
   renderRadarIcon,
   renderLevel,
+  applyPalette,
+  planPalette,
   renderMower,
   renderSpray,
   renderVacuum,
@@ -257,6 +259,8 @@ class FloorCastCard extends LitElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    if (changed.has("hass") || changed.has("_plan") || changed.has("_config"))
+      applyPalette(this, planPalette(this._plan?.appearance, this.hass?.themes?.darkMode, this._config?.theme).colours);
     if (changed.has("hass") && !this._unsubscribe && this.isConnected) this._subscribe();
     if (this.isConnected) this.followStills();
     if (this.isConnected) this.followGround();

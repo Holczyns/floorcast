@@ -30,6 +30,8 @@ import {
   type ItemType,
   type Level,
   type Opening,
+  type Appearance,
+  type PaletteKey,
   type Plan,
   type Point,
   type Room,
@@ -82,6 +84,11 @@ import {
   cameraView,
   mowerPlace,
   planStyles,
+  applyPalette,
+  planPalette,
+  DARK_PALETTE,
+  LIGHT_PALETTE,
+  PALETTE_GROUPS,
   radarView,
   renderCameraGlow,
   renderCameraIcon,
@@ -311,6 +318,7 @@ class FloorCastPanel extends LitElement {
     _cursor: { state: true },
     _addOpen: { state: true },
     _confirmDelete: { state: true },
+    _paletteMode: { state: true },
     _locked: { state: true },
     _toast: { state: true },
     _find: { state: true },
@@ -347,6 +355,8 @@ class FloorCastPanel extends LitElement {
   private _mode: Mode = "plan";
   /** The palette of + Add is open. */
   private _addOpen = false;
+  /** The palette edited in Settings, dark or light; the one the plan shows without a choice. */
+  private _paletteMode?: "dark" | "light";
   /** Delete was pressed once: a second press within a few seconds deletes. */
   private _confirmDelete = false;
   private _confirmTimer?: number;
@@ -416,6 +426,10 @@ class FloorCastPanel extends LitElement {
   private _unsubscribePeople?: Promise<() => void>;
 
   protected updated(changed: PropertyValues): void {
+    // The plan shows its colours; in Settings the palette being edited, to see it while choosing.
+    const palette = planPalette(this._plan?.appearance, this.hass?.themes?.darkMode);
+    const shown = this._mode === "settings" && this._paletteMode ? this._paletteMode : palette.mode;
+    applyPalette(this, planPalette(this._plan?.appearance, undefined, shown).colours);
     if (changed.has("hass") && this.hass && !this._loaded) {
       this._loaded = true;
       this.load();
@@ -2921,6 +2935,7 @@ class FloorCastPanel extends LitElement {
             "cm",
           )
         : nothing}
+      ${this.appearanceProperties()}
       <h3>Plan file</h3>
       <div class="row">
         <button @click=${() => this.exportPlan()}>Export</button>
@@ -2935,6 +2950,71 @@ class FloorCastPanel extends LitElement {
         <li>Joined wall ends move together; hold Shift while dragging an end to detach it.</li>
         <li>On a touch screen, two fingers zoom and move the plan.</li>
       </ul>
+    `;
+  }
+
+  /** Theme of the plan and its colours, dark and light, each with its own changes over the defaults. */
+  private appearanceProperties() {
+    const plan = this._plan!;
+    const appearance = plan.appearance ?? {};
+    const current = planPalette(appearance, this.hass?.themes?.darkMode).mode;
+    const mode = this._paletteMode ?? current;
+    const own = appearance[mode] ?? {};
+    const defaults = mode === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
+    const setColour = (key: PaletteKey, value: string | undefined) =>
+      this.change(() => {
+        const next = { ...(plan.appearance?.[mode] ?? {}) };
+        if (value && value !== defaults[key]) next[key] = value;
+        else delete next[key];
+        plan.appearance = { ...plan.appearance, [mode]: next };
+      });
+    return html`
+      <h3>Appearance</h3>
+      <label class="field wide">
+        <span>Theme</span>
+        <select
+          @change=${(e: Event) =>
+            this.change(() => (plan.appearance = { ...plan.appearance, theme: (e.target as HTMLSelectElement).value as Appearance["theme"] }))}
+        >
+          <option value="auto" ?selected=${(appearance.theme ?? "auto") === "auto"}>As Home Assistant (dark or light)</option>
+          <option value="dark" ?selected=${appearance.theme === "dark"}>Dark</option>
+          <option value="light" ?selected=${appearance.theme === "light"}>Light</option>
+        </select>
+      </label>
+      <div class="row">
+        <span class="muted">Colours of</span>
+        ${(["dark", "light"] as const).map(
+          (m) => html`<button class=${mode === m ? "on" : ""} @click=${() => (this._paletteMode = m)}>${m === "dark" ? "Dark" : "Light"}</button>`,
+        )}
+      </div>
+      ${PALETTE_GROUPS.map(
+        (group) => html`<details class="settings" ?open=${group.name === "Building"}>
+          <summary>${group.name}</summary>
+          ${group.keys.map(
+            ([key, label]) => html`<div class="colour-row">
+              <span>${label}</span>
+              <input type="color" .value=${own[key] ?? defaults[key]} @change=${(e: Event) => setColour(key, (e.target as HTMLInputElement).value)} />
+              ${own[key] ? html`<button class="small" title="Back to the default colour" @click=${() => setColour(key, undefined)}>↺</button>` : html`<span></span>`}
+            </div>`,
+          )}
+        </details>`,
+      )}
+      <div class="row">
+        <button
+          ?disabled=${!Object.keys(own).length}
+          @click=${() =>
+            this.change(() => {
+              const next = { ...plan.appearance };
+              delete next[mode];
+              plan.appearance = next;
+            })}
+        >
+          Reset the ${mode} colours
+        </button>
+      </div>
+      <p class="muted">
+        The plan in this editor shows the colours you edit. Every card uses them; a card can still choose dark or light for itself.
+      </p>
     `;
   }
 
@@ -4820,6 +4900,22 @@ class FloorCastPanel extends LitElement {
         font-weight: 500;
         padding: 4px 0;
       }
+      .colour-row {
+        display: grid;
+        grid-template-columns: 1fr 48px 28px;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0;
+        font-size: 13px;
+      }
+      .colour-row input[type="color"] {
+        width: 48px;
+        height: 26px;
+        padding: 0;
+        border: 1px solid var(--divider-color);
+        border-radius: 6px;
+        background: none;
+      }
       .crumbs {
         font-size: 12px;
         color: var(--secondary-text-color);
@@ -4928,6 +5024,8 @@ class FloorCastPanel extends LitElement {
         opacity: 0.5;
         pointer-events: none;
       }
+      /* Wide click targets around small symbols, never drawn. */
+      .hit,
       .mower-device .hit,
       .camera-device .hit {
         fill: transparent;

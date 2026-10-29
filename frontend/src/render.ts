@@ -32,6 +32,8 @@ import {
   projectOnWall,
   wallLength,
   wallDirection,
+  type Appearance,
+  type PaletteKey,
 } from "./model";
 
 const n = (v: number): string => v.toFixed(3);
@@ -817,6 +819,126 @@ export function renderLevel(
   `;
 }
 
+/** The colours of the plan, dark and light, by group as the palette editor shows them. */
+export const PALETTE_GROUPS: { name: string; keys: [PaletteKey, string][] }[] = [
+  {
+    name: "Building",
+    keys: [
+      ["background", "Background"],
+      ["floor", "Floor"],
+      ["wall", "Walls"],
+      ["window", "Windows"],
+      ["label", "Names and labels"],
+      ["value", "Readings"],
+      ["obstacle", "Furniture"],
+      ["obstacle-edge", "Furniture edge"],
+    ],
+  },
+  {
+    name: "Garden",
+    keys: [
+      ["lawn-a", "Lawn"],
+      ["lawn-b", "Lawn stripes"],
+      ["hedge", "Hedge"],
+      ["soil", "Soil"],
+      ["paving", "Paving"],
+      ["terrace", "Terrace"],
+      ["wood", "Wood"],
+      ["glass", "Glass"],
+      ["trampoline", "Trampoline"],
+      ["trampoline-mat", "Trampoline mat"],
+    ],
+  },
+  {
+    name: "Devices and people",
+    keys: [
+      ["light", "Light"],
+      ["water", "Water"],
+      ["screen-light", "Screen light"],
+      ["presence", "People"],
+      ["alert", "Open window"],
+      ["mower", "Mower"],
+      ["camera-glow", "Camera view"],
+    ],
+  },
+];
+
+export const DARK_PALETTE: Record<PaletteKey, string> = {
+  background: "#10151b",
+  floor: "#1b2129",
+  wall: "#b8bfc7",
+  window: "#4f8fea",
+  label: "#8b95a1",
+  value: "#e6ebf0",
+  obstacle: "#353e4a",
+  "obstacle-edge": "#4f5a67",
+  "lawn-a": "#1b2d21",
+  "lawn-b": "#1e3224",
+  hedge: "#234a2d",
+  soil: "#33291f",
+  paving: "#262c33",
+  terrace: "#2f353d",
+  wood: "#5d4631",
+  glass: "#7fb3d5",
+  trampoline: "#2563b8",
+  "trampoline-mat": "#0b0e12",
+  light: "#ffc94d",
+  water: "#4fc3f7",
+  mower: "#66bb6a",
+  "screen-light": "#bbdefb",
+  "camera-glow": "#c9d1da",
+  alert: "#ff9f43",
+  presence: "#4fc3f7",
+};
+
+// Light: a pale floor under dark walls; the glow of a light is a warmer, stronger orange to show on it.
+export const LIGHT_PALETTE: Record<PaletteKey, string> = {
+  background: "#eef1f4",
+  floor: "#ffffff",
+  wall: "#3d4651",
+  window: "#2f7de1",
+  label: "#5b6672",
+  value: "#1f2933",
+  obstacle: "#dde2e8",
+  "obstacle-edge": "#b9c1ca",
+  "lawn-a": "#dcefd8",
+  "lawn-b": "#d2e9cd",
+  hedge: "#9ccf95",
+  soil: "#e6d6c1",
+  paving: "#e3e6ea",
+  terrace: "#d6dade",
+  wood: "#b48a62",
+  glass: "#9cc7e6",
+  trampoline: "#2563b8",
+  "trampoline-mat": "#2b313a",
+  light: "#f59e0b",
+  water: "#1e88e5",
+  mower: "#43a047",
+  "screen-light": "#64b5f6",
+  "camera-glow": "#7b8794",
+  alert: "#f57c00",
+  presence: "#0288d1",
+};
+
+/**
+ * The colours a card or the editor draws with: the plan's theme (or the card's own), dark or light as Home
+ * Assistant is when it follows it, with the plan's own colours over the defaults.
+ */
+export function planPalette(
+  appearance: Appearance | undefined,
+  darkMode: boolean | undefined,
+  theme?: "auto" | "dark" | "light",
+): { mode: "dark" | "light"; colours: Record<PaletteKey, string> } {
+  const wanted = theme ?? appearance?.theme ?? "auto";
+  const mode = wanted === "auto" ? (darkMode === false ? "light" : "dark") : wanted;
+  return { mode, colours: { ...(mode === "dark" ? DARK_PALETTE : LIGHT_PALETTE), ...appearance?.[mode] } };
+}
+
+/** Sets the colours as the CSS variables of an element, over the defaults of planStyles. */
+export function applyPalette(element: HTMLElement, colours: Record<PaletteKey, string>): void {
+  for (const [key, value] of Object.entries(colours)) element.style.setProperty(`--fc-${key}`, value);
+}
+
 export const planStyles = css`
   :host {
     --fc-background: #10151b;
@@ -1011,7 +1133,7 @@ export const planStyles = css`
     fill: var(--fc-trampoline);
   }
   .fc-trampoline-mat {
-    fill: #0b0e12;
+    fill: var(--fc-trampoline-mat, #0b0e12);
   }
   /* Obstacles are drawn twice: outlines first, fills over them, so overlapping ones share one outline. */
   .fc-obstacle-edge {

@@ -338,6 +338,8 @@
         states,
         language: "en",
         user: { is_admin: true },
+        // ?light: Home Assistant in a light theme.
+        themes: { darkMode: !params.has("light") },
         callService,
         callApi: async (method, path) => {
           if (path.startsWith("dreame_lawn_mower/mowing-map"))

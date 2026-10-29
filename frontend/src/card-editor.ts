@@ -216,6 +216,19 @@ export class FloorCastCardEditor extends LitElement {
         ],
         "toggle",
       )}
+      <label>
+        <span>Colours</span>
+        <select @change=${(e: Event) => this.set("theme", (e.target as HTMLSelectElement).value || undefined, undefined)}>
+          ${(
+            [
+              ["", "As set in the editor"],
+              ["auto", "As Home Assistant (dark or light)"],
+              ["dark", "Dark"],
+              ["light", "Light"],
+            ] as [string, string][]
+          ).map(([value, label]) => html`<option value=${value} ?selected=${(this._config.theme ?? "") === value}>${label}</option>`)}
+        </select>
+      </label>
       ${this.select(
         "Heat map",
         "heatmap",

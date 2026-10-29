@@ -566,8 +566,44 @@ export interface Level {
   zones?: Zone[];
 }
 
+/** Colours of the plan a palette can change, named as their CSS variables without --fc-. */
+export type PaletteKey =
+  | "background"
+  | "floor"
+  | "wall"
+  | "window"
+  | "label"
+  | "value"
+  | "obstacle"
+  | "obstacle-edge"
+  | "lawn-a"
+  | "lawn-b"
+  | "hedge"
+  | "soil"
+  | "paving"
+  | "terrace"
+  | "wood"
+  | "glass"
+  | "trampoline"
+  | "trampoline-mat"
+  | "light"
+  | "water"
+  | "mower"
+  | "screen-light"
+  | "camera-glow"
+  | "alert"
+  | "presence";
+
+/** How the plan looks: dark, light or as Home Assistant, with own colours for each of the two. */
+export interface Appearance {
+  theme?: "auto" | "dark" | "light";
+  dark?: Partial<Record<PaletteKey, string>>;
+  light?: Partial<Record<PaletteKey, string>>;
+}
+
 export interface Plan {
   levels: Level[];
+  appearance?: Appearance;
   tracking?: TrackingSettings;
   wallTypes?: WallType[];
   /** Corners of walls, rooms and objects drawn round instead of square. */

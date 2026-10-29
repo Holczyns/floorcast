@@ -87,6 +87,10 @@ const SECTIONS: Section[] = [
         <li>Joined wall ends move together; hold <b>Shift</b> while dragging an end to detach it.</li>
         <li>On a touch screen two fingers zoom and move the plan.</li>
         <li>
+          <b>Appearance</b> in ⚙ Settings makes the plan dark, light or as Home Assistant, and changes any of its colours,
+          separately for dark and light; ↺ brings a colour back.
+        </li>
+        <li>
           <b>Export</b> in ⚙ Settings saves the plan as a JSON file; <b>Import</b> loads one. Use it as a backup before large
           changes.
         </li>
@@ -485,6 +489,14 @@ actions:
           <td>
             <code>temperature</code>, <code>humidity</code> or <code>co2</code>: rooms coloured by the sensors standing in them,
             with a switch and the scale on the card
+          </td>
+        </tr>
+        <tr>
+          <td><code>theme</code></td>
+          <td>the plan's</td>
+          <td>
+            <code>auto</code> (dark or light as Home Assistant), <code>dark</code> or <code>light</code> for this card. The
+            theme and the colours of both are set in the editor, ⚙ Settings, Appearance
           </td>
         </tr>
         <tr>
