@@ -128,6 +128,7 @@ class FloorCastCard extends LitElement {
     _garden: { state: true },
     _heat: { state: true },
     _views: { state: true },
+    _group: { state: true },
     _people: { state: true },
     _objects: { state: true },
     _pad: { state: true },
@@ -165,10 +166,13 @@ class FloorCastCard extends LitElement {
   // Zoom: the view of each level while it differs from its default, the pointers on the plan, and
   // whether the last gesture moved the plan, so its pointerup is no tap.
   private _views: Record<string, Bounds> = {};
+  // Levels side by side zoom and move together as one drawing: its scale and shift on the screen.
+  private _group?: { s: number; tx: number; ty: number };
   private _pointers = new Map<number, { x: number; y: number }>();
   private _gesture?: { level: string; start: Bounds; points: { x: number; y: number }[]; rect: DOMRect };
   private _dragged = false;
   private _zoomTimer?: number;
+  private _groupStart?: { s: number; tx: number; ty: number };
   // Ids of gradients and clip paths must differ between cards on one dashboard.
   private _uid = `fc${Math.random().toString(36).slice(2, 8)}`;
   // Mowers and vacuums as the integration places them, with their tracks.
@@ -457,6 +461,73 @@ class FloorCastCard extends LitElement {
   private resetViews(): void {
     window.clearTimeout(this._zoomTimer);
     this._views = {};
+    this._group = undefined;
+  }
+
+  /**
+   * Levels side by side as one drawing: scaled from 1 (the default views) up to a view about MIN_ZOOM_WIDTH metres
+   * wide, about a point of the frame that stays where it is, and kept inside the frame.
+   */
+  private setGroup(s: number, about: { x: number; y: number }, from: { s: number; tx: number; ty: number }, frame: DOMRect, maxScale: number): void {
+    const scale = Math.min(Math.max(s, 1), Math.max(1, maxScale));
+    const cx = (about.x - from.tx) / from.s;
+    const cy = (about.y - from.ty) / from.s;
+    const clamp = (shift: number, size: number) => Math.min(0, Math.max(size - size * scale, shift));
+    const tx = clamp(about.x - cx * scale, frame.width);
+    const ty = clamp(about.y - cy * scale, frame.height);
+    this._group = scale === 1 ? undefined : { s: scale, tx, ty };
+    this.restartZoomReset();
+  }
+
+  private groupDown(event: PointerEvent): void {
+    if (!this._config.zoom) return;
+    if (this._pointers.size === 0) this._dragged = false;
+    this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const touches = event.pointerType === "touch" && this._pointers.size === 2;
+    const mouse = event.pointerType === "mouse" && event.button === 0;
+    if (!touches && !mouse) return;
+    const frame = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this._gesture = { level: "", start: { x: 0, y: 0, w: 0, h: 0 }, points: [...this._pointers.values()], rect: frame };
+    this._groupStart = this._group ?? { s: 1, tx: 0, ty: 0 };
+  }
+
+  private groupMove(event: PointerEvent, maxScale: number): void {
+    if (!this._pointers.has(event.pointerId)) return;
+    this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const gesture = this._gesture;
+    const start = this._groupStart;
+    if (!gesture || !start) return;
+    const now = [...this._pointers.values()];
+    if (now.length !== gesture.points.length) return;
+    const mid = (points: { x: number; y: number }[]) => ({
+      x: points.reduce((s, p) => s + p.x, 0) / points.length - gesture.rect.left,
+      y: points.reduce((s, p) => s + p.y, 0) / points.length - gesture.rect.top,
+    });
+    const spread = (points: { x: number; y: number }[]) =>
+      points.length < 2 ? 1 : Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
+    const from = mid(gesture.points);
+    const to = mid(now);
+    if (!this._dragged && Math.hypot(to.x - from.x, to.y - from.y) < DRAG_PX && Math.abs(spread(now) - spread(gesture.points)) < DRAG_PX) return;
+    this._dragged = true;
+    window.clearTimeout(this._holdTimer);
+    const s = (start.s * spread(now)) / spread(gesture.points);
+    // The drawing point under the first middle of the fingers stays under their middle now.
+    const moved = { s: start.s, tx: start.tx + (to.x - from.x), ty: start.ty + (to.y - from.y) };
+    this.setGroup(s, to, moved, gesture.rect, maxScale);
+  }
+
+  private groupWheel(event: WheelEvent, maxScale: number): void {
+    if (!this._config.zoom || !event.ctrlKey) return;
+    event.preventDefault();
+    const frame = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const current = this._group ?? { s: 1, tx: 0, ty: 0 };
+    this.setGroup(current.s * Math.exp(-event.deltaY / 300), { x: event.clientX - frame.left, y: event.clientY - frame.top }, current, frame, maxScale);
+  }
+
+  private groupButton(event: Event, factor: number, maxScale: number): void {
+    const frame = ((event.currentTarget as HTMLElement).closest(".levels") as HTMLElement).getBoundingClientRect();
+    const current = this._group ?? { s: 1, tx: 0, ty: 0 };
+    this.setGroup(current.s * factor, { x: frame.width / 2, y: frame.height / 2 }, current, frame, maxScale);
   }
 
   /** Rule of the wall tablet: a zoomed card goes back to its default view after a while without a touch. */
@@ -535,8 +606,6 @@ class FloorCastCard extends LitElement {
   private renderZoomButtons(level: Level) {
     if (!this._config.zoom) return nothing;
     return html`<div class="zoom">
-      <button title="Zoom in" @click=${() => this.zoomAt(level, 1.5)}>+</button>
-      <button title="Zoom out" @click=${() => this.zoomAt(level, 1 / 1.5)}>−</button>
       ${this._views[level.id]
         ? html`<button
             title="Default view"
@@ -548,6 +617,8 @@ class FloorCastCard extends LitElement {
             ⌂
           </button>`
         : nothing}
+      <button title="Zoom in" @click=${() => this.zoomAt(level, 1.5)}>+</button>
+      <button title="Zoom out" @click=${() => this.zoomAt(level, 1 / 1.5)}>−</button>
     </div>`;
   }
 
@@ -697,30 +768,64 @@ class FloorCastCard extends LitElement {
 
             </div>`}
         ${this.renderAlarmBar(levels)}
-        <div class="levels ${side ? "side" : ""}">
-          ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
-        </div>
+        ${side && this._config.zoom
+          ? this.renderGroup(levels, width, sideScale, metres)
+          : html`<div class="levels ${side ? "side" : ""}">
+              ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
+            </div>`}
         ${this.renderPad()} ${this.renderAsk()}
       </ha-card>
     `;
   }
 
-  private renderLevel(level: Level, width: number, scale?: number) {
-    const b = this.viewBounds(level);
+  /** Levels side by side that zoom and move together, with one set of buttons. */
+  private renderGroup(levels: Level[], width: number, sideScale: number, metres: number[]) {
+    // As close as MIN_ZOOM_WIDTH metres across the card.
+    const maxScale = metres.reduce((sum, w) => sum + w, 0) / MIN_ZOOM_WIDTH;
+    const group = this._group;
+    return html`<div
+      class="levels side zoomable"
+      @pointerdown=${(e: PointerEvent) => this.groupDown(e)}
+      @pointermove=${(e: PointerEvent) => this.groupMove(e, maxScale)}
+      @pointerup=${(e: PointerEvent) => this.zoomUp(e)}
+      @pointercancel=${(e: PointerEvent) => this.zoomUp(e)}
+      @wheel=${(e: WheelEvent) => this.groupWheel(e, maxScale)}
+      @click=${{
+        handleEvent: (e: Event) => {
+          if (this._dragged) e.stopPropagation();
+        },
+        capture: true,
+      }}
+    >
+      <div class="group" style=${group ? `transform:translate(${group.tx}px,${group.ty}px) scale(${group.s})` : ""}>
+        ${levels.map((level) => this.renderLevel(level, width, sideScale, true))}
+      </div>
+      <div class="zoom">
+        ${group ? html`<button title="Default view" @click=${() => (this._group = undefined)}>⌂</button>` : nothing}
+        <button title="Zoom in" @click=${(e: Event) => this.groupButton(e, 1.5, maxScale)}>+</button>
+        <button title="Zoom out" @click=${(e: Event) => this.groupButton(e, 1 / 1.5, maxScale)}>−</button>
+      </div>
+    </div>`;
+  }
+
+  private renderLevel(level: Level, width: number, scale?: number, inGroup = false) {
+    const b = inGroup ? this.defaultBounds(level) : this.viewBounds(level);
     const home = this.defaultBounds(level);
     // Side by side every level uses the same scale, so a metre is equally long on each; zoom enlarges it.
     const style = scale ? `width:${(home.w * scale).toFixed(0)}px` : "width:100%";
     const pxPerMetre = (scale ?? width / home.w) * (home.w / b.w);
-    const zoomed = !!this._config.zoom && !!this._views[level.id];
+    const zoomed = !!this._config.zoom && !!this._views[level.id] && !inGroup;
+    // In a group the levels zoom together; their own gestures and buttons rest.
+    const own = !!this._config.zoom && !inGroup;
     return html`
       <div
-        class="level ${this._config.zoom ? "zoomable" : ""}"
+        class="level ${own ? "zoomable" : ""}"
         style=${style}
-        @pointerdown=${(e: PointerEvent) => this.zoomDown(level, e)}
-        @pointermove=${(e: PointerEvent) => this.zoomMove(level, e)}
-        @pointerup=${(e: PointerEvent) => this.zoomUp(e)}
-        @pointercancel=${(e: PointerEvent) => this.zoomUp(e)}
-        @wheel=${(e: WheelEvent) => this.zoomWheel(level, e)}
+        @pointerdown=${(e: PointerEvent) => own && this.zoomDown(level, e)}
+        @pointermove=${(e: PointerEvent) => own && this.zoomMove(level, e)}
+        @pointerup=${(e: PointerEvent) => own && this.zoomUp(e)}
+        @pointercancel=${(e: PointerEvent) => own && this.zoomUp(e)}
+        @wheel=${(e: WheelEvent) => own && this.zoomWheel(level, e)}
         @click=${{
           handleEvent: (e: Event) => {
             if (this._dragged) e.stopPropagation();
@@ -736,7 +841,7 @@ class FloorCastCard extends LitElement {
           ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)}
           ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}
         </svg>
-        ${this.renderZoomButtons(level)}
+        ${own ? this.renderZoomButtons(level) : nothing}
       </div>
     `;
   }
@@ -1616,8 +1721,18 @@ class FloorCastCard extends LitElement {
         overflow: hidden;
       }
       /* One finger scrolls the page; two fingers are the card's to zoom and move the plan. */
-      .level.zoomable svg {
+      .level.zoomable svg,
+      .levels.zoomable {
         touch-action: pan-x pan-y;
+      }
+      .levels.zoomable {
+        position: relative;
+        overflow: hidden;
+      }
+      .group {
+        display: flex;
+        align-items: flex-start;
+        transform-origin: 0 0;
       }
       .zoom {
         position: absolute;

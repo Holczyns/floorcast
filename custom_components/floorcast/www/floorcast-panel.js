@@ -495,7 +495,8 @@ actions:
           <td><code>false</code></td>
           <td>
             Zoom and move the plan on the dashboard: two fingers, the mouse (drag, Ctrl with the wheel) and the + − ⌂ buttons.
-            Every opening of the dashboard starts from the default view, the visible part set by <code>crop</code>
+            Levels side by side zoom and move together as one drawing. Every opening of the dashboard starts from the
+            default view, the visible part set by <code>crop</code>
           </td>
         </tr>
         <tr>
