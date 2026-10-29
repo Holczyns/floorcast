@@ -1,6 +1,7 @@
 import { defineElement } from "./define";
 import { LitElement, css, html, nothing } from "lit";
 import { type HomeAssistant, fireEvent } from "./ha";
+import { t } from "./i18n";
 
 const SHOWN = 60;
 
@@ -61,7 +62,7 @@ export class FloorCastEntityPicker extends LitElement {
       <div class="field">
         <input
           type="text"
-          placeholder=${this.value ? label : "Search by name"}
+          placeholder=${this.value ? label : t("Search by name")}
           .value=${this._open ? this._query : label}
           @focus=${() => {
             this._open = true;
@@ -78,7 +79,7 @@ export class FloorCastEntityPicker extends LitElement {
           }}
         />
         ${this.optional && this.value
-          ? html`<button class="clear" title="Remove" @mousedown=${(e: Event) => e.preventDefault()} @click=${() => this.pick(null)}>×</button>`
+          ? html`<button class="clear" title=${t("Remove")} @mousedown=${(e: Event) => e.preventDefault()} @click=${() => this.pick(null)}>×</button>`
           : nothing}
       </div>
       ${this._open
@@ -92,8 +93,8 @@ export class FloorCastEntityPicker extends LitElement {
                 <span>${option.name}</span><em>${option.id}</em>
               </button>`,
             )}
-            ${list.length > SHOWN ? html`<p>${list.length - SHOWN} more; type more of the name.</p>` : nothing}
-            ${list.length ? nothing : html`<p>Nothing matches.</p>`}
+            ${list.length > SHOWN ? html`<p>${t("{count} more; type more of the name.", { count: list.length - SHOWN })}</p>` : nothing}
+            ${list.length ? nothing : html`<p>${t("Nothing matches.")}</p>`}
           </div>`
         : nothing}
     `;

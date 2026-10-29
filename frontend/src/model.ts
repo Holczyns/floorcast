@@ -1,4 +1,5 @@
 // The plan document and plain geometry on it. Every length is in metres.
+import { N_, t } from "./i18n";
 
 export type Point = [number, number];
 
@@ -178,11 +179,11 @@ export type SensorType = "temperature" | "humidity" | "generic" | "alarm";
 
 /** Binary sensors an Alarm sensor takes, with the name its warning shows; an alarm panel is an Alarm too. */
 export const ALARM_CLASSES: Record<string, string> = {
-  smoke: "Smoke",
-  gas: "Gas",
-  carbon_monoxide: "Carbon monoxide",
-  moisture: "Water leak",
-  safety: "Alarm",
+  smoke: N_("Smoke"),
+  gas: N_("Gas"),
+  carbon_monoxide: N_("Carbon monoxide"),
+  moisture: N_("Water leak"),
+  safety: N_("Alarm"),
 };
 
 /** What an Alarm sensor reports: its kind for the icon and warning, and whether it alarms now. */
@@ -192,7 +193,7 @@ export function alarmState(entityId: string | null | undefined, stateObj: Readin
   const state = stateObj?.state;
   return {
     kind,
-    name: panel ? "Alarm" : (ALARM_CLASSES[kind] ?? "Alarm"),
+    name: panel ? N_("Alarm") : (ALARM_CLASSES[kind] ?? N_("Alarm")),
     active: panel ? state === "triggered" : state === "on",
     unknown: !stateObj || state === "unavailable" || state === "unknown",
   };
@@ -883,16 +884,16 @@ export function roomAt(level: Level, p: Point): Room | undefined {
 export type AreaKind = "light" | "sensor" | "alarm" | "presence" | "climate" | "contact" | "blind" | "gate" | "lock" | "camera";
 
 export const AREA_KIND_NAMES: Record<AreaKind, string> = {
-  light: "Light",
-  sensor: "Sensor",
-  alarm: "Alarm",
-  presence: "Presence",
-  climate: "Thermostat",
-  contact: "Door or window",
-  blind: "Blind",
-  gate: "Gate",
-  lock: "Lock",
-  camera: "Camera",
+  light: N_("Light"),
+  sensor: N_("Sensor"),
+  alarm: N_("Alarm"),
+  presence: N_("Presence"),
+  climate: N_("Thermostat"),
+  contact: N_("Door or window"),
+  blind: N_("Blind"),
+  gate: N_("Gate"),
+  lock: N_("Lock"),
+  camera: N_("Camera"),
 };
 
 export function areaKind(entityId: string, stateObj: Reading): AreaKind | undefined {
@@ -941,7 +942,7 @@ export function roomOpenings(level: Level, room: Room): Opening[] {
   });
 }
 
-export const OPENING_NAMES: Record<Opening["type"], string> = { door: "Door", window: "Window", gate: "Gate" };
+export const OPENING_NAMES: Record<Opening["type"], string> = { door: N_("Door"), window: N_("Window"), gate: N_("Gate") };
 
 /** A door or window named by the side of the room it is on, such as "Window, north". */
 export function openingName(level: Level, room: Room, opening: Opening): string {
@@ -950,8 +951,8 @@ export function openingName(level: Level, room: Room, opening: Opening): string 
   const m = centroid(room.points);
   const dx = c[0] - m[0];
   const dy = c[1] - m[1];
-  const side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "east" : "west") : dy > 0 ? "south" : "north";
-  return `${OPENING_NAMES[opening.type]}, ${side}`;
+  const side = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? N_("{opening}, east") : N_("{opening}, west")) : dy > 0 ? N_("{opening}, south") : N_("{opening}, north");
+  return t(side, { opening: t(OPENING_NAMES[opening.type]) });
 }
 
 /** Spots for new devices in a room: n in a row across it, at a share of its height (0 top, 1 bottom). */

@@ -1,5 +1,6 @@
 // Drawing of a level as SVG in metres, shared by the card and the editor.
 import { css, nothing, svg, type SVGTemplateResult } from "lit";
+import { N_, t } from "./i18n";
 import {
   CIRCLE_TYPES,
   DEFAULT_CORNER_RADIUS,
@@ -217,8 +218,8 @@ export function renderOpeningLabels(level: Level, states: States, size: number):
       const state = openingState(opening, states);
       const parts = [
         opening.cover && state.position !== undefined ? `${state.position}%` : undefined,
-        opening.cover && state.position === undefined && state.closure !== undefined ? (state.closure ? "closed" : "open") : undefined,
-        state.sensed === undefined ? undefined : state.sensed ? "open" : "closed",
+        opening.cover && state.position === undefined && state.closure !== undefined ? (state.closure ? t("closed") : t("open")) : undefined,
+        state.sensed === undefined ? undefined : state.sensed ? t("open") : t("closed"),
       ].filter(Boolean);
       if (!parts.length) return nothing;
       const out = outsideNormal(level, opening, wall);
@@ -867,43 +868,43 @@ export function renderLevel(
 /** The colours of the plan, dark and light, by group as the palette editor shows them. */
 export const PALETTE_GROUPS: { name: string; keys: [PaletteKey, string][] }[] = [
   {
-    name: "Building",
+    name: N_("Building"),
     keys: [
-      ["background", "Background"],
-      ["floor", "Floor"],
-      ["wall", "Walls"],
-      ["window", "Windows"],
-      ["label", "Names and labels"],
-      ["value", "Readings"],
-      ["obstacle", "Furniture"],
-      ["obstacle-edge", "Furniture edge"],
+      ["background", N_("Background")],
+      ["floor", N_("Floor")],
+      ["wall", N_("Walls")],
+      ["window", N_("Windows")],
+      ["label", N_("Names and labels")],
+      ["value", N_("Readings")],
+      ["obstacle", N_("Furniture")],
+      ["obstacle-edge", N_("Furniture edge")],
     ],
   },
   {
-    name: "Garden",
+    name: N_("Garden"),
     keys: [
-      ["lawn-a", "Lawn"],
-      ["lawn-b", "Lawn stripes"],
-      ["hedge", "Hedge"],
-      ["soil", "Soil"],
-      ["paving", "Paving"],
-      ["terrace", "Terrace"],
-      ["wood", "Wood"],
-      ["glass", "Glass"],
-      ["trampoline", "Trampoline"],
-      ["trampoline-mat", "Trampoline mat"],
+      ["lawn-a", N_("Lawn")],
+      ["lawn-b", N_("Lawn stripes")],
+      ["hedge", N_("Hedge")],
+      ["soil", N_("Soil")],
+      ["paving", N_("Paving")],
+      ["terrace", N_("Terrace")],
+      ["wood", N_("Wood")],
+      ["glass", N_("Glass")],
+      ["trampoline", N_("Trampoline")],
+      ["trampoline-mat", N_("Trampoline mat")],
     ],
   },
   {
-    name: "Devices and people",
+    name: N_("Devices and people"),
     keys: [
-      ["light", "Light"],
-      ["water", "Water"],
-      ["screen-light", "Screen light"],
-      ["presence", "People"],
-      ["alert", "Open window"],
-      ["mower", "Mower"],
-      ["camera-glow", "Camera view"],
+      ["light", N_("Light")],
+      ["water", N_("Water")],
+      ["screen-light", N_("Screen light")],
+      ["presence", N_("People")],
+      ["alert", N_("Open window")],
+      ["mower", N_("Mower")],
+      ["camera-glow", N_("Camera view")],
     ],
   },
 ];

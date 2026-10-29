@@ -6,6 +6,8 @@ import { type HomeAssistant, fireEvent } from "./ha";
 import { type CardConfig } from "./card-config";
 import { type Level, type Plan, type Point, drawnBounds, planRadius } from "./model";
 import { PLAN_DEFS, planStyles, renderLevel } from "./render";
+import { pickLanguage, t, useDictionary } from "./i18n";
+import { CARD_LANGUAGES } from "./i18n/card-languages";
 
 type Crop = [number, number, number, number];
 const STEP = 0.05;
@@ -39,6 +41,9 @@ export class FloorCastCardEditor extends LitElement {
       this.hass
         .callWS<{ plan: Plan }>({ type: "floorcast/plan/get" })
         .then((result) => {
+          // The language of the card: the plan's choice, else the user's language in Home Assistant.
+          const code = pickLanguage(result.plan.language, this.hass.language, Object.keys(CARD_LANGUAGES));
+          useDictionary(CARD_LANGUAGES[code], code);
           this._plan = result.plan;
           this._levels = result.plan.levels.map((level) => ({ id: level.id, name: level.name }));
         })
@@ -146,7 +151,7 @@ export class FloorCastCardEditor extends LitElement {
     return html`<div class="crop">
       <div class="crop-head">
         <span>${level.name}</span>
-        <button ?disabled=${!this._config.crop?.[level.id]} @click=${() => this.setCrop(level, undefined)}>Whole level</button>
+        <button ?disabled=${!this._config.crop?.[level.id]} @click=${() => this.setCrop(level, undefined)}>${t("Whole level")}</button>
       </div>
       <svg
         viewBox="${left} ${top} ${right - left} ${bottom - top}"
@@ -183,11 +188,11 @@ export class FloorCastCardEditor extends LitElement {
     const chosen = this._config.levels;
     return html`
       <label>
-        <span>Title</span>
+        <span>${t("Title")}</span>
         <input type="text" .value=${this._config.title ?? ""} @change=${(e: Event) => this.set("title", (e.target as HTMLInputElement).value)} />
       </label>
       <div class="group">
-        <span>Levels</span>
+        <span>${t("Levels")}</span>
         ${(this._levels ?? []).map(
           (level) => html`<label class="check">
             <input
@@ -200,63 +205,64 @@ export class FloorCastCardEditor extends LitElement {
         )}
       </div>
       <div class="group">
-        <span>Visible part</span>
+        <span>${t("Visible part")}</span>
         ${(this._plan?.levels ?? [])
           .filter((level) => !chosen?.length || chosen.includes(level.id))
           .map((level) => this.renderCrop(level))}
-        <p class="hint">Drag a corner of the frame to resize it, inside it to move it.</p>
+        <p class="hint">${t("Drag a corner of the frame to resize it, inside it to move it.")}</p>
       </div>
       ${this.select(
-        "Garden",
+        t("Garden"),
         "garden",
         [
-          ["toggle", "Switch on the card"],
-          ["show", "Always shown"],
-          ["hide", "Hidden"],
+          ["toggle", t("Switch on the card")],
+          ["show", t("Always shown")],
+          ["hide", t("Hidden")],
         ],
         "toggle",
       )}
       <label>
-        <span>Colours</span>
+        <span>${t("Colours")}</span>
         <select @change=${(e: Event) => this.set("theme", (e.target as HTMLSelectElement).value || undefined, undefined)}>
           ${(
             [
-              ["", "As set in the editor"],
-              ["auto", "As Home Assistant (dark or light)"],
-              ["dark", "Dark"],
-              ["light", "Light"],
+              ["", t("As set in the editor")],
+              ["auto", t("As Home Assistant (dark or light)")],
+              ["dark", t("Dark")],
+              // The key tells the theme from the light of a lamp; English shows it without the bracket.
+              ["light", t("Light (theme)").replace(" (theme)", "")],
             ] as [string, string][]
           ).map(([value, label]) => html`<option value=${value} ?selected=${(this._config.theme ?? "") === value}>${label}</option>`)}
         </select>
       </label>
       ${this.select(
-        "Heat map",
+        t("Heat map"),
         "heatmap",
         [
-          ["none", "None"],
-          ["temperature", "Temperature"],
-          ["humidity", "Humidity"],
-          ["co2", "CO₂"],
+          ["none", t("None")],
+          ["temperature", t("Temperature")],
+          ["humidity", t("Humidity")],
+          ["co2", t("CO₂")],
         ],
         "none",
       )}
       ${this.select(
-        "Layout",
+        t("Layout"),
         "layout",
         [
-          ["auto", "Side by side when they fit"],
-          ["tabs", "One level, tabs to switch"],
-          ["side", "Always side by side"],
+          ["auto", t("Side by side when they fit")],
+          ["tabs", t("One level, tabs to switch")],
+          ["side", t("Always side by side")],
         ],
         "auto",
       )}
       ${this.select(
-        "Details",
+        t("Details"),
         "details",
         [
-          ["auto", "When the plan is large enough"],
-          ["show", "Always"],
-          ["hide", "Never"],
+          ["auto", t("When the plan is large enough")],
+          ["show", t("Always")],
+          ["hide", t("Never")],
         ],
         "auto",
       )}
@@ -266,7 +272,7 @@ export class FloorCastCardEditor extends LitElement {
           .checked=${this._config.names !== false}
           @change=${(e: Event) => this.set("names", (e.target as HTMLInputElement).checked, true)}
         />
-        Room names
+        ${t("Room names")}
       </label>
       <label class="check">
         <input
@@ -274,7 +280,7 @@ export class FloorCastCardEditor extends LitElement {
           .checked=${this._config.auto_preview !== false}
           @change=${(e: Event) => this.set("auto_preview", (e.target as HTMLInputElement).checked, true)}
         />
-        Camera still when it sees someone
+        ${t("Camera still when it sees someone")}
       </label>
       <label class="check">
         <input
@@ -282,7 +288,7 @@ export class FloorCastCardEditor extends LitElement {
           .checked=${this._config.trails !== false}
           @change=${(e: Event) => this.set("trails", (e.target as HTMLInputElement).checked, true)}
         />
-        Tracks of people and objects
+        ${t("Tracks of people and objects")}
       </label>
       <label class="check">
         <input
@@ -290,7 +296,7 @@ export class FloorCastCardEditor extends LitElement {
           .checked=${!!this._config.history}
           @change=${(e: Event) => this.set("history", (e.target as HTMLInputElement).checked, false)}
         />
-        Paths switch: where people walked over the last day
+        ${t("Paths switch: where people walked over the last day")}
       </label>
       <label class="check">
         <input
@@ -298,11 +304,11 @@ export class FloorCastCardEditor extends LitElement {
           .checked=${!!this._config.zoom}
           @change=${(e: Event) => this.set("zoom", (e.target as HTMLInputElement).checked, false)}
         />
-        Zoom and pan on the dashboard (two fingers, mouse, buttons); the visible part above is the default view
+        ${t("Zoom and pan on the dashboard (two fingers, mouse, buttons); the visible part above is the default view")}
       </label>
       ${this._config.zoom
         ? html`<label>
-            <span>Back to the default view after (s, 0 never)</span>
+            <span>${t("Back to the default view after (s, 0 never)")}</span>
             <input
               type="number"
               min="0"
@@ -313,7 +319,7 @@ export class FloorCastCardEditor extends LitElement {
           </label>`
         : nothing}
       <label>
-        <span>Hold time (ms)</span>
+        <span>${t("Hold time (ms)")}</span>
         <input
           type="number"
           min="150"

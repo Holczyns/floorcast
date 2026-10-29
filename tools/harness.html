@@ -367,7 +367,8 @@
       };
       const hass = {
         states,
-        language: "en",
+        // ?lang=pl: a user of Home Assistant in Polish.
+        language: params.get("lang") ?? "en",
         user: { is_admin: true },
         // ?light: Home Assistant in a light theme.
         themes: { darkMode: !params.has("light") },

@@ -58,6 +58,8 @@ someone to the kitchen counter.
 - **Ask before switching** for a pump, a server or a gate.
 - **Dark and light**: the plan follows the theme of Home Assistant, and every colour can be changed in the editor.
 - **Built-in guide** in the editor, explaining every part with examples.
+- **English and Polish**, as each user's language in Home Assistant or one chosen for the plan; more languages can be
+  added.
 - **Service `floorcast.press`** doing what a tap does, for automations and buttons.
 - **Local**: everything is computed inside Home Assistant, the card only draws. No extra Python packages, no
   resources to add by hand.
@@ -155,6 +157,10 @@ cd frontend && npm ci && npm run check && npm run build
 The built card and panel in `custom_components/floorcast/www` are committed, so installing through HACS needs no build
 step. `python tools/dev_server.py` serves `tools/harness.html` on port 8765: the card and the editor against a mocked
 Home Assistant with the example house.
+
+Translations live in `frontend/src/i18n`: a language is a folder with `card.ts` and `editor.ts` (English text →
+translation) and `guide.ts`, registered in `card-languages.ts`, `editor-languages.ts`, `guide.ts` and `LANGUAGE_NAMES`.
+`npm run i18n` lists the texts a language does not translate yet.
 
 Issues and pull requests are welcome. By opening a pull request you agree to the contribution terms in
 [NOTICE](NOTICE).

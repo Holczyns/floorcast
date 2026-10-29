@@ -3,7 +3,7 @@ import { defineElement } from "./define";
 import "./card-editor";
 import { type CardConfig } from "./card-config";
 import { GroundFeed } from "./ground";
-import { pickLanguage, t, useDictionary } from "./i18n";
+import { N_, pickLanguage, t, useDictionary } from "./i18n";
 import { CARD_LANGUAGES } from "./i18n/card-languages";
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { repeat } from "lit/directives/repeat.js";
@@ -100,7 +100,12 @@ const MIN_ZOOM_WIDTH = 2;
 const DRAG_PX = 6;
 type Bounds = { x: number; y: number; w: number; h: number };
 const HEAT_KEY = "floorcast-card-heat";
-const HEAT_NAMES: Record<HeatKind, string> = { temperature: "Temperature", humidity: "Humidity", co2: "CO₂" };
+const HEAT_NAMES: Record<HeatKind, string> = { temperature: N_("Temperature"), humidity: N_("Humidity"), co2: N_("CO₂") };
+const HEAT_TITLES: Record<HeatKind, string> = {
+  temperature: N_("Rooms coloured by their temperature"),
+  humidity: N_("Rooms coloured by their humidity"),
+  co2: N_("Rooms coloured by their CO₂"),
+};
 
 /** A switch of the card remembered in this browser; the fallback when it was never set or without storage. */
 function stored(key: string, fallback = false): boolean {
@@ -120,12 +125,15 @@ function store(key: string, on: boolean): void {
   }
 }
 
-/** What a tap does to a blind, as floorcast.press decides it: stop it moving, close it when open, else open it. */
+/**
+ * What a tap does to a blind, as floorcast.press decides it: stop it moving, close it when open, else open it;
+ * as the question Ask before switching shows.
+ */
 function coverAction(stateObj: { state: string; attributes: Record<string, any> } | undefined): string {
-  if (stateObj?.state === "opening" || stateObj?.state === "closing") return "Stop";
+  if (stateObj?.state === "opening" || stateObj?.state === "closing") return N_("Stop {name}?");
   const position = stateObj?.attributes.current_position;
   const open = typeof position === "number" ? position > 0 : stateObj?.state === "open";
-  return open ? "Close" : "Open";
+  return open ? N_("Close {name}?") : N_("Open {name}?");
 }
 
 class FloorCastCard extends LitElement {
@@ -629,7 +637,7 @@ class FloorCastCard extends LitElement {
     return html`<div class="zoom">
       ${this._views[level.id]
         ? html`<button
-            title="Default view"
+            title=${t("Default view")}
             @click=${() => {
               const { [level.id]: _, ...rest } = this._views;
               this._views = rest;
@@ -638,8 +646,8 @@ class FloorCastCard extends LitElement {
             ⌂
           </button>`
         : nothing}
-      <button title="Zoom in" @click=${() => this.zoomAt(level, 1.5)}>+</button>
-      <button title="Zoom out" @click=${() => this.zoomAt(level, 1 / 1.5)}>−</button>
+      <button title=${t("Zoom in")} @click=${() => this.zoomAt(level, 1.5)}>+</button>
+      <button title=${t("Zoom out")} @click=${() => this.zoomAt(level, 1 / 1.5)}>−</button>
     </div>`;
   }
 
@@ -718,10 +726,10 @@ class FloorCastCard extends LitElement {
     const scale = HEAT_SCALES[kind];
     const stops = scale.stops;
     const gradient = stops.map(([, c]) => `rgb(${c.join(",")})`).join(",");
-    return html`<label class="switch" title="Rooms coloured by their ${HEAT_NAMES[kind].toLowerCase()}">
+    return html`<label class="switch" title=${t(HEAT_TITLES[kind])}>
       <input type="checkbox" .checked=${this._heat} @change=${() => this.toggleHeat()} />
       <span class="track"><span class="knob"></span></span>
-      ${HEAT_NAMES[kind]}
+      ${t(HEAT_NAMES[kind])}
       ${this._heat
         ? html`<span class="scale"
             >${stops[0][0]}${scale.unit}<span class="bar" style="background:linear-gradient(90deg,${gradient})"></span
@@ -741,7 +749,7 @@ class FloorCastCard extends LitElement {
   render() {
     if (!this._plan) return html`<ha-card><div class="empty">…</div></ha-card>`;
     const all = this.levels();
-    if (!all.length) return html`<ha-card><div class="empty">FloorCast: no levels to show.</div></ha-card>`;
+    if (!all.length) return html`<ha-card><div class="empty">${t("FloorCast: no levels to show.")}</div></ha-card>`;
     // The garden is switched on the card, or fixed by the configuration (a phone showing one floor).
     const gardenMode = this._config.garden ?? "toggle";
     const gardenToggle = gardenMode === "toggle" && all.some(hasGarden);
@@ -775,14 +783,14 @@ class FloorCastCard extends LitElement {
                 ? html`<label class="switch">
                     <input type="checkbox" .checked=${this._garden} @change=${() => this.toggleGarden()} />
                     <span class="track"><span class="knob"></span></span>
-                    Garden
+                    ${t("Garden")}
                   </label>`
                 : nothing}
               ${this._config.history
-                ? html`<label class="switch" title="Where people walked over the last day">
+                ? html`<label class="switch" title=${t("Where people walked over the last day")}>
                     <input type="checkbox" .checked=${this._showWalks} @change=${() => this.toggleWalks(levels)} />
                     <span class="track"><span class="knob"></span></span>
-                    Paths
+                    ${t("Paths")}
                   </label>`
                 : nothing}
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
@@ -822,9 +830,9 @@ class FloorCastCard extends LitElement {
         ${levels.map((level) => this.renderLevel(level, width, sideScale, true))}
       </div>
       <div class="zoom">
-        ${group ? html`<button title="Default view" @click=${() => (this._group = undefined)}>⌂</button>` : nothing}
-        <button title="Zoom in" @click=${(e: Event) => this.groupButton(e, 1.5, maxScale)}>+</button>
-        <button title="Zoom out" @click=${(e: Event) => this.groupButton(e, 1 / 1.5, maxScale)}>−</button>
+        ${group ? html`<button title=${t("Default view")} @click=${() => (this._group = undefined)}>⌂</button>` : nothing}
+        <button title=${t("Zoom in")} @click=${(e: Event) => this.groupButton(e, 1.5, maxScale)}>+</button>
+        <button title=${t("Zoom out")} @click=${(e: Event) => this.groupButton(e, 1 / 1.5, maxScale)}>−</button>
       </div>
     </div>`;
   }
@@ -910,7 +918,7 @@ class FloorCastCard extends LitElement {
             @pointerdown=${() => this.holdStart(() => this.openMoreInfo(opening.lock!))}
             @pointerup=${() =>
               this.holdEnd(() =>
-                this.ask(opening.confirm !== false, opening.lock, locked ? "Unlock" : "Lock", () =>
+                this.ask(opening.confirm !== false, opening.lock, locked ? N_("Unlock {name}?") : N_("Lock {name}?"), () =>
                   this.hass.callService("lock", locked ? "unlock" : "lock", { entity_id: opening.lock }),
                 ),
               )}
@@ -941,7 +949,7 @@ class FloorCastCard extends LitElement {
             @pointerup=${() =>
               this.holdEnd(() =>
                 switchable
-                  ? this.ask(device.confirm, entity, on ? "Turn off" : "Turn on", () => this.hass.callService("homeassistant", "toggle", { entity_id: entity }))
+                  ? this.ask(device.confirm, entity, on ? N_("Turn off {name}?") : N_("Turn on {name}?"), () => this.hass.callService("homeassistant", "toggle", { entity_id: entity }))
                   : this.openMoreInfo(entity),
               )}
             @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
@@ -961,7 +969,7 @@ class FloorCastCard extends LitElement {
         return svg`<g class="mower-hit"
             @pointerdown=${() => this.holdStart(() => (this._pad = device))}
             @pointerup=${() =>
-              this.holdEnd(() => this.ask(device.confirm, device.entity ?? device.remote, on ? "Turn off" : "Turn on", () => this.press({ device: device.id })))}
+              this.holdEnd(() => this.ask(device.confirm, device.entity ?? device.remote, on ? N_("Turn off {name}?") : N_("Turn on {name}?"), () => this.press({ device: device.id })))}
             @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
           ${renderScreen(device, on)}
           <path class="opening-hit" stroke-width=${Math.max(0.5, 24 / pxPerMetre)} d="M${device.at[0]} ${device.at[1]}L${to[0]} ${to[1]}"></path>
@@ -970,20 +978,23 @@ class FloorCastCard extends LitElement {
   }
 
   private toggleLight(light: Device, on: boolean): void {
-    this.ask(light.confirm, light.entity, on ? "Turn off" : "Turn on", () =>
+    this.ask(light.confirm, light.entity, on ? N_("Turn off {name}?") : N_("Turn on {name}?"), () =>
       this.hass.callService("homeassistant", "toggle", { entity_id: light.entity }),
     );
   }
 
-  /** A device with Ask before switching runs its tap only after Yes in a bar over the plan; the bar goes after 5 s. */
-  private ask(confirm: boolean | undefined, entity: string | null | undefined, action: string, run: () => void): void {
+  /**
+   * A device with Ask before switching runs its tap only after Yes in a bar over the plan; the bar goes after 5 s.
+   * The question is an English text with {name} for the device.
+   */
+  private ask(confirm: boolean | undefined, entity: string | null | undefined, question: string, run: () => void): void {
     if (!confirm) {
       run();
       return;
     }
-    const name = (entity && this.hass.states[entity]?.attributes.friendly_name) || entity || "this device";
+    const name = (entity && this.hass.states[entity]?.attributes.friendly_name) || entity || t("this device");
     window.clearTimeout(this._askTimer);
-    this._ask = { text: `${action} ${name}?`, run, top: this._pointerTop };
+    this._ask = { text: t(question, { name }), run, top: this._pointerTop };
     this._askTimer = window.setTimeout(() => (this._ask = undefined), 5000);
   }
 
@@ -1010,9 +1021,9 @@ class FloorCastCard extends LitElement {
           ask.run();
         }}
       >
-        Yes
+        ${t("Yes")}
       </button>
-      <button class="key" @click=${close}>No</button>
+      <button class="key" @click=${close}>${t("No")}</button>
     </div>`;
   }
 
@@ -1034,8 +1045,8 @@ class FloorCastCard extends LitElement {
     return html`<div class="pad-backdrop" @click=${(e: Event) => e.target === e.currentTarget && (this._pad = undefined)}>
       <div class="pad">
         <div class="pad-top">
-          <span>${stateObj?.attributes.friendly_name ?? "Screen"} · ${stateObj?.state ?? "?"}</span>
-          <button class="key" title="Close" @click=${() => (this._pad = undefined)}>×</button>
+          <span>${stateObj?.attributes.friendly_name ?? t("Screen")} · ${stateObj?.state ?? "?"}</span>
+          <button class="key" title=${t("Close")} @click=${() => (this._pad = undefined)}>×</button>
         </div>
         <div class="pad-row">
           <button class="key power ${on ? "on" : ""}" ?disabled=${!entity} @click=${() => this.press({ device: device.id })}>⏻</button>
@@ -1047,7 +1058,7 @@ class FloorCastCard extends LitElement {
         </div>
         <div class="pad-row">${key("BACK", "↩")} ${key("HOME", "⌂")} ${key("MEDIA_PLAY_PAUSE", "⏯")}</div>
         <div class="pad-row">${key("VOLUME_DOWN", "−")} ${key("VOLUME_MUTE", "🔇")} ${key("VOLUME_UP", "+")}</div>
-        ${device.remote ? nothing : html`<p class="pad-note">Choose the remote of the screen in the editor to use the keys.</p>`}
+        ${device.remote ? nothing : html`<p class="pad-note">${t("Choose the remote of the screen in the editor to use the keys.")}</p>`}
       </div>
     </div>`;
   }
@@ -1384,7 +1395,7 @@ class FloorCastCard extends LitElement {
               this.holdEnd(
                 () =>
                   device.entity &&
-                  this.ask(device.confirm !== false, device.entity, this.isWatering(device.entity) ? "Close" : "Open", () =>
+                  this.ask(device.confirm !== false, device.entity, this.isWatering(device.entity) ? N_("Close {name}?") : N_("Open {name}?"), () =>
                     this.hass.callService("homeassistant", "toggle", { entity_id: device.entity }),
                   ),
               )}
@@ -1435,7 +1446,7 @@ class FloorCastCard extends LitElement {
             this.openMoreInfo(alarm.device.entity!);
           }}
         >
-          ${alarm.room ? `${alarm.room.name} · ` : ""}${alarm.name}
+          ${alarm.room ? t("{room} · {alarm}", { room: alarm.room.name, alarm: t(alarm.name) }) : t(alarm.name)}
         </button>`,
       )}
     </div>`;

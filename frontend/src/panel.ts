@@ -4,7 +4,7 @@ import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import "./entity-picker";
 import "./guide";
 import { GroundFeed } from "./ground";
-import { LANGUAGE_NAMES, pickLanguage, t, useDictionary } from "./i18n";
+import { LANGUAGE_NAMES, N_, pickLanguage, t, useDictionary } from "./i18n";
 import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
 import examplePlan from "../../tools/example_plan.json";
 import { type HomeAssistant } from "./ha";
@@ -141,24 +141,24 @@ type Layer = "devices" | "zones" | "names";
 /** Tools that draw the layout, off while it is locked. */
 const LAYOUT_TOOLS: Tool[] = ["wall", "door", "window", "gate", "room", "item"];
 const TOOL_NAMES: Partial<Record<Tool, string>> = {
-  wall: "Wall",
-  door: "Door",
-  window: "Window",
-  gate: "Gate",
-  room: "Room",
-  zone: "Zone",
-  item: "Object",
-  light: "Light",
-  sprinkler: "Sprinkler",
-  mower: "Mower",
-  vacuum: "Vacuum",
-  sensor: "Sensor",
-  screen: "Screen",
-  indicator: "Indicator",
-  camera: "Camera",
-  radar: "Radar",
-  mark: "Mark the vacuum",
-  calibrate: "Calibrate",
+  wall: N_("Wall"),
+  door: N_("Door"),
+  window: N_("Window"),
+  gate: N_("Gate"),
+  room: N_("Room"),
+  zone: N_("Zone"),
+  item: N_("Object"),
+  light: N_("Light"),
+  sprinkler: N_("Sprinkler"),
+  mower: N_("Mower"),
+  vacuum: N_("Vacuum"),
+  sensor: N_("Sensor"),
+  screen: N_("Screen"),
+  indicator: N_("Indicator"),
+  camera: N_("Camera"),
+  radar: N_("Radar"),
+  mark: N_("Mark the vacuum"),
+  calibrate: N_("Calibrate"),
 };
 
 /** A choice of the editor remembered in this browser; off without storage. */
@@ -195,35 +195,35 @@ function storeList(key: string, values: string[]): void {
 }
 
 const MODES: { mode: Mode; label: string }[] = [
-  { mode: "plan", label: "Plan" },
-  { mode: "devices", label: "Devices" },
-  { mode: "people", label: "People" },
-  { mode: "settings", label: "⚙ Settings" },
+  { mode: "plan", label: N_("Plan") },
+  { mode: "devices", label: N_("Devices") },
+  { mode: "people", label: N_("People") },
+  { mode: "settings", label: N_("⚙ Settings") },
 ];
 
 /** What the Add section offers in each tab, with the key that starts it. */
 const MODE_TOOLS: Record<Mode, [Tool, string, string][]> = {
   plan: [
-    ["wall", "Wall", "W"],
-    ["door", "Door", "D"],
-    ["window", "Window", "N"],
-    ["gate", "Gate", "G"],
-    ["room", "Room", "R"],
-    ["item", "Garden, furniture", "O"],
+    ["wall", N_("Wall"), "W"],
+    ["door", N_("Door"), "D"],
+    ["window", N_("Window"), "N"],
+    ["gate", N_("Gate"), "G"],
+    ["room", N_("Room"), "R"],
+    ["item", N_("Garden, furniture"), "O"],
   ],
   devices: [
-    ["light", "Light or strip", "L"],
-    ["sensor", "Sensor or alarm", "S"],
-    ["screen", "Screen", "T"],
-    ["indicator", "Indicator", "I"],
-    ["sprinkler", "Sprinkler", "P"],
-    ["camera", "Camera", "C"],
-    ["mower", "Mower", "M"],
-    ["vacuum", "Vacuum", "V"],
+    ["light", N_("Light or strip"), "L"],
+    ["sensor", N_("Sensor or alarm"), "S"],
+    ["screen", N_("Screen"), "T"],
+    ["indicator", N_("Indicator"), "I"],
+    ["sprinkler", N_("Sprinkler"), "P"],
+    ["camera", N_("Camera"), "C"],
+    ["mower", N_("Mower"), "M"],
+    ["vacuum", N_("Vacuum"), "V"],
   ],
   people: [
-    ["radar", "Radar", "A"],
-    ["zone", "Zone", "Z"],
+    ["radar", N_("Radar"), "A"],
+    ["zone", N_("Zone"), "Z"],
   ],
   settings: [],
 };
@@ -235,16 +235,16 @@ const TOOL_MODE = new Map<Tool, Mode>(
 const KEY_TOOLS = new Map<string, Tool>(Object.values(MODE_TOOLS).flatMap((tools) => tools.map(([tool, , key]) => [key.toLowerCase(), tool] as [string, Tool])));
 
 const DEVICE_LABELS: Record<Device["kind"], string> = {
-  light: "Light",
-  sprinkler: "Sprinkler",
-  camera: "Camera",
-  mower: "Mower",
-  vacuum: "Vacuum",
-  radar: "Radar",
-  sensor: "Sensor",
-  thermometer: "Thermometer",
-  screen: "Screen",
-  indicator: "Indicator",
+  light: N_("Light"),
+  sprinkler: N_("Sprinkler"),
+  camera: N_("Camera"),
+  mower: N_("Mower"),
+  vacuum: N_("Vacuum"),
+  radar: N_("Radar"),
+  sensor: N_("Sensor"),
+  thermometer: N_("Thermometer"),
+  screen: N_("Screen"),
+  indicator: N_("Indicator"),
 };
 
 /** Areas of Home Assistant with their floor, and the area and device of each entity. */
@@ -307,27 +307,44 @@ type Drag =
   | { kind: "create-room"; start: Point; current: Point };
 
 const ITEM_LABELS: Record<ItemType, string> = {
-  lawn: "Lawn",
-  paving: "Paving",
-  terrace: "Terrace",
-  bed: "Flower bed",
-  hedge: "Hedge or shrubs",
-  vegetable: "Vegetable garden",
-  greenhouse: "Greenhouse",
-  shelter: "Shelter",
-  garden_house: "Garden house",
-  trampoline: "Trampoline",
-  manhole: "Manhole",
-  obstacle: "Obstacle (furniture)",
-  round_obstacle: "Round obstacle (table, pouf)",
+  lawn: N_("Lawn"),
+  paving: N_("Paving"),
+  terrace: N_("Terrace"),
+  bed: N_("Flower bed"),
+  hedge: N_("Hedge or shrubs"),
+  vegetable: N_("Vegetable garden"),
+  greenhouse: N_("Greenhouse"),
+  shelter: N_("Shelter"),
+  garden_house: N_("Garden house"),
+  trampoline: N_("Trampoline"),
+  manhole: N_("Manhole"),
+  obstacle: N_("Obstacle (furniture)"),
+  round_obstacle: N_("Round obstacle (table, pouf)"),
 };
 
 const ZONE_LABELS: Record<Zone["kind"], string> = {
-  count: "Count people here",
-  entrance: "Entrance (people count at once)",
-  exclude: "Ignore (fan, curtain, reflections)",
-  stationary: "Resting place (sofa, bed)",
+  count: N_("Count people here"),
+  entrance: N_("Entrance (people count at once)"),
+  exclude: N_("Ignore (fan, curtain, reflections)"),
+  stationary: N_("Resting place (sofa, bed)"),
 };
+
+/** Whether a level still has the name it was added with, "Level 3", in English or in the language in use. */
+function isNumberedLevel(name: string): boolean {
+  if (/^Level \d+$/.test(name)) return true;
+  const [before, after = ""] = t("Level {number}").split("{number}");
+  const middle = name.slice(before.length, name.length - after.length);
+  return name.startsWith(before) && name.endsWith(after) && /^\d+$/.test(middle);
+}
+
+/**
+ * A word whose English form has another meaning elsewhere, such as Light for the theme and the lamp: its key
+ * names the meaning, and English shows the plain word when the language in use does not translate the key.
+ */
+function inContext(key: string, english: string): string {
+  const out = t(key);
+  return out === key ? english : out;
+}
 
 const GRID = 0.05;
 const SNAP_RADIUS = 0.2;
@@ -581,7 +598,7 @@ class FloorCastPanel extends LitElement {
     this._plan = plan;
     if (saved) this._saved = stored;
     if (updated)
-      this._message = "The plan was brought to the new format (wall types, lights and sensors placed in the rooms). Save to keep it.";
+      this._message = t("The plan was brought to the new format (wall types, lights and sensors placed in the rooms). Save to keep it.");
     if (!plan.levels.some((level) => level.id === this._levelId)) this._levelId = plan.levels[0].id;
     this._selection = undefined;
     this.fit();
@@ -912,7 +929,7 @@ class FloorCastPanel extends LitElement {
     const next = again && index >= 0 ? candidates[(index + 1) % candidates.length] : candidates[0];
     this._message =
       candidates.length > 1
-        ? `${candidates.indexOf(next!) + 1} of ${candidates.length} here: click again to select what lies below.`
+        ? t("{index} of {count} here: click again to select what lies below.", { index: candidates.indexOf(next!) + 1, count: candidates.length })
         : "";
     return next;
   }
@@ -985,7 +1002,7 @@ class FloorCastPanel extends LitElement {
     const historyBefore = this._history.length;
     // A tool that placed something at once ends here; one that drags tells on release.
     queueMicrotask(() => {
-      if (placing && this._history.length > historyBefore) this.notify(`${TOOL_NAMES[placing] ?? "Item"} placed`);
+      if (placing && this._history.length > historyBefore) this.notify(t("{name} placed", { name: t(TOOL_NAMES[placing] ?? N_("Item")) }));
     });
     switch (this._tool) {
       case "select": {
@@ -1085,7 +1102,7 @@ class FloorCastPanel extends LitElement {
         const device = this._selection?.kind === "device" ? this.findDevice(this._selection.id) : undefined;
         if (!device || !this._imagePoint) return;
         if (this._calibrationTarget === "mower" && !this.mowerPose(device)) {
-          this._message = "The mower reports no heading now; the spot is not kept.";
+          this._message = t("The mower reports no heading now; the spot is not kept.");
           return;
         }
         const pair = { image: this._imagePoint, plan: this.snap(p, event) };
@@ -1093,7 +1110,10 @@ class FloorCastPanel extends LitElement {
         this._imagePoint = undefined;
         this._tool = "select";
         const count = this.pairsOf(device).length;
-        this._message = count < 4 ? `${count} of at least 4 spots. Click the next one in the image.` : `${count} spots; add more or press Done.`;
+        this._message =
+          count < 4
+            ? t("{count} of at least 4 spots. Click the next one in the image.", { count })
+            : t("{count} spots; add more or press Done.", { count });
         return;
       }
       case "sprinkler": {
@@ -1333,12 +1353,12 @@ class FloorCastPanel extends LitElement {
       this.select(this.pickFrom(drag.candidates, drag.screen));
       return;
     }
-    if (drag.kind === "move" && drag.moved) this.notify("Moved");
+    if (drag.kind === "move" && drag.moved) this.notify(t("Moved"));
     if (drag.kind === "create-item" || drag.kind === "create-light" || drag.kind === "create-room") {
       const placing = this._tool;
       const historyBefore = this._history.length;
       queueMicrotask(() => {
-        if (this._history.length > historyBefore) this.notify(`${TOOL_NAMES[placing] ?? "Item"} placed`);
+        if (this._history.length > historyBefore) this.notify(t("{name} placed", { name: t(TOOL_NAMES[placing] ?? N_("Item")) }));
       });
     }
     if (drag.kind === "create-item") {
@@ -1456,7 +1476,7 @@ class FloorCastPanel extends LitElement {
     const camera = device.map ? this.hass.states[device.map] : undefined;
     const path = camera?.attributes.mowing_map_api_path as string | undefined;
     if (!path) {
-      this._message = "The map camera of the mower has no mowing map; choose the camera of the Dreame mower map.";
+      this._message = t("The map camera of the mower has no mowing map; choose the camera of the Dreame mower map.");
       return;
     }
     try {
@@ -1478,9 +1498,9 @@ class FloorCastPanel extends LitElement {
       const old = this._mapImages.get(device.id);
       if (old) URL.revokeObjectURL(old);
       this._mapImages.set(device.id, URL.createObjectURL(await response.blob()));
-      this._message = "Drag the map until its lawn covers the lawn of the plan; turn it with the handle at its corner.";
+      this._message = t("Drag the map until its lawn covers the lawn of the plan; turn it with the handle at its corner.");
     } catch (err) {
-      this._message = `The mower map could not be read: ${(err as Error).message ?? err}`;
+      this._message = t("The mower map could not be read: {error}", { error: String((err as Error).message ?? err) });
     }
     this.requestUpdate();
   }
@@ -1497,7 +1517,7 @@ class FloorCastPanel extends LitElement {
       const p = result.response?.[entity];
       return p ? [p.x, p.y] : undefined;
     } catch (err) {
-      this._message = `The vacuum did not report its position: ${(err as Error).message ?? err}`;
+      this._message = t("The vacuum did not report its position: {error}", { error: String((err as Error).message ?? err) });
       return undefined;
     }
   }
@@ -1511,7 +1531,7 @@ class FloorCastPanel extends LitElement {
     this.change(() => (this.level.devices ??= []).push(device));
     this._selection = { kind: "device", id: device.id };
     this._tool = "select";
-    this._message = "Put the vacuum on its dock, then press Dock is here.";
+    this._message = t("Put the vacuum on its dock, then press Dock is here.");
   }
 
   /** First pair: the dock, where the vacuum stands and where the device was placed on the plan. */
@@ -1520,7 +1540,7 @@ class FloorCastPanel extends LitElement {
     const robot = await this.vacuumPosition(device.entity);
     if (!robot) return;
     this.change(() => (device.pairs = [{ robot, plan: device.at }, ...(device.pairs ?? []).slice(1)]));
-    this._message = "Dock marked. Send the vacuum somewhere easy to find, then press Mark where it stands and click that spot.";
+    this._message = t("Dock marked. Send the vacuum somewhere easy to find, then press Mark where it stands and click that spot.");
   }
 
   /** Second pair: wherever the vacuum stands now, clicked on the plan. */
@@ -1534,8 +1554,8 @@ class FloorCastPanel extends LitElement {
     const scale = calibrationScale(device);
     this._message =
       scale && Math.abs(scale - 1) > 0.1
-        ? `Calibrated, but the distances differ by ${Math.round(Math.abs(scale - 1) * 100)}%: check the spot, or try Mirror.`
-        : "Calibrated: the vacuum now appears where it is.";
+        ? t("Calibrated, but the distances differ by {percent}%: check the spot, or try Mirror.", { percent: Math.round(Math.abs(scale - 1) * 100) })
+        : t("Calibrated: the vacuum now appears where it is.");
   }
 
   private addMower(at: Point): void {
@@ -1572,7 +1592,7 @@ class FloorCastPanel extends LitElement {
     const s = this._selection;
     if (!s) return;
     if (this.lockedKind(s)) {
-      this.notify("The layout is locked");
+      this.notify(t("The layout is locked"));
       return;
     }
     const shift = (q: Point): Point => [fix(q[0] + 0.5), fix(q[1] + 0.5)];
@@ -1640,14 +1660,14 @@ class FloorCastPanel extends LitElement {
   private closeRoom(): void {
     if (this._draft.length < 3) return;
     if (this._tool === "zone") {
-      const zone: Zone = { id: uid("zone"), name: `Zone ${(this.level.zones ?? []).length + 1}`, kind: "count", points: this._draft };
+      const zone: Zone = { id: uid("zone"), name: t("Zone {number}", { number: (this.level.zones ?? []).length + 1 }), kind: "count", points: this._draft };
       this.change(() => (this.level.zones ??= []).push(zone));
       this._draft = [];
       this._tool = "select";
       this._selection = { kind: "zone", id: zone.id };
       return;
     }
-    const room: Room = { id: uid("room"), name: `Room ${this.level.rooms.length + 1}`, points: this._draft, lights: [] };
+    const room: Room = { id: uid("room"), name: t("Room {number}", { number: this.level.rooms.length + 1 }), points: this._draft, lights: [] };
     this.change(() => this.level.rooms.push(room));
     this._draft = [];
     this._tool = "select";
@@ -1657,7 +1677,7 @@ class FloorCastPanel extends LitElement {
   private addOpening(p: Point, type: Opening["type"]): void {
     const found = this.nearestWall(p);
     if (!found) {
-      this._message = "Click on a wall to place it.";
+      this._message = t("Click on a wall to place it.");
       return;
     }
     const length = wallLength(found.wall);
@@ -1788,10 +1808,10 @@ class FloorCastPanel extends LitElement {
     const s = this._selection;
     if (!s) return;
     if (this.lockedKind(s)) {
-      this.notify("The layout is locked");
+      this.notify(t("The layout is locked"));
       return;
     }
-    this.notify("Deleted");
+    this.notify(t("Deleted"));
     this.change(() => {
       const level = this.level;
       if (s.kind === "wall") {
@@ -1826,9 +1846,9 @@ class FloorCastPanel extends LitElement {
     try {
       await this.hass.callWS({ type: "floorcast/plan/save", plan: this._plan });
       this._saved = JSON.stringify(this._plan);
-      this._message = "Saved.";
+      this._message = t("Saved.");
     } catch (err) {
-      this._message = `Not saved: ${(err as { message?: string }).message ?? err}`;
+      this._message = t("Not saved: {error}", { error: String((err as { message?: string }).message ?? err) });
     } finally {
       this._saving = false;
     }
@@ -1849,13 +1869,13 @@ class FloorCastPanel extends LitElement {
     file.text().then((text) => {
       try {
         const plan = JSON.parse(text) as Plan;
-        if (!Array.isArray(plan.levels) || !plan.levels.length) throw new Error("no levels");
+        if (!Array.isArray(plan.levels) || !plan.levels.length) throw new Error(t("no levels"));
         const before = this.snapshot();
         this.setPlan(plan, false);
         this.remember(before);
-        this._message = "Imported. Save to keep it.";
+        this._message = t("Imported. Save to keep it.");
       } catch (err) {
-        this._message = `Import failed: ${(err as Error).message}`;
+        this._message = t("Import failed: {error}", { error: (err as Error).message });
       }
     });
   }
@@ -1863,7 +1883,7 @@ class FloorCastPanel extends LitElement {
   // ---- rendering ----
 
   render() {
-    if (!this._plan) return html`<div class="loading">Loading…</div>`;
+    if (!this._plan) return html`<div class="loading">${t("Loading…")}</div>`;
     return html`
       <div class="top">
         <div class="levels">
@@ -1885,16 +1905,16 @@ class FloorCastPanel extends LitElement {
           )}
           <button
             class="chip ghost"
-            title="Add level"
+            title=${t("Add level")}
             @click=${() => {
-              const level = emptyLevel(`Level ${this._plan!.levels.length + 1}`);
+              const level = emptyLevel(t("Level {number}", { number: this._plan!.levels.length + 1 }));
               this.change(() => this._plan!.levels.push(level));
               this._levelId = level.id;
             }}
           >
             +
           </button>
-          <label class="switch" title="Show or hide the garden around the house">
+          <label class="switch" title=${t("Show or hide the garden around the house")}>
             <input
               type="checkbox"
               .checked=${this._garden}
@@ -1906,32 +1926,32 @@ class FloorCastPanel extends LitElement {
               }}
             />
             <span class="track"><span class="knob"></span></span>
-            Garden
+            ${t("Garden")}
           </label>
-          <label class="switch" title="Show live states: lights, water, mower, temperatures">
+          <label class="switch" title=${t("Show live states: lights, water, mower, temperatures")}>
             <input type="checkbox" .checked=${this._live} @change=${() => (this._live = !this._live)} />
             <span class="track"><span class="knob"></span></span>
-            Live
+            ${t("Live")}
           </label>
           <span class="spacer"></span>
           ${this.renderFind()} ${this.renderLayers()}
           <button
             class=${this._locked ? "on" : ""}
-            title=${this._locked ? "Walls, doors, windows, rooms and objects stay where they are. Click to unlock." : "Lock walls, doors, windows, rooms and objects where they are"}
+            title=${this._locked ? t("Walls, doors, windows, rooms and objects stay where they are. Click to unlock.") : t("Lock walls, doors, windows, rooms and objects where they are")}
             @click=${() => {
               this._locked = !this._locked;
               store(LOCK_KEY, this._locked);
               if (this._locked && LAYOUT_TOOLS.includes(this._tool)) this.cancelTool();
             }}
           >
-            ${this._locked ? "🔒" : "🔓"} Layout
+            ${this._locked ? "🔒" : "🔓"} ${t("Layout")}
           </button>
-          <button class=${this._guide ? "on" : ""} @click=${() => (this._guide = !this._guide)} title="How to draw the plan and what every part does">
-            Guide
+          <button class=${this._guide ? "on" : ""} @click=${() => (this._guide = !this._guide)} title=${t("How to draw the plan and what every part does")}>
+            ${t("Guide")}
           </button>
-          <button @click=${() => this.undo()} ?disabled=${!this._history.length} title="Undo (Ctrl+Z)">Undo</button>
+          <button @click=${() => this.undo()} ?disabled=${!this._history.length} title=${t("Undo (Ctrl+Z)")}>${t("Undo")}</button>
           <button class="primary" @click=${() => this.save()} ?disabled=${!this.dirty || this._saving}>
-            ${this.dirty ? "Save" : "Saved"}
+            ${this.dirty ? t("Save") : t("Saved")}
           </button>
         </div>
       </div>
@@ -1940,9 +1960,9 @@ class FloorCastPanel extends LitElement {
         <div class="canvas" ?hidden=${this._guide}>
           ${this.renderCanvas()} ${this.renderBigImage()} ${this.renderPlacing()} ${this.renderToast()} ${this.renderStart()}
           <div class="view-buttons">
-            <button title="Zoom in" @click=${() => this.zoom(1 / 1.3)}>+</button>
-            <button title="Zoom out" @click=${() => this.zoom(1.3)}>−</button>
-            <button title="Fit the plan and centre it" @click=${() => this.fit()}>⌖</button>
+            <button title=${t("Zoom in")} @click=${() => this.zoom(1 / 1.3)}>+</button>
+            <button title=${t("Zoom out")} @click=${() => this.zoom(1.3)}>−</button>
+            <button title=${t("Fit the plan and centre it")} @click=${() => this.fit()}>⌖</button>
           </div>
         </div>
         <aside ?hidden=${this._guide}>${this.renderPanel()}</aside>
@@ -1959,7 +1979,7 @@ class FloorCastPanel extends LitElement {
   /** Starts a tool in its tab, from the palette or its key. */
   private startTool(tool: Tool): void {
     if (this._locked && LAYOUT_TOOLS.includes(tool)) {
-      this.notify("The layout is locked");
+      this.notify(t("The layout is locked"));
       return;
     }
     const mode = TOOL_MODE.get(tool);
@@ -2032,10 +2052,12 @@ class FloorCastPanel extends LitElement {
 
   private renderPlacing() {
     if (this._tool === "select" || this._guide) return nothing;
-    const label = TOOL_NAMES[this._tool] ?? this._tool;
+    const name = TOOL_NAMES[this._tool];
+    const label = name ? t(name) : this._tool;
+    const hint = HINTS[this._tool];
     return html`<div class="placing-bar">
-      <b>${label}</b><span>${HINTS[this._tool]}</span>
-      <button @click=${() => this.cancelTool()}>Cancel (Esc)</button>
+      <b>${label}</b><span>${hint ? t(hint) : nothing}</span>
+      <button @click=${() => this.cancelTool()}>${t("Cancel (Esc)")}</button>
     </div>`;
   }
 
@@ -2049,7 +2071,7 @@ class FloorCastPanel extends LitElement {
           this._toast = undefined;
         }}
       >
-        Undo
+        ${t("Undo")}
       </button>
     </div>`;
   }
@@ -2062,12 +2084,12 @@ class FloorCastPanel extends LitElement {
     const name = (entity?: string | null) => (entity ? String(this.hass.states[entity]?.attributes.friendly_name ?? "") : "");
     for (const level of this._plan!.levels) {
       for (const room of level.rooms)
-        results.push({ label: room.name, detail: `Room · ${level.name}`, level, s: { kind: "room", id: room.id }, at: centroid(room.points), text: `room ${room.name} ${room.area ?? ""}` });
+        results.push({ label: room.name, detail: `${t("Room")} · ${level.name}`, level, s: { kind: "room", id: room.id }, at: centroid(room.points), text: `room ${t("Room")} ${room.name} ${room.area ?? ""}` });
       for (const device of level.devices ?? []) {
-        const kind = device.kind === "sensor" && device.sensorType === "alarm" ? "Alarm" : DEVICE_LABELS[device.kind];
+        const kind = t(device.kind === "sensor" && device.sensorType === "alarm" ? N_("Alarm") : DEVICE_LABELS[device.kind]);
         results.push({
           label: device.label || name(device.entity) || device.entity || kind,
-          detail: `${kind} · ${device.entity ?? device.source ?? "no entity"} · ${level.name}`,
+          detail: `${kind} · ${device.entity ?? device.source ?? t("no entity")} · ${level.name}`,
           level,
           s: { kind: "device", id: device.id },
           at: device.at,
@@ -2077,21 +2099,22 @@ class FloorCastPanel extends LitElement {
       for (const opening of level.openings) {
         const wall = level.walls.find((w) => w.id === opening.wall);
         if (!wall) continue;
-        const kind = OPENING_NAMES[opening.type];
+        const kind = t(OPENING_NAMES[opening.type]);
         results.push({
           label: name(opening.cover) || name(opening.lock) || name(opening.contact) || kind,
-          detail: `${kind} · ${[opening.contact, opening.cover, opening.lock].filter(Boolean).join(", ") || "no sensor"} · ${level.name}`,
+          detail: `${kind} · ${[opening.contact, opening.cover, opening.lock].filter(Boolean).join(", ") || t("no sensor")} · ${level.name}`,
           level,
           s: { kind: "opening", id: opening.id },
           at: pointOnWall(wall, opening.at),
-          text: `${kind} ${opening.contact ?? ""} ${opening.cover ?? ""} ${opening.lock ?? ""} ${name(opening.contact)} ${name(opening.cover)} ${name(opening.lock)}`,
+          text: `${kind} ${opening.type} ${opening.contact ?? ""} ${opening.cover ?? ""} ${opening.lock ?? ""} ${name(opening.contact)} ${name(opening.cover)} ${name(opening.lock)}`,
         });
       }
       for (const zone of level.zones ?? [])
-        results.push({ label: zone.name, detail: `Zone · ${level.name}`, level, s: { kind: "zone", id: zone.id }, at: centroid(zone.points), text: `zone ${zone.name} ${zone.kind}` });
+        results.push({ label: zone.name, detail: `${t("Zone")} · ${level.name}`, level, s: { kind: "zone", id: zone.id }, at: centroid(zone.points), text: `zone ${t("Zone")} ${zone.name} ${zone.kind}` });
       for (const item of level.items) {
         const at = item.center ?? centroid(itemPoints(item));
-        results.push({ label: item.name || ITEM_LABELS[item.type], detail: `Object · ${level.name}`, level, s: { kind: "item", id: item.id }, at, text: `object ${ITEM_LABELS[item.type]} ${item.type} ${item.name ?? ""}` });
+        const label = t(ITEM_LABELS[item.type]);
+        results.push({ label: item.name || label, detail: `${t("Object")} · ${level.name}`, level, s: { kind: "item", id: item.id }, at, text: `object ${t("Object")} ${label} ${item.type} ${item.name ?? ""}` });
       }
     }
     return results.filter((r) => words.every((w) => r.text.toLowerCase().includes(w))).slice(0, 12);
@@ -2113,7 +2136,7 @@ class FloorCastPanel extends LitElement {
       <input
         class="find"
         type="search"
-        placeholder="Find (/)"
+        placeholder=${t("Find (/)")}
         .value=${this._find}
         @input=${(e: Event) => (this._find = (e.target as HTMLInputElement).value)}
         @keydown=${(e: KeyboardEvent) => {
@@ -2129,7 +2152,7 @@ class FloorCastPanel extends LitElement {
                     <span>${r.label}</span><em>${r.detail}</em>
                   </button>`,
                 )
-              : html`<p class="muted">Nothing found.</p>`}
+              : html`<p class="muted">${t("Nothing found.")}</p>`}
           </div>`
         : nothing}
     </div>`;
@@ -2151,13 +2174,13 @@ class FloorCastPanel extends LitElement {
       ${label}
     </label>`;
     return html`<div class="layers-box">
-      <button class=${this._hidden.size ? "on" : ""} @click=${() => (this._layersOpen = !this._layersOpen)} title="Show or hide parts of the plan">
-        Layers ▾
+      <button class=${this._hidden.size ? "on" : ""} @click=${() => (this._layersOpen = !this._layersOpen)} title=${t("Show or hide parts of the plan")}>
+        ${t("Layers")} ▾
       </button>
       ${this._layersOpen
         ? html`<div class="layers-menu">
-            ${layer("devices", "Devices")} ${layer("zones", "Zones")} ${layer("names", "Room names")}
-            <p class="muted">Hidden parts cannot be clicked.</p>
+            ${layer("devices", t("Devices"))} ${layer("zones", t("Zones"))} ${layer("names", t("Room names"))}
+            <p class="muted">${t("Hidden parts cannot be clicked.")}</p>
           </div>`
         : nothing}
     </div>`;
@@ -2262,7 +2285,7 @@ class FloorCastPanel extends LitElement {
                 ${(() => {
                   const stateObj = device.entity ? this.hass.states[device.entity] : undefined;
                   const shown = indicatorState(device, this._live ? stateObj : undefined);
-                  const label = device.label || String(stateObj?.attributes.friendly_name ?? device.entity ?? "Indicator");
+                  const label = device.label || String(stateObj?.attributes.friendly_name ?? device.entity ?? t("Indicator"));
                   return renderIndicator(device.at, label, shown.text, shown.running, px * 9);
                 })()}
               </g>`
@@ -2281,7 +2304,7 @@ class FloorCastPanel extends LitElement {
                   device.at,
                   device.label,
                   (this._live && device.entity ? readingText(this.hass.states[device.entity], device.main) : undefined) ??
-                    (device.sensorType === "temperature" ? "–°" : device.sensorType === "humidity" ? "–%" : "Sensor"),
+                    (device.sensorType === "temperature" ? "–°" : device.sensorType === "humidity" ? "–%" : t("Sensor")),
                   this._live
                     ? (device.secondary ?? [])
                         .map((value) => {
@@ -2389,7 +2412,7 @@ class FloorCastPanel extends LitElement {
   private stateLine(entity: string | null | undefined) {
     if (!entity) return nothing;
     const stateObj = this.hass.states[entity];
-    if (!stateObj) return html`<p class="muted">${entity} does not exist.</p>`;
+    if (!stateObj) return html`<p class="muted">${t("{entity} does not exist.", { entity })}</p>`;
     const domain = entity.split(".")[0];
     const brightness = stateObj.attributes.brightness;
     const detail = brightness && stateObj.state === "on" ? ` · ${Math.round((Number(brightness) / 255) * 100)}%` : "";
@@ -2398,18 +2421,18 @@ class FloorCastPanel extends LitElement {
     let action: unknown = nothing;
     if (domain === "light" || domain === "switch") {
       action = html`<button class="small" @click=${() => this.hass.callService("homeassistant", "toggle", { entity_id: entity })}>
-        ${stateObj.state === "on" ? "Turn off" : "Turn on"}
+        ${stateObj.state === "on" ? t("Turn off") : t("Turn on")}
       </button>`;
     } else if (domain === "valve") {
       const open = stateObj.state === "open" || stateObj.state === "opening";
       action = html`<button
         class="small"
         @click=${() => {
-          if (!open && !confirm(`Open ${name}? Water starts flowing.`)) return;
+          if (!open && !confirm(t("Open {name}? Water starts flowing.", { name: String(name) }))) return;
           this.hass.callService("valve", open ? "close_valve" : "open_valve", { entity_id: entity });
         }}
       >
-        ${open ? "Close" : "Open"}
+        ${open ? t("Close") : t("Open")}
       </button>`;
     }
     return html`<div class="state-line">
@@ -2551,12 +2574,12 @@ class FloorCastPanel extends LitElement {
     return html`
       <nav class="tabs">
         ${MODES.map(
-          ({ mode, label }) => html`<button class="tab ${mode === this._mode ? "on" : ""}" @click=${() => this.setMode(mode)}>${label}</button>`,
+          ({ mode, label }) => html`<button class="tab ${mode === this._mode ? "on" : ""}" @click=${() => this.setMode(mode)}>${t(label)}</button>`,
         )}
       </nav>
       ${tools.length
         ? html`<section class="add-section">
-            <h4>Add</h4>
+            <h4>${t("Add")}</h4>
             <div class="palette">
               ${tools.map(([tool, label, key]) => {
                 const locked = this._locked && LAYOUT_TOOLS.includes(tool);
@@ -2564,10 +2587,10 @@ class FloorCastPanel extends LitElement {
                 return html`<button
                   class=${on ? "on" : ""}
                   ?disabled=${locked}
-                  title=${locked ? "Unlock the layout to draw" : HINTS[tool]}
+                  title=${locked ? t("Unlock the layout to draw") : t(HINTS[tool])}
                   @click=${() => (on ? this.cancelTool() : this.startTool(tool))}
                 >
-                  <span>${label}</span><kbd>${key}</kbd>
+                  <span>${t(label)}</span><kbd>${key}</kbd>
                 </button>`;
               })}
             </div>
@@ -2575,7 +2598,7 @@ class FloorCastPanel extends LitElement {
           </section>`
         : nothing}
       ${this._selection
-        ? html`<button class="back" @click=${() => (this._selection = undefined)}>‹ ${MODES.find((m) => m.mode === this._mode)!.label}</button>
+        ? html`<button class="back" @click=${() => (this._selection = undefined)}>‹ ${t(MODES.find((m) => m.mode === this._mode)!.label)}</button>
             ${this.renderProperties()}`
         : this.renderList()}
       ${this._message ? html`<p class="message">${this._message}</p>` : nothing}
@@ -2585,20 +2608,20 @@ class FloorCastPanel extends LitElement {
   /** Choices of the active drawing tool: wall type, light shape, kind of object. */
   private toolOptions() {
     if (this._tool === "wall")
-      return html`<select @change=${(e: Event) => (this._wallType = (e.target as HTMLSelectElement).value)} title="Wall type">
+      return html`<select @change=${(e: Event) => (this._wallType = (e.target as HTMLSelectElement).value)} title=${t("Wall type")}>
         ${this.wallTypes.map(
           (type) => html`<option value=${type.id} ?selected=${type.id === this._wallType}>${type.name} ${(type.t * 100).toFixed(1)} cm</option>`,
         )}
       </select>`;
     if (this._tool === "light")
       return html`<select @change=${(e: Event) => (this._lightShape = (e.target as HTMLSelectElement).value as "point" | "line")}>
-        <option value="point" ?selected=${this._lightShape === "point"}>Point (click)</option>
-        <option value="line" ?selected=${this._lightShape === "line"}>Line (drag)</option>
+        <option value="point" ?selected=${this._lightShape === "point"}>${t("Point (click)")}</option>
+        <option value="line" ?selected=${this._lightShape === "line"}>${t("Line (drag)")}</option>
       </select>`;
     if (this._tool === "item")
       return html`<select @change=${(e: Event) => (this._itemType = (e.target as HTMLSelectElement).value as ItemType)}>
         ${(Object.keys(ITEM_LABELS) as ItemType[]).map(
-          (type) => html`<option value=${type} ?selected=${type === this._itemType}>${ITEM_LABELS[type]}</option>`,
+          (type) => html`<option value=${type} ?selected=${type === this._itemType}>${t(ITEM_LABELS[type])}</option>`,
         )}
       </select>`;
     return nothing;
@@ -2616,7 +2639,7 @@ class FloorCastPanel extends LitElement {
     return html`<input
       class="filter"
       type="search"
-      placeholder="Filter"
+      placeholder=${t("Filter")}
       .value=${this._filter}
       @input=${(e: Event) => (this._filter = (e.target as HTMLInputElement).value)}
     />`;
@@ -2638,9 +2661,9 @@ class FloorCastPanel extends LitElement {
   }
 
   private shortState(id: string | null | undefined): string {
-    if (!id) return "no entity";
+    if (!id) return t("no entity");
     const stateObj = this.hass.states[id];
-    if (!stateObj) return "missing";
+    if (!stateObj) return t("missing");
     const unit = stateObj.attributes.unit_of_measurement;
     return unit ? `${stateObj.state} ${unit}` : stateObj.state;
   }
@@ -2650,14 +2673,17 @@ class FloorCastPanel extends LitElement {
     const rooms = level.rooms.filter((room) => this.passesFilter(room.name));
     return html`
       <p class="muted">
-        ${level.walls.length} walls · ${level.openings.filter((o) => o.type === "door").length} doors ·
-        ${level.openings.filter((o) => o.type === "window").length} windows. Click a wall, door or window on the plan to edit it.
+        ${t("{walls} walls · {doors} doors · {windows} windows. Click a wall, door or window on the plan to edit it.", {
+          walls: level.walls.length,
+          doors: level.openings.filter((o) => o.type === "door").length,
+          windows: level.openings.filter((o) => o.type === "window").length,
+        })}
       </p>
-      <h3>Rooms</h3>
+      <h3>${t("Rooms")}</h3>
       ${rooms.map((room) =>
         this.listRow(
           room.name,
-          roomThermometers(level, room)[0] ? this.shortState(roomThermometers(level, room)[0].entity) : room.stairs ? "stairs" : room.outdoor ? "outdoor" : "",
+          roomThermometers(level, room)[0] ? this.shortState(roomThermometers(level, room)[0].entity) : room.stairs ? t("stairs") : room.outdoor ? t("outdoor") : "",
           () => this.pick({ kind: "room", id: room.id }, centroid(room.points)),
         ),
       )}
@@ -2665,30 +2691,30 @@ class FloorCastPanel extends LitElement {
   }
 
   private objectList() {
-    const items = this.shown.items.filter((item) => this.passesFilter(item.name, ITEM_LABELS[item.type]));
+    const items = this.shown.items.filter((item) => this.passesFilter(item.name, t(ITEM_LABELS[item.type])));
     const size = (item: Item) =>
       item.rect
         ? `${item.rect[2].toFixed(2)} × ${item.rect[3].toFixed(2)} m`
         : item.center
           ? `⌀ ${(item.diameter ?? 1).toFixed(2)} m`
-          : "free shape";
+          : t("free shape");
     const centre = (item: Item): Point => {
       const b = levelBoundsOf(item);
       return [b.x + b.w / 2, b.y + b.h / 2];
     };
     return html`
-      <h3>Garden and furniture</h3>
+      <h3>${t("Garden and furniture")}</h3>
       ${items.map((item) =>
-        this.listRow(item.name || ITEM_LABELS[item.type], size(item), () => this.pick({ kind: "item", id: item.id }, centre(item))),
+        this.listRow(item.name || t(ITEM_LABELS[item.type]), size(item), () => this.pick({ kind: "item", id: item.id }, centre(item))),
       )}
-      ${items.length ? nothing : html`<p class="muted">No objects. Choose Garden, furniture under Add and drag on the plan.</p>`}
+      ${items.length ? nothing : html`<p class="muted">${t("No objects. Choose Garden, furniture under Add and drag on the plan.")}</p>`}
     `;
   }
 
   /** Devices by the room they stand in, then those outside the rooms; a device without an entity is marked. */
   private deviceList() {
     const level = this.shown;
-    const kindName = (device: Device) => (device.kind === "sensor" && device.sensorType === "alarm" ? "Alarm" : DEVICE_LABELS[device.kind]);
+    const kindName = (device: Device) => t(device.kind === "sensor" && device.sensorType === "alarm" ? N_("Alarm") : DEVICE_LABELS[device.kind]);
     const devices = (level.devices ?? []).filter(
       (device) => device.kind !== "radar" && this.passesFilter(kindName(device), device.entity, this.entityName(device.entity), device.label),
     );
@@ -2701,7 +2727,7 @@ class FloorCastPanel extends LitElement {
     const rows = (list: Device[]) =>
       list.map((device) =>
         this.listRow(
-          this.entityName(device.entity) ?? device.label ?? `${kindName(device)} without entity`,
+          this.entityName(device.entity) ?? device.label ?? t("{kind} without entity", { kind: kindName(device) }),
           device.entity ? `${kindName(device)} · ${this.shortState(device.entity)}` : kindName(device),
           () => this.pick({ kind: "device", id: device.id }, deviceCentre(device)),
           device.entity ? "" : "unset",
@@ -2709,37 +2735,36 @@ class FloorCastPanel extends LitElement {
       );
     return html`
       ${this.filterBox()}
-      ${unset ? html`<p class="muted warn">${unset} without an entity: they are marked below.</p>` : nothing}
+      ${unset ? html`<p class="muted warn">${t("{count} without an entity: they are marked below.", { count: unset })}</p>` : nothing}
       ${level.rooms
         .filter((room) => byRoom.has(room.id))
         .map(
           (room) => html`<h3 class="link" @click=${() => this.pick({ kind: "room", id: room.id }, centroid(room.points))}>${room.name}</h3>
             ${rows(byRoom.get(room.id)!)}`,
         )}
-      ${byRoom.has("") ? html`<h3>Outside the rooms</h3>${rows(byRoom.get("")!)}` : nothing}
-      ${devices.length ? nothing : html`<p class="muted">No devices. Choose one under Add and click on the plan, or link a room to its area.</p>`}
+      ${byRoom.has("") ? html`<h3>${t("Outside the rooms")}</h3>${rows(byRoom.get("")!)}` : nothing}
+      ${devices.length ? nothing : html`<p class="muted">${t("No devices. Choose one under Add and click on the plan, or link a room to its area.")}</p>`}
     `;
   }
 
   private radarList() {
     const radars = (this.shown.devices ?? []).filter((device) => device.kind === "radar");
     return html`
-      <h3>Radars</h3>
+      <h3>${t("Radars")}</h3>
       ${radars.map((radar) => {
         const seen = radarTargets(radar, this.hass.states).length;
         const online = !!radar.source && this.hass.states[`sensor.${radar.source}_target_1_x`]?.state !== "unavailable";
         return this.listRow(
-          radar.source ?? "Radar without sensors",
-          online ? `sees ${seen}` : "offline",
+          radar.source ?? t("Radar without sensors"),
+          online ? t("sees {count}", { count: seen }) : t("offline"),
           () => this.pick({ kind: "device", id: radar.id }, radar.at),
           online ? "" : "unset",
         );
       })}
-      ${radars.length ? nothing : html`<p class="muted">No radars on this level. Choose Radar under Add and click where one hangs.</p>`}
+      ${radars.length ? nothing : html`<p class="muted">${t("No radars on this level. Choose Radar under Add and click where one hangs.")}</p>`}
       ${radars.length ? this.trackingProperties("radar") : nothing}
       <p class="muted">
-        Blue dots are people after the rules, grey dots the raw targets of the radars. Select a radar to see only its own targets and
-        the people it sees. Zones work the same for radars and cameras.
+        ${t("Blue dots are people after the rules, grey dots the raw targets of the radars. Select a radar to see only its own targets and the people it sees. Zones work the same for radars and cameras.")}
       </p>
     `;
   }
@@ -2749,24 +2774,22 @@ class FloorCastPanel extends LitElement {
     const cameras = (this.shown.devices ?? []).filter((device) => device.kind === "camera");
     const people = this._people?.[this.level.id] ?? [];
     return html`
-      <h3>Cameras</h3>
+      <h3>${t("Cameras")}</h3>
       ${cameras.map((camera) => {
         const spots = camera.calibration?.length ?? 0;
         const seen = people.filter((p) => p.camera && p.camera === camera.frigate).length;
-        const detail = !camera.frigate ? "no Frigate camera" : spots < 4 ? `${spots} of 4 spots` : `sees ${seen}`;
+        const detail = !camera.frigate ? t("no Frigate camera") : spots < 4 ? t("{count} of 4 spots", { count: spots }) : t("sees {count}", { count: seen });
         return this.listRow(
-          this.entityName(camera.entity) ?? camera.frigate ?? "Camera without entity",
+          this.entityName(camera.entity) ?? camera.frigate ?? t("Camera without entity"),
           detail,
           () => this.pick({ kind: "device", id: camera.id }, camera.at),
           camera.frigate && spots >= 4 ? "" : "unset",
         );
       })}
-      ${cameras.length ? nothing : html`<p class="muted">No cameras on this level. Add one in Devices, then calibrate it here to count people.</p>`}
+      ${cameras.length ? nothing : html`<p class="muted">${t("No cameras on this level. Add one in Devices, then calibrate it here to count people.")}</p>`}
       ${cameras.some((camera) => camera.frigate && (camera.calibration?.length ?? 0) >= 4) ? this.trackingProperties("camera") : nothing}
       <p class="muted">
-        Select a camera to choose its Frigate camera and calibrate it: four spots on the ground, in the image and on the plan. People a
-        calibrated camera sees are tracked as purple dots and counted with the radar people in the same rooms and zones. A selected
-        camera also shows its raw detections in grey, before snapping into rooms and tracking.
+        ${t("Select a camera to choose its Frigate camera and calibrate it: four spots on the ground, in the image and on the plan. People a calibrated camera sees are tracked as purple dots and counted with the radar people in the same rooms and zones. A selected camera also shows its raw detections in grey, before snapping into rooms and tracking.")}
       </p>
     `;
   }
@@ -2785,34 +2808,33 @@ class FloorCastPanel extends LitElement {
     const zones = level.zones ?? [];
     const rooms = level.rooms.filter((room) => !room.stairs);
     return html`
-      <h3>Rooms</h3>
+      <h3>${t("Rooms")}</h3>
       ${rooms.map((room) =>
         this.listRow(room.name, this.countIn(room.id, room.points), () => this.centreOn(centroid(room.points)), "people"),
       )}
-      <h3>Where people walked</h3>
+      <h3>${t("Where people walked")}</h3>
       <div class="row">
         <label class="check"
           ><input type="checkbox" .checked=${!!this._walks} @change=${(e: Event) => this.showWalks((e.target as HTMLInputElement).checked)} />
-          Show</label
+          ${t("Show")}</label
         >
         <select @change=${(e: Event) => this.loadWalks(Number((e.target as HTMLSelectElement).value))}>
           ${[1, 6, 24].map((hours) => html`<option value=${hours} ?selected=${hours === this._walkHours}>${hours} h</option>`)}
         </select>
-        <button class="danger" @click=${() => this.clearWalks()}>Clear</button>
+        <button class="danger" @click=${() => this.clearWalks()}>${t("Clear")}</button>
       </div>
-      <h3>Zones</h3>
+      <h3>${t("Zones")}</h3>
       ${zones.map((zone) =>
         this.listRow(
           zone.name,
-          zone.kind === "count" ? this.countIn(zone.id, zone.points) : ZONE_LABELS[zone.kind].replace(/ \(.*\)$/, ""),
+          zone.kind === "count" ? this.countIn(zone.id, zone.points) : t(ZONE_LABELS[zone.kind]).replace(/ \(.*\)$/, ""),
           () => this.pick({ kind: "zone", id: zone.id }, centroid(zone.points)),
           zone.kind === "count" ? "people" : "",
         ),
       )}
-      ${zones.length ? nothing : html`<p class="muted">No zones. Draw one with Zone to count a part of a room, mark a door or ignore a fan.</p>`}
+      ${zones.length ? nothing : html`<p class="muted">${t("No zones. Draw one with Zone to count a part of a room, mark a door or ignore a fan.")}</p>`}
       <p class="muted">
-        Every room a radar or a calibrated camera sees counts its people; zones count a part of a room or steer the tracking. The rules
-        are the same for people seen by radars and by cameras.
+        ${t("Every room a radar or a calibrated camera sees counts its people; zones count a part of a room or steer the tracking. The rules are the same for people seen by radars and by cameras.")}
       </p>
     `;
   }
@@ -2828,14 +2850,14 @@ class FloorCastPanel extends LitElement {
     try {
       const result = await this.hass.callWS<{ walks: Point[][] }>({ type: "floorcast/history/get", level: this.level.id, hours });
       this._walks = result.walks;
-      this._message = result.walks.length ? "" : "Nobody walked here in that time.";
+      this._message = result.walks.length ? "" : t("Nobody walked here in that time.");
     } catch (err) {
-      this._message = `History not read: ${(err as { message?: string }).message ?? err}`;
+      this._message = t("History not read: {error}", { error: String((err as { message?: string }).message ?? err) });
     }
   }
 
   private async clearWalks(): Promise<void> {
-    if (!confirm("Clear the history of where people walked on every level?")) return;
+    if (!confirm(t("Clear the history of where people walked on every level?"))) return;
     await this.hass.callWS({ type: "floorcast/history/clear" });
     if (this._walks) this._walks = [];
   }
@@ -2898,11 +2920,11 @@ class FloorCastPanel extends LitElement {
     return html`
       ${device ? this.positionFields(device) : nothing}
       <div class="row end">
-        <button title="Copy (Ctrl+D)" ?disabled=${locked} @click=${() => this.duplicateSelection()}>Duplicate</button>
+        <button title=${t("Copy (Ctrl+D)")} ?disabled=${locked} @click=${() => this.duplicateSelection()}>${t("Duplicate")}</button>
         <button
           class="danger ${this._confirmDelete ? "armed" : ""}"
           ?disabled=${locked}
-          title=${locked ? "Unlock the layout to delete" : "Delete (Del)"}
+          title=${locked ? t("Unlock the layout to delete") : t("Delete (Del)")}
           @click=${() => {
             if (!this._confirmDelete) {
               this._confirmDelete = true;
@@ -2914,7 +2936,7 @@ class FloorCastPanel extends LitElement {
             this.deleteSelection();
           }}
         >
-          ${this._confirmDelete ? "Click again to delete" : "Delete"}
+          ${this._confirmDelete ? t("Click again to delete") : t("Delete")}
         </button>
       </div>
     `;
@@ -2928,8 +2950,8 @@ class FloorCastPanel extends LitElement {
       if (device.to) device.to = axis === 0 ? [fix(device.to[0] + delta), device.to[1]] : [device.to[0], fix(device.to[1] + delta)];
     };
     return html`<details class="settings">
-      <summary>Position</summary>
-      ${this.number("x (east)", device.at[0], (v) => move(0, v))} ${this.number("y (south)", device.at[1], (v) => move(1, v))}
+      <summary>${t("Position")}</summary>
+      ${this.number(t("x (east)"), device.at[0], (v) => move(0, v))} ${this.number(t("y (south)"), device.at[1], (v) => move(1, v))}
     </details>`;
   }
 
@@ -2943,18 +2965,18 @@ class FloorCastPanel extends LitElement {
     if (s.kind === "device") {
       const device = this.findDevice(s.id);
       at = device && deviceCentre(device);
-      what = device ? (device.kind === "sensor" && device.sensorType === "alarm" ? "Alarm" : DEVICE_LABELS[device.kind]) : "";
+      what = device ? t(device.kind === "sensor" && device.sensorType === "alarm" ? N_("Alarm") : DEVICE_LABELS[device.kind]) : "";
     } else if (s.kind === "opening") {
       const opening = this.findOpening(s.id);
       const wall = opening && this.findWall(opening.wall);
       at = opening && wall ? pointOnWall(wall, opening.at) : undefined;
-      what = opening ? OPENING_NAMES[opening.type] : "";
+      what = opening ? t(OPENING_NAMES[opening.type]) : "";
     } else if (s.kind === "item") {
       const item = this.findItem(s.id);
       at = item ? (item.center ?? centroid(itemPoints(item))) : undefined;
-      what = item ? item.name || ITEM_LABELS[item.type] : "";
-    } else if (s.kind === "wall") what = "Wall";
-    else if (s.kind === "zone") what = "Zone";
+      what = item ? item.name || t(ITEM_LABELS[item.type]) : "";
+    } else if (s.kind === "wall") what = t("Wall");
+    else if (s.kind === "zone") what = t("Zone");
     const room = s.kind === "room" ? this.findRoom(s.id) : at ? roomAt(level, at) : undefined;
     return html`<nav class="crumbs">
       <span>${level.name}</span>
@@ -2988,7 +3010,7 @@ class FloorCastPanel extends LitElement {
         this._plan!.levels = list;
       });
     return html`
-      <h3>Levels</h3>
+      <h3>${t("Levels")}</h3>
       ${levels.map(
         (level, i) => html`<div class="level-row ${level.id === this.level.id ? "current" : ""}">
           <input
@@ -2996,11 +3018,11 @@ class FloorCastPanel extends LitElement {
             .value=${level.name}
             @change=${(e: Event) => this.change(() => (level.name = (e.target as HTMLInputElement).value.trim() || level.name))}
           />
-          <button class="small" title="Up" ?disabled=${i === 0} @click=${() => moveLevel(i, -1)}>↑</button>
-          <button class="small" title="Down" ?disabled=${i === levels.length - 1} @click=${() => moveLevel(i, 1)}>↓</button>
+          <button class="small" title=${t("Up")} ?disabled=${i === 0} @click=${() => moveLevel(i, -1)}>↑</button>
+          <button class="small" title=${t("Down")} ?disabled=${i === levels.length - 1} @click=${() => moveLevel(i, 1)}>↓</button>
           <button
             class="small danger ${this._deleteLevel === level.id ? "armed" : ""}"
-            title=${levels.length < 2 ? "The plan needs one level" : "Delete the level with everything on it"}
+            title=${levels.length < 2 ? t("The plan needs one level") : t("Delete the level with everything on it")}
             ?disabled=${levels.length < 2}
             @click=${() => {
               if (this._deleteLevel !== level.id) {
@@ -3011,35 +3033,35 @@ class FloorCastPanel extends LitElement {
               this._deleteLevel = undefined;
               this.change(() => (this._plan!.levels = levels.filter((l) => l.id !== level.id)));
               if (this._levelId === level.id) this._levelId = this._plan!.levels[0].id;
-              this.notify(`Level ${level.name} deleted`);
+              this.notify(t("Level {name} deleted", { name: level.name }));
               this.fit();
             }}
           >
-            ${this._deleteLevel === level.id ? "Delete?" : "×"}
+            ${this._deleteLevel === level.id ? t("Delete?") : "×"}
           </button>
-          <em class="muted">${level.rooms.length} rooms · ${(level.devices ?? []).length} devices</em>
+          <em class="muted">${t("{rooms} rooms · {devices} devices", { rooms: level.rooms.length, devices: (level.devices ?? []).length })}</em>
           ${registry?.floors.length
             ? html`<select
                 class="floor"
-                title="The floor of Home Assistant this level is"
+                title=${t("The floor of Home Assistant this level is")}
                 @change=${(e: Event) =>
                   this.change(() => {
                     const id = (e.target as HTMLSelectElement).value || null;
                     const floor = registry.floors.find((f) => f.id === id);
                     level.floor = id;
                     // A level still named as it was added takes the name of its floor.
-                    if (floor && /^Level \d+$/.test(level.name)) level.name = floor.name;
+                    if (floor && isNumberedLevel(level.name)) level.name = floor.name;
                   })}
               >
-                <option value="" ?selected=${!level.floor}>No floor of Home Assistant</option>
-                ${registry.floors.map((f) => html`<option value=${f.id} ?selected=${level.floor === f.id}>Floor: ${f.name}</option>`)}
+                <option value="" ?selected=${!level.floor}>${t("No floor of Home Assistant")}</option>
+                ${registry.floors.map((f) => html`<option value=${f.id} ?selected=${level.floor === f.id}>${t("Floor: {name}", { name: f.name })}</option>`)}
               </select>`
             : nothing}
         </div>`,
       )}
       <div class="row">
-        <button @click=${() => addLevel(`Level ${levels.length + 1}`)}>Add level</button>
-        ${missing.map((floor) => html`<button title="A level for this floor of Home Assistant" @click=${() => addLevel(floor.name, floor.id)}>Add ${floor.name}</button>`)}
+        <button @click=${() => addLevel(t("Level {number}", { number: levels.length + 1 }))}>${t("Add level")}</button>
+        ${missing.map((floor) => html`<button title=${t("A level for this floor of Home Assistant")} @click=${() => addLevel(floor.name, floor.id)}>${t("Add {name}", { name: floor.name })}</button>`)}
       </div>
     `;
   }
@@ -3047,7 +3069,7 @@ class FloorCastPanel extends LitElement {
   /** Settings of the whole plan: wall types, corners, colours and file. */
   private levelProperties() {
     return html`
-      <h3>Wall types</h3>
+      <h3>${t("Wall types")}</h3>
       ${this.wallTypes.map(
         (type) => html`<div class="type-row">
           <input
@@ -3071,7 +3093,7 @@ class FloorCastPanel extends LitElement {
           <em>cm</em>
           <button
             class="small"
-            title="Remove the type; its walls keep their thickness"
+            title=${t("Remove the type; its walls keep their thickness")}
             ?disabled=${this.wallTypes.length < 2}
             @click=${() =>
               this.change(() => {
@@ -3084,7 +3106,7 @@ class FloorCastPanel extends LitElement {
         </div>`,
       )}
       <div class="row">
-        <button @click=${() => this.change(() => this.wallTypes.push({ id: uid("walltype"), name: "New wall", t: 0.2 }))}>Add wall type</button>
+        <button @click=${() => this.change(() => this.wallTypes.push({ id: uid("walltype"), name: t("New wall"), t: 0.2 }))}>${t("Add wall type")}</button>
       </div>
       <label class="check"
         ><input
@@ -3092,11 +3114,11 @@ class FloorCastPanel extends LitElement {
           .checked=${!!this._plan!.roundCorners}
           @change=${(e: Event) => this.change(() => (this._plan!.roundCorners = (e.target as HTMLInputElement).checked))}
         />
-        Rounded corners</label
+        ${t("Rounded corners")}</label
       >
       ${this._plan!.roundCorners
         ? this.number(
-            "Radius",
+            t("Radius"),
             (this._plan!.cornerRadius ?? DEFAULT_CORNER_RADIUS) * 100,
             (v) => (this._plan!.cornerRadius = Math.max(0, v) / 100),
             1,
@@ -3115,10 +3137,10 @@ class FloorCastPanel extends LitElement {
         </select>
       </label>
       <p class="muted">${t("For the editor and every card. A text without a translation shows in English.")}</p>
-      <h3>Plan file</h3>
+      <h3>${t("Plan file")}</h3>
       <div class="row">
-        <button @click=${() => this.exportPlan()}>Export</button>
-        <label class="button">Import<input type="file" accept="application/json,.json" hidden @change=${this.importPlan} /></label>
+        <button @click=${() => this.exportPlan()}>${t("Export")}</button>
+        <label class="button">${t("Import")}<input type="file" accept="application/json,.json" hidden @change=${this.importPlan} /></label>
       </div>
       <h3 class="danger-title">${t("Delete everything")}</h3>
       <p class="muted">
@@ -3152,32 +3174,32 @@ class FloorCastPanel extends LitElement {
         plan.appearance = { ...plan.appearance, [mode]: next };
       });
     return html`
-      <h3>Appearance</h3>
+      <h3>${t("Appearance")}</h3>
       <label class="field wide">
-        <span>Theme</span>
+        <span>${t("Theme")}</span>
         <select
           @change=${(e: Event) =>
             this.change(() => (plan.appearance = { ...plan.appearance, theme: (e.target as HTMLSelectElement).value as Appearance["theme"] }))}
         >
-          <option value="auto" ?selected=${(appearance.theme ?? "auto") === "auto"}>As Home Assistant (dark or light)</option>
-          <option value="dark" ?selected=${appearance.theme === "dark"}>Dark</option>
-          <option value="light" ?selected=${appearance.theme === "light"}>Light</option>
+          <option value="auto" ?selected=${(appearance.theme ?? "auto") === "auto"}>${t("As Home Assistant (dark or light)")}</option>
+          <option value="dark" ?selected=${appearance.theme === "dark"}>${t("Dark")}</option>
+          <option value="light" ?selected=${appearance.theme === "light"}>${inContext(N_("Light (theme)"), "Light")}</option>
         </select>
       </label>
       <div class="row">
-        <span class="muted">Colours of</span>
+        <span class="muted">${t("Colours of")}</span>
         ${(["dark", "light"] as const).map(
-          (m) => html`<button class=${mode === m ? "on" : ""} @click=${() => (this._paletteMode = m)}>${m === "dark" ? "Dark" : "Light"}</button>`,
+          (m) => html`<button class=${mode === m ? "on" : ""} @click=${() => (this._paletteMode = m)}>${m === "dark" ? t("Dark") : inContext(N_("Light (theme)"), "Light")}</button>`,
         )}
       </div>
       ${PALETTE_GROUPS.map(
         (group) => html`<details class="settings" ?open=${group.name === "Building"}>
-          <summary>${group.name}</summary>
+          <summary>${t(group.name)}</summary>
           ${group.keys.map(
             ([key, label]) => html`<div class="colour-row">
-              <span>${label}</span>
+              <span>${t(label)}</span>
               <input type="color" .value=${own[key] ?? defaults[key]} @change=${(e: Event) => setColour(key, (e.target as HTMLInputElement).value)} />
-              ${own[key] ? html`<button class="small" title="Back to the default colour" @click=${() => setColour(key, undefined)}>↺</button>` : html`<span></span>`}
+              ${own[key] ? html`<button class="small" title=${t("Back to the default colour")} @click=${() => setColour(key, undefined)}>↺</button>` : html`<span></span>`}
             </div>`,
           )}
         </details>`,
@@ -3192,11 +3214,11 @@ class FloorCastPanel extends LitElement {
               plan.appearance = next;
             })}
         >
-          Reset the ${mode} colours
+          ${mode === "dark" ? t("Reset the dark colours") : t("Reset the light colours")}
         </button>
       </div>
       <p class="muted">
-        The plan in this editor shows the colours you edit. Every card uses them; a card can still choose dark or light for itself.
+        ${t("The plan in this editor shows the colours you edit. Every card uses them; a card can still choose dark or light for itself.")}
       </p>
     `;
   }
@@ -3204,9 +3226,9 @@ class FloorCastPanel extends LitElement {
   private wallProperties(wall?: Wall) {
     if (!wall) return nothing;
     return html`
-      <h3>Wall</h3>
+      <h3>${t("Wall")}</h3>
       <label class="field wide">
-        <span>Type</span>
+        <span>${t("Type")}</span>
         <select
           @change=${(e: Event) =>
             this.change(() => {
@@ -3222,11 +3244,11 @@ class FloorCastPanel extends LitElement {
           ${this.wallTypes.map(
             (type) => html`<option value=${type.id} ?selected=${type.id === wall.type}>${type.name} ${(type.t * 100).toFixed(1)} cm</option>`,
           )}
-          <option value="" ?selected=${!wall.type}>Own thickness</option>
+          <option value="" ?selected=${!wall.type}>${t("Own thickness")}</option>
         </select>
       </label>
       ${this.number(
-        "Thickness",
+        t("Thickness"),
         wall.t * 100,
         (v) => {
           // A thickness typed for one wall makes it a wall of its own thickness.
@@ -3236,10 +3258,10 @@ class FloorCastPanel extends LitElement {
         0.5,
         "cm",
       )}
-      <p class="muted">Length ${wallLength(wall).toFixed(2)} m</p>
-      <label class="check" title="Same as holding Shift while dragging an end"
+      <p class="muted">${t("Length {length} m", { length: wallLength(wall).toFixed(2) })}</p>
+      <label class="check" title=${t("Same as holding Shift while dragging an end")}
         ><input type="checkbox" .checked=${this._endsAlone} @change=${(e: Event) => (this._endsAlone = (e.target as HTMLInputElement).checked)} />
-        Move ends alone (detach from joined walls)</label
+        ${t("Move ends alone (detach from joined walls)")}</label
       >
       ${this.deleteButton()}
     `;
@@ -3248,28 +3270,28 @@ class FloorCastPanel extends LitElement {
   private openingProperties(opening?: Opening) {
     if (!opening) return nothing;
     return html`
-      <h3>${OPENING_NAMES[opening.type]}</h3>
+      <h3>${t(OPENING_NAMES[opening.type])}</h3>
       <label class="field wide">
-        <span>Type</span>
+        <span>${t("Type")}</span>
         <select @change=${(e: Event) => this.change(() => (opening.type = (e.target as HTMLSelectElement).value as Opening["type"]))}>
-          <option value="door" ?selected=${opening.type === "door"}>Door</option>
-          <option value="window" ?selected=${opening.type === "window"}>Window</option>
-          <option value="gate" ?selected=${opening.type === "gate"}>Gate or garage door</option>
+          <option value="door" ?selected=${opening.type === "door"}>${t("Door")}</option>
+          <option value="window" ?selected=${opening.type === "window"}>${t("Window")}</option>
+          <option value="gate" ?selected=${opening.type === "gate"}>${t("Gate or garage door")}</option>
         </select>
       </label>
-      ${this.number("Width", opening.width * 100, (v) => (opening.width = Math.max(10, v) / 100), 5, "cm")}
+      ${this.number(t("Width"), opening.width * 100, (v) => (opening.width = Math.max(10, v) / 100), 5, "cm")}
       ${opening.type === "door"
         ? html`<div class="row">
-            <button title="Moves the hinge to the other side of the door" @click=${() => this.change(() => (opening.hingeEnd = !opening.hingeEnd))}>
-              Flip hinge
+            <button title=${t("Moves the hinge to the other side of the door")} @click=${() => this.change(() => (opening.hingeEnd = !opening.hingeEnd))}>
+              ${t("Flip hinge")}
             </button>
-            <button title="Opens the door into the other room" @click=${() => this.change(() => (opening.swingRight = !opening.swingRight))}>
-              Flip side
+            <button title=${t("Opens the door into the other room")} @click=${() => this.change(() => (opening.swingRight = !opening.swingRight))}>
+              ${t("Flip side")}
             </button>
           </div>`
         : nothing}
       <div class="pick">
-        <span>Open/closed sensor</span>
+        <span>${t("Open/closed sensor")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["binary_sensor"]}
@@ -3281,7 +3303,7 @@ class FloorCastPanel extends LitElement {
       ${this.stateLine(opening.contact)}
       ${opening.type === "door"
         ? html`<div class="pick">
-              <span>Lock</span>
+              <span>${t("Lock")}</span>
               <floorcast-entity-picker
                 .hass=${this.hass}
                 .domains=${["lock"]}
@@ -3293,19 +3315,19 @@ class FloorCastPanel extends LitElement {
             ${this.stateLine(opening.lock)}
             ${opening.lock
               ? html`${this.confirmCheck(opening, true)}
-                  <p class="muted">A padlock beside the door: a tap on the card locks or unlocks it, holding opens it.</p>`
+                  <p class="muted">${t("A padlock beside the door: a tap on the card locks or unlocks it, holding opens it.")}</p>`
               : nothing}
             <label class="field wide">
-              <span>Drawn as</span>
+              <span>${t("Drawn as")}</span>
               <select @change=${(e: Event) => this.change(() => (opening.drawn = (e.target as HTMLSelectElement).value as "open" | "closed"))}>
-                <option value="open" ?selected=${opening.drawn !== "closed"}>Open</option>
-                <option value="closed" ?selected=${opening.drawn === "closed"}>Closed</option>
+                <option value="open" ?selected=${opening.drawn !== "closed"}>${inContext(N_("Open (state)"), "Open")}</option>
+                <option value="closed" ?selected=${opening.drawn === "closed"}>${t("Closed")}</option>
               </select>
             </label>
-            <p class="muted">With a sensor the door follows it; this is how it is drawn without one or while the sensor is unavailable.</p>`
+            <p class="muted">${t("With a sensor the door follows it; this is how it is drawn without one or while the sensor is unavailable.")}</p>`
         : opening.type === "gate"
           ? html`<div class="pick">
-                <span>Gate</span>
+                <span>${t("Gate")}</span>
                 <floorcast-entity-picker
                   .hass=${this.hass}
                   .domains=${["cover"]}
@@ -3316,10 +3338,10 @@ class FloorCastPanel extends LitElement {
               </div>
               ${this.stateLine(opening.cover)} ${this.confirmCheck(opening, true)}
               <p class="muted">
-                Drawn closed across the opening for as much as the cover closes it. A tap on the card opens, closes or stops it.
+                ${t("Drawn closed across the opening for as much as the cover closes it. A tap on the card opens, closes or stops it.")}
               </p>`
           : html`<div class="pick">
-              <span>Blind</span>
+              <span>${t("Blind")}</span>
               <floorcast-entity-picker
                 .hass=${this.hass}
                 .domains=${["cover"]}
@@ -3331,12 +3353,12 @@ class FloorCastPanel extends LitElement {
             ${this.stateLine(opening.cover)}
             ${opening.cover
               ? html`<div class="row">
-                    <button title="Draws the blind on the other side of the wall" @click=${() => this.change(() => (opening.blindFlip = !opening.blindFlip))}>
-                      Flip blind side
+                    <button title=${t("Draws the blind on the other side of the wall")} @click=${() => this.change(() => (opening.blindFlip = !opening.blindFlip))}>
+                      ${t("Flip blind side")}
                     </button>
                   </div>
                   ${this.confirmCheck(opening)}
-                  <p class="muted">The bar outside the window is as long as the blind covers it; the number is its position, 100% open.</p>`
+                  <p class="muted">${t("The bar outside the window is as long as the blind covers it; the number is its position, 100% open.")}</p>`
               : nothing}`}
       ${this.deleteButton()}
     `;
@@ -3346,25 +3368,30 @@ class FloorCastPanel extends LitElement {
     const sources = radarSources(this.hass.states);
     const seen = radarTargets(device, this.hass.states).length;
     return html`
-      <h3>Radar</h3>
+      <h3>${t("Radar")}</h3>
       <label class="field wide">
-        <span>Sensors</span>
+        <span>${t("Sensors")}</span>
         <select @change=${(e: Event) => this.change(() => (device.source = (e.target as HTMLSelectElement).value || null))}>
           <option value="" ?selected=${!device.source}>–</option>
           ${sources.map((source) => html`<option value=${source} ?selected=${source === device.source}>sensor.${source}_target_…</option>`)}
         </select>
       </label>
-      <p class="muted">${device.source ? `Sees ${seen} ${seen === 1 ? "person" : "people"} now.` : "Choose the target sensors of the radar."}</p>
-      ${this.number("Heading", device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 1, "°")}
-      ${this.number("View", device.arc ?? DEFAULT_RADAR_VIEW, (v) => (device.arc = Math.min(180, Math.max(10, v))), 5, "°")}
-      ${this.number("Range", device.radius ?? DEFAULT_RADAR_RANGE, (v) => (device.radius = Math.max(1, v)), 0.5, "m")}
+      <p class="muted">
+        ${device.source
+          ? seen === 1
+            ? t("Sees 1 person now.")
+            : t("Sees {count} people now.", { count: seen })
+          : t("Choose the target sensors of the radar.")}
+      </p>
+      ${this.number(t("Heading"), device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 1, "°")}
+      ${this.number(t("View"), device.arc ?? DEFAULT_RADAR_VIEW, (v) => (device.arc = Math.min(180, Math.max(10, v))), 5, "°")}
+      ${this.number(t("Range"), device.radius ?? DEFAULT_RADAR_RANGE, (v) => (device.radius = Math.max(1, v)), 0.5, "m")}
       <label class="check"
         ><input type="checkbox" .checked=${!!device.mirror} @change=${(e: Event) => this.change(() => (device.mirror = (e.target as HTMLInputElement).checked))} />
-        Mirror (people move the wrong way sideways)</label
+        ${t("Mirror (people move the wrong way sideways)")}</label
       >
       <p class="muted">
-        Place the radar where it hangs and aim it with the handle. Walk across the room and watch the dot: turn the radar until the dot
-        follows you, and mirror it when it goes left as you go right. Targets beyond the range are ignored.
+        ${t("Place the radar where it hangs and aim it with the handle. Walk across the room and watch the dot: turn the radar until the dot follows you, and mirror it when it goes left as you go right. Targets beyond the range are ignored.")}
       </p>
       ${this.deleteButton()}
     `;
@@ -3372,9 +3399,9 @@ class FloorCastPanel extends LitElement {
 
   private cameraProperties(device: Device) {
     return html`
-      <h3>Camera</h3>
+      <h3>${t("Camera")}</h3>
       <div class="pick">
-        <span>Camera</span>
+        <span>${t("Camera")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["camera"]}
@@ -3384,10 +3411,10 @@ class FloorCastPanel extends LitElement {
         ></floorcast-entity-picker>
       </div>
       ${this.stateLine(device.entity)}
-      ${this.number("Heading", device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 5, "°")}
-      ${this.number("View", device.arc ?? DEFAULT_FIELD_OF_VIEW, (v) => (device.arc = Math.min(360, Math.max(10, v))), 5, "°")}
-      ${this.number("Range", device.radius ?? DEFAULT_CAMERA_RANGE, (v) => (device.radius = Math.max(1, v)), 0.5, "m")}
-      <p class="muted">Drag the handle at the end of the view to aim the camera. On the card a tap shows a still, holding opens the live view.</p>
+      ${this.number(t("Heading"), device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 5, "°")}
+      ${this.number(t("View"), device.arc ?? DEFAULT_FIELD_OF_VIEW, (v) => (device.arc = Math.min(360, Math.max(10, v))), 5, "°")}
+      ${this.number(t("Range"), device.radius ?? DEFAULT_CAMERA_RANGE, (v) => (device.radius = Math.max(1, v)), 0.5, "m")}
+      <p class="muted">${t("Drag the handle at the end of the view to aim the camera. On the card a tap shows a still, holding opens the live view.")}</p>
       ${this.detectionProperties(device)} ${this.frigateProperties(device)} ${this.groundProperties(device)}
       ${this.deleteButton()}
     `;
@@ -3403,7 +3430,7 @@ class FloorCastPanel extends LitElement {
     const suggestion = device.detection ? undefined : this.detectionSuggestion(device, registry);
     return html`
       <div class="pick">
-        <span>Detection sensor</span>
+        <span>${t("Detection sensor")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["binary_sensor"]}
@@ -3415,12 +3442,11 @@ class FloorCastPanel extends LitElement {
       ${this.stateLine(device.detection)}
       ${suggestion
         ? html`<div class="row">
-            <button @click=${() => this.change(() => (device.detection = suggestion))}>Use ${this.entityName(suggestion) ?? suggestion}</button>
+            <button @click=${() => this.change(() => (device.detection = suggestion))}>${t("Use {name}", { name: String(this.entityName(suggestion) ?? suggestion) })}</button>
           </div>`
         : nothing}
       <p class="muted">
-        While it is on, the view of the camera turns red on the card and its still opens by itself: a person sensor of Frigate,
-        UniFi Protect or Reolink, or any motion sensor.
+        ${t("While it is on, the view of the camera turns red on the card and its still opens by itself: a person sensor of Frigate, UniFi Protect or Reolink, or any motion sensor.")}
       </p>
     `;
   }
@@ -3461,11 +3487,11 @@ class FloorCastPanel extends LitElement {
     const unsaved = !!this._plan && JSON.stringify(this._plan) !== this._saved;
     return html`<div class="row">
         <button class=${this._groundPreview.has(device.id) ? "primary" : ""} @click=${() => this.toggleGroundPreview(device)}>
-          ${this._groundPreview.has(device.id) ? "Hide preview" : "Preview"}
+          ${this._groundPreview.has(device.id) ? t("Hide preview") : t("Preview")}
         </button>
-        <button ?disabled=${!unsaved || this._saving} @click=${() => this.save()}>Save and redraw</button>
+        <button ?disabled=${!unsaved || this._saving} @click=${() => this.save()}>${t("Save and redraw")}</button>
       </div>
-      <p class="muted">The integration draws the saved plan; save after a change to see it.</p>`;
+      <p class="muted">${t("The integration draws the saved plan; save after a change to see it.")}</p>`;
   }
 
   /**
@@ -3475,7 +3501,7 @@ class FloorCastPanel extends LitElement {
   private groundProperties(device: Device) {
     const mower = device.kind === "mower";
     const entity = mower ? device.camera : device.entity;
-    if (!entity) return mower ? html`<h3>Ground view (experimental)</h3><p class="muted">Choose the camera of the mower above first.</p>` : nothing;
+    if (!entity) return mower ? html`<h3>${t("Ground view (experimental)")}</h3><p class="muted">${t("Choose the camera of the mower above first.")}</p>` : nothing;
     const ground = device.ground ?? {};
     const set = (apply: (ground: NonNullable<Device["ground"]>) => void) => {
       const next = { ...device.ground };
@@ -3490,13 +3516,12 @@ class FloorCastPanel extends LitElement {
     const toggle = (id: string, on: boolean) =>
       this.change(() => set((g) => (g.zones = on ? [...(g.zones ?? []).filter((zone) => zone !== id), id] : (g.zones ?? []).filter((zone) => zone !== id))));
     return html`
-      <h3>Ground view (experimental)</h3>
+      <h3>${t("Ground view (experimental)")}</h3>
       <p class="muted">
-        The camera image is laid on the plan like the top view of a car. Only flat ground lies true; walls, fences and people
-        stretch.
+        ${t("The camera image is laid on the plan like the top view of a car. Only flat ground lies true; walls, fences and people stretch.")}
       </p>
       <label class="field wide">
-        <span>Preview</span>
+        <span>${t("Preview")}</span>
         <select
           @change=${(e: Event) =>
             this.change(() => {
@@ -3507,68 +3532,73 @@ class FloorCastPanel extends LitElement {
         >
           ${(
             [
-              ["window", "Window"],
-              ["ground", "Ground"],
-              ["both", "Ground and window"],
+              ["window", N_("Window")],
+              ["ground", N_("Ground")],
+              ["both", N_("Ground and window")],
             ] as [PreviewMode, string][]
-          ).map(([mode, label]) => html`<option value=${mode} ?selected=${(device.preview ?? "window") === mode}>${label}</option>`)}
+          ).map(([mode, label]) => html`<option value=${mode} ?selected=${(device.preview ?? "window") === mode}>${t(label)}</option>`)}
         </select>
       </label>
       <p class="muted">
-        What the card shows when the preview opens: ${mower ? "a tap on the mower" : "the camera sees someone, or a tap on it"}.
-        The ground needs ${MIN_GROUND_SPOTS} calibration spots.
+        ${mower
+          ? t("What the card shows when the preview opens: a tap on the mower.")
+          : t("What the card shows when the preview opens: the camera sees someone, or a tap on it.")}
+        ${t("The ground needs {count} calibration spots.", { count: MIN_GROUND_SPOTS })}
       </p>
       ${mower
         ? nothing
-        : html`<p class="muted">Lay it on these zones or rooms; tick only the paving or the terrace.</p>
+        : html`<p class="muted">${t("Lay it on these zones or rooms; tick only the paving or the terrace.")}</p>
             ${areas.map(
               (area) => html`<label class="check"
                 ><input type="checkbox" .checked=${chosen.has(area.id)} @change=${(e: Event) => toggle(area.id, (e.target as HTMLInputElement).checked)} />
                 ${area.name}</label
               >`,
             )}`}
-      <h4>Calibration</h4>
+      <h4>${t("Calibration")}</h4>
       <p class="muted">
         ${pairs.length >= MIN_GROUND_SPOTS
-          ? `Calibrated with ${pairs.length} spots.`
-          : `${pairs.length} of at least ${MIN_GROUND_SPOTS} spots; the image is not laid until then.`}
-        Click a spot on the ground in the image, then the same spot on the plan${mower ? ", with the mower standing still" : ""}.
+          ? t("Calibrated with {count} spots.", { count: pairs.length })
+          : t("{count} of at least {needed} spots; the image is not laid until then.", { count: pairs.length, needed: MIN_GROUND_SPOTS })}
+        ${mower
+          ? t("Click a spot on the ground in the image, then the same spot on the plan, with the mower standing still.")
+          : t("Click a spot on the ground in the image, then the same spot on the plan.")}
       </p>
       ${this.spotList(device, target)}
       <div class="row">
-        <button ?disabled=${mower && !pose} @click=${() => this.openBigImage(target)}>Calibrate</button>
+        <button ?disabled=${mower && !pose} @click=${() => this.openBigImage(target)}>${t("Calibrate")}</button>
         ${mower
           ? nothing
           : html`<button
               ?disabled=${!(device.calibration?.length ?? 0)}
               @click=${() => this.change(() => set((g) => (g.calibration = structuredClone(device.calibration ?? []))))}
             >
-              Copy from Frigate
+              ${t("Copy from Frigate")}
             </button>`}
-        <button ?disabled=${!pairs.length} @click=${() => this.change(() => set((g) => (mower ? (g.spots = []) : (g.calibration = []))))}>Clear</button>
+        <button ?disabled=${!pairs.length} @click=${() => this.change(() => set((g) => (mower ? (g.spots = []) : (g.calibration = []))))}>${t("Clear")}</button>
       </div>
-      ${mower && !pose ? html`<p class="muted">The mower reports no heading now, so it cannot be calibrated.</p>` : nothing}
-      <h4>Range</h4>
+      ${mower && !pose ? html`<p class="muted">${t("The mower reports no heading now, so it cannot be calibrated.")}</p>` : nothing}
+      <h4>${t("Range")}</h4>
       ${this.number(
-        "Visible range",
+        t("Visible range"),
         ground.range ?? (mower ? ground.reach ?? 2 : device.radius ?? DEFAULT_CAMERA_RANGE),
         (v) => set((g) => (g.range = Math.min(30, Math.max(0.3, v)))),
         mower ? 0.1 : 0.5,
         "m",
       )}
-      <p class="muted">The image is whole up to half the range from the ${mower ? "mower" : "camera"} and fades out at the range.</p>
+      <p class="muted">
+        ${mower
+          ? t("The image is whole up to half the range from the mower and fades out at the range.")
+          : t("The image is whole up to half the range from the camera and fades out at the range.")}
+      </p>
       ${mower
         ? html`
-            ${this.number("Position delay", ground.delay ?? 0, (v) => set((g) => (g.delay = Math.min(10, Math.max(0, v)))), 0.5, "s")}
+            ${this.number(t("Position delay"), ground.delay ?? 0, (v) => set((g) => (g.delay = Math.min(10, Math.max(0, v)))), 0.5, "s")}
             <p class="muted">
-              The mower and its track are shown this late and move smoothly between the places it reports, every few seconds;
-              set it to the time between reports or more.
+              ${t("The mower and its track are shown this late and move smoothly between the places it reports, every few seconds; set it to the time between reports or more.")}
             </p>
-            ${this.number("View delay", ground.viewDelay ?? 0, (v) => set((g) => (g.viewDelay = Math.min(10, Math.max(0, v)))), 0.5, "s")}
+            ${this.number(t("View delay"), ground.viewDelay ?? 0, (v) => set((g) => (g.viewDelay = Math.min(10, Math.max(0, v)))), 0.5, "s")}
             <p class="muted">
-              The camera image on the ground is laid this late. It keeps pace with the mower at the position delay less the time
-              its images come late; change it until the image stops running ahead of or behind the plan while the mower drives
-              along an edge.
+              ${t("The camera image on the ground is laid this late. It keeps pace with the mower at the position delay less the time its images come late; change it until the image stops running ahead of or behind the plan while the mower drives along an edge.")}
             </p>
           `
         : nothing}
@@ -3590,7 +3620,7 @@ class FloorCastPanel extends LitElement {
     const pairs = device.calibration ?? [];
     const picture = device.entity ? this.hass.states[device.entity]?.attributes.entity_picture : undefined;
     return html`
-      <h3>Objects from Frigate</h3>
+      <h3>${t("Objects from Frigate")}</h3>
       <label class="field wide">
         <span>Frigate</span>
         <select @change=${(e: Event) => this.change(() => (device.frigate = (e.target as HTMLSelectElement).value || null))}>
@@ -3600,17 +3630,16 @@ class FloorCastPanel extends LitElement {
         </select>
       </label>
       ${device.frigate && !known?.size
-        ? html`${this.number("Detect width", device.detect?.[0] ?? 1280, (v) => (device.detect = [v, device.detect?.[1] ?? 720]), 1, "px")}
-          ${this.number("Detect height", device.detect?.[1] ?? 720, (v) => (device.detect = [device.detect?.[0] ?? 1280, v]), 1, "px")}`
+        ? html`${this.number(t("Detect width"), device.detect?.[0] ?? 1280, (v) => (device.detect = [v, device.detect?.[1] ?? 720]), 1, "px")}
+          ${this.number(t("Detect height"), device.detect?.[1] ?? 720, (v) => (device.detect = [device.detect?.[0] ?? 1280, v]), 1, "px")}`
         : nothing}
       ${device.frigate
         ? html`<p class="muted">
-              Click a spot on the ground in the image, then the same spot on the plan: corners of the terrace, of the paving, a post.
-              Four or more spots, spread as wide as the camera sees.
+              ${t("Click a spot on the ground in the image, then the same spot on the plan: corners of the terrace, of the paving, a post. Four or more spots, spread as wide as the camera sees.")}
             </p>
             ${picture
               ? html`<div class="row">
-                    <button class="primary" @click=${() => this.openBigImage("frigate")}>Calibrate on a large image</button>
+                    <button class="primary" @click=${() => this.openBigImage("frigate")}>${t("Calibrate on a large image")}</button>
                   </div>
                   <div class="calibration-image" @click=${() => this.openBigImage("frigate")}>
                   <img src=${picture} alt="" draggable="false" />
@@ -3622,17 +3651,17 @@ class FloorCastPanel extends LitElement {
                     ? html`<span class="mark waiting" style="left:${this._imagePoint[0] * 100}%;top:${this._imagePoint[1] * 100}%">?</span>`
                     : nothing}
                 </div>`
-              : html`<p class="muted">Choose the camera entity above to see its image.</p>`}
+              : html`<p class="muted">${t("Choose the camera entity above to see its image.")}</p>`}
             ${this.spotList(device, "frigate")}
             <p class="muted">
               ${pairs.length < 4
-                ? `${pairs.length} of at least 4 spots.`
+                ? t("{count} of at least 4 spots.", { count: pairs.length })
                 : homography(pairs)
-                  ? `Calibrated with ${pairs.length} spots.`
-                  : "These spots do not fix the view; spread them wider, not along one line."}
+                  ? t("Calibrated with {count} spots.", { count: pairs.length })
+                  : t("These spots do not fix the view; spread them wider, not along one line.")}
             </p>
             <div class="row">
-              <button ?disabled=${!homography(pairs)} @click=${() => this.loadPaths(device)}>Show recent paths</button>
+              <button ?disabled=${!homography(pairs)} @click=${() => this.loadPaths(device)}>${t("Show recent paths")}</button>
             </div>`
         : nothing}
     `;
@@ -3668,12 +3697,17 @@ class FloorCastPanel extends LitElement {
     return pairs.map(
       (pair, i) => html`<div class="list-row static">
         <span
-          >${i + 1}. image ${pair.image[0].toFixed(2)}, ${pair.image[1].toFixed(2)} → plan ${pair.plan[0].toFixed(2)},
-          ${pair.plan[1].toFixed(2)}</span
+          >${t("{number}. image {imageX}, {imageY} → plan {planX}, {planY}", {
+            number: i + 1,
+            imageX: pair.image[0].toFixed(2),
+            imageY: pair.image[1].toFixed(2),
+            planX: pair.plan[0].toFixed(2),
+            planY: pair.plan[1].toFixed(2),
+          })}</span
         >
         <button
           class="small"
-          title="Remove this spot"
+          title=${t("Remove this spot")}
           ?disabled=${!fixed}
           @click=${() => this.change(() => this.setPairs(device, pairs.filter((_, j) => j !== i), target))}
         >
@@ -3692,14 +3726,14 @@ class FloorCastPanel extends LitElement {
   private openBigImage(target: "frigate" | "ground" | "mower"): void {
     const device = this._selection?.kind === "device" ? this.findDevice(this._selection.id) : undefined;
     if (target === "mower" && device && !this.mowerPose(device)) {
-      this._message = "The mower reports no heading now; calibrate it when its map shows where it heads.";
+      this._message = t("The mower reports no heading now; calibrate it when its map shows where it heads.");
       return;
     }
     this._calibrationTarget = target;
     this._bigImage = true;
     this._imagePoint = undefined;
     this._imageZoom = { scale: 1, origin: [50, 50] };
-    this._message = "Click a spot on the ground in the image; the wheel zooms in.";
+    this._message = t("Click a spot on the ground in the image; the wheel zooms in.");
   }
 
   /**
@@ -3715,13 +3749,19 @@ class FloorCastPanel extends LitElement {
     const zoom = this._imageZoom;
     return html`<div class="big-image" @wheel=${(e: WheelEvent) => this.zoomImage(e)}>
       <div class="big-image-bar">
-        <span>${pairs.length} ${pairs.length === 1 ? "spot" : "spots"}${pairs.length < 4 ? ", at least 4 needed" : ""}. Click a spot on the ground.</span>
-        <button ?disabled=${!pairs.length} @click=${() => this.change(() => this.setPairs(device, pairs.slice(0, -1)))}>Remove last</button>
-        <button @click=${() => (this._imageZoom = { scale: 1, origin: [50, 50] })}>Fit</button>
+        <span>
+          ${pairs.length === 1
+            ? t("1 spot, at least 4 needed. Click a spot on the ground.")
+            : pairs.length < 4
+              ? t("{count} spots, at least 4 needed. Click a spot on the ground.", { count: pairs.length })
+              : t("{count} spots. Click a spot on the ground.", { count: pairs.length })}
+        </span>
+        <button ?disabled=${!pairs.length} @click=${() => this.change(() => this.setPairs(device, pairs.slice(0, -1)))}>${t("Remove last")}</button>
+        <button @click=${() => (this._imageZoom = { scale: 1, origin: [50, 50] })}>${t("Fit")}</button>
         <button class="primary" @click=${() => {
           this._bigImage = false;
           this._message = "";
-        }}>Done</button>
+        }}>${t("Done")}</button>
       </div>
       <div class="big-image-spots">${this.spotList(device, this._calibrationTarget)}</div>
       <div class="big-image-view">
@@ -3769,7 +3809,7 @@ class FloorCastPanel extends LitElement {
     const v = Math.min(1, Math.max(0, (event.clientY - box.top) / box.height));
     this._imagePoint = [fix(u), fix(v)];
     this._tool = "calibrate";
-    this._message = "Now click the same spot on the plan.";
+    this._message = t("Now click the same spot on the plan.");
   }
 
   /** Paths of the last people events of the camera, from the Frigate integration. */
@@ -3784,9 +3824,11 @@ class FloorCastPanel extends LitElement {
       });
       const paths = events.map((e) => (e.data?.path_data ?? []).map(([q]) => q)).filter((path) => path.length > 1);
       this._paths = new Map(this._paths).set(device.id, paths);
-      this._message = paths.length ? `${paths.length} recent paths drawn on the plan.` : "No recent paths of people from this camera.";
+      this._message = paths.length
+        ? t("{count} recent paths drawn on the plan.", { count: paths.length })
+        : t("No recent paths of people from this camera.");
     } catch (err) {
-      this._message = `Paths not read: ${(err as { message?: string }).message ?? err}`;
+      this._message = t("Paths not read: {error}", { error: String((err as { message?: string }).message ?? err) });
     }
   }
 
@@ -3803,21 +3845,19 @@ class FloorCastPanel extends LitElement {
       </div>
       ${this.stateLine(value)}`;
     return html`
-      <h3>Screen</h3>
-      ${picker("Power", ["remote", "media_player", "switch"], device.entity, (id) => (device.entity = id))}
-      ${picker("Remote", ["remote"], device.remote, (id) => (device.remote = id))}
-      ${this.number("Light reach", device.radius ?? DEFAULT_SCREEN_THROW, (v) => (device.radius = Math.max(0.5, v)), 0.5, "m")}
-      ${this.number("Light spread", device.arc ?? DEFAULT_SCREEN_SPREAD, (v) => (device.arc = Math.min(160, Math.max(0, v))), 5, "°")}
+      <h3>${t("Screen")}</h3>
+      ${picker(t("Power"), ["remote", "media_player", "switch"], device.entity, (id) => (device.entity = id))}
+      ${picker(t("Remote"), ["remote"], device.remote, (id) => (device.remote = id))}
+      ${this.number(t("Light reach"), device.radius ?? DEFAULT_SCREEN_THROW, (v) => (device.radius = Math.max(0.5, v)), 0.5, "m")}
+      ${this.number(t("Light spread"), device.arc ?? DEFAULT_SCREEN_SPREAD, (v) => (device.arc = Math.min(160, Math.max(0, v))), 5, "°")}
       <div class="row">
-        <button title="Lets the light fall on the other side of the screen" @click=${() => this.change(() => (device.flip = !device.flip))}>
-          Flip light side
+        <button title=${t("Lets the light fall on the other side of the screen")} @click=${() => this.change(() => (device.flip = !device.flip))}>
+          ${t("Flip light side")}
         </button>
       </div>
       ${this.confirmCheck(device)}
       <p class="muted">
-        Draw the screen as a line: a projector screen, a TV or a monitor. While it is on, its light falls into the room as shown
-        when selected. On the card a tap switches it on or off; holding opens a remote control with arrows,
-        OK, back, home, volume and play, sent to the remote entity.
+        ${t("Draw the screen as a line: a projector screen, a TV or a monitor. While it is on, its light falls into the room as shown when selected. On the card a tap switches it on or off; holding opens a remote control with arrows, OK, back, home, volume and play, sent to the remote entity.")}
       </p>
       ${this.deleteButton()}
     `;
@@ -3826,16 +3866,16 @@ class FloorCastPanel extends LitElement {
   /** How one value of a sensor is written: its unit, whether the unit shows, and its decimals. */
   private sensorValueSettings(value: SensorValue, apply: (change: (value: SensorValue) => void) => void) {
     return html`<label class="field wide">
-        <span>Unit</span>
+        <span>${t("Unit")}</span>
         <select @change=${(e: Event) => apply((v) => (v.unit = (e.target as HTMLSelectElement).value as SensorValue["unit"]))}>
-          <option value="auto" ?selected=${(value.unit ?? "auto") === "auto"}>Short (°, %, or the entity's)</option>
-          <option value="entity" ?selected=${value.unit === "entity"}>The entity's</option>
-          <option value="custom" ?selected=${value.unit === "custom"}>Custom</option>
+          <option value="auto" ?selected=${(value.unit ?? "auto") === "auto"}>${t("Short (°, %, or the entity's)")}</option>
+          <option value="entity" ?selected=${value.unit === "entity"}>${t("The entity's")}</option>
+          <option value="custom" ?selected=${value.unit === "custom"}>${t("Custom")}</option>
         </select>
       </label>
-      ${value.unit === "custom" ? this.text("Unit text", value.unitText ?? "", (v) => apply((s) => (s.unitText = v))) : nothing}
+      ${value.unit === "custom" ? this.text(t("Unit text"), value.unitText ?? "", (v) => apply((s) => (s.unitText = v))) : nothing}
       <label class="field wide">
-        <span>Decimals</span>
+        <span>${t("Decimals")}</span>
         <select
           @change=${(e: Event) => {
             const chosen = (e.target as HTMLSelectElement).value;
@@ -3843,13 +3883,13 @@ class FloorCastPanel extends LitElement {
           }}
         >
           ${["auto", "0", "1", "2", "3"].map(
-            (d) => html`<option value=${d} ?selected=${(value.decimals === undefined ? "auto" : String(value.decimals)) === d}>${d === "auto" ? "Auto" : d}</option>`,
+            (d) => html`<option value=${d} ?selected=${(value.decimals === undefined ? "auto" : String(value.decimals)) === d}>${d === "auto" ? t("Auto") : d}</option>`,
           )}
         </select>
       </label>
       <label class="check"
         ><input type="checkbox" .checked=${value.showUnit !== false} @change=${(e: Event) => apply((v) => (v.showUnit = (e.target as HTMLInputElement).checked))} />
-        Show the unit</label
+        ${t("Show the unit")}</label
       >`;
   }
 
@@ -3877,11 +3917,11 @@ class FloorCastPanel extends LitElement {
     const secondary = device.secondary ?? [];
     const room = roomAt(this.level, device.at);
     return html`
-      <h3>Sensor</h3>
+      <h3>${t("Sensor")}</h3>
       ${this.sensorTypeSelect(device)}
-      ${this.text("Header", device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
-      <h4>Main value</h4>
-      ${picker("Entity", device.entity, (id) => (device.entity = id), deviceClass)}
+      ${this.text(t("Header"), device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
+      <h4>${t("Main value")}</h4>
+      ${picker(t("Entity"), device.entity, (id) => (device.entity = id), deviceClass)}
       ${this.sensorValueSettings(device.main ?? {}, (change) =>
         this.change(() => {
           device.main = { ...device.main };
@@ -3889,23 +3929,26 @@ class FloorCastPanel extends LitElement {
         }),
       )}
       ${secondary.map(
-        (value, i) => html`<h4>Secondary value ${i + 1}</h4>
-          ${picker("Entity", value.entity, (id) => (value.entity = id))}
-          ${this.text("Label", value.label ?? "", (v) => (v.trim() ? (value.label = v.trim()) : delete value.label))}
+        (value, i) => html`<h4>${t("Secondary value {number}", { number: i + 1 })}</h4>
+          ${picker(t("Entity"), value.entity, (id) => (value.entity = id))}
+          ${this.text(t("Label"), value.label ?? "", (v) => (v.trim() ? (value.label = v.trim()) : delete value.label))}
           ${this.sensorValueSettings(value, (change) => this.change(() => change(value)))}
           <div class="row">
-            <button @click=${() => this.change(() => (device.secondary = secondary.filter((_, j) => j !== i)))}>Remove this value</button>
+            <button @click=${() => this.change(() => (device.secondary = secondary.filter((_, j) => j !== i)))}>${t("Remove this value")}</button>
           </div>`,
       )}
       ${secondary.length < MAX_SECONDARY
         ? html`<div class="row">
-            <button @click=${() => this.change(() => (device.secondary = [...secondary, { entity: null }]))}>Add a secondary value</button>
+            <button @click=${() => this.change(() => (device.secondary = [...secondary, { entity: null }]))}>${t("Add a secondary value")}</button>
           </div>`
         : nothing}
       <p class="muted">
-        The header stands above the main value, the secondary values under it in smaller type; the card shows them when it is large
-        enough. Holding the sensor on the card opens its main value.
-        ${type === "temperature" ? (room ? ` Holding ${room.name} on the card opens this temperature.` : " Outside the rooms.") : ""}
+        ${t("The header stands above the main value, the secondary values under it in smaller type; the card shows them when it is large enough. Holding the sensor on the card opens its main value.")}
+        ${type === "temperature"
+          ? room
+            ? t("Holding {room} on the card opens this temperature.", { room: room.name })
+            : t("Outside the rooms.")
+          : ""}
       </p>
       ${this.deleteButton()}
     `;
@@ -3917,9 +3960,9 @@ class FloorCastPanel extends LitElement {
     const shown = indicatorState(device, stateObj);
     const switchable = !!device.entity && SWITCHABLE_DOMAINS.includes(device.entity.split(".")[0]);
     return html`
-      <h3>Indicator</h3>
+      <h3>${t("Indicator")}</h3>
       <div class="pick">
-        <span>Entity</span>
+        <span>${t("Entity")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${INDICATOR_DOMAINS}
@@ -3929,12 +3972,12 @@ class FloorCastPanel extends LitElement {
         ></floorcast-entity-picker>
       </div>
       ${this.stateLine(device.entity)}
-      ${this.text("Name", device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
-      ${shown.power ? this.number("Running from", device.threshold ?? 5, (v) => (device.threshold = Math.max(0, v)), 1, "W") : nothing}
+      ${this.text(t("Name"), device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
+      ${shown.power ? this.number(t("Running from"), device.threshold ?? 5, (v) => (device.threshold = Math.max(0, v)), 1, "W") : nothing}
       ${switchable ? this.confirmCheck(device) : nothing}
       <p class="muted">
-        A dot with the name and state of any entity; it glows while the device runs: a state such as on, running, heating
-        or cleaning, or a power sensor above the watts set. ${switchable ? "A tap on the card switches it." : "A tap on the card opens it."}
+        ${t("A dot with the name and state of any entity; it glows while the device runs: a state such as on, running, heating or cleaning, or a power sensor above the watts set.")}
+        ${switchable ? t("A tap on the card switches it.") : t("A tap on the card opens it.")}
       </p>
       ${this.deleteButton()}
     `;
@@ -3944,10 +3987,10 @@ class FloorCastPanel extends LitElement {
   private alarmProperties(device: Device) {
     const room = roomAt(this.level, device.at);
     return html`
-      <h3>Sensor</h3>
+      <h3>${t("Sensor")}</h3>
       ${this.sensorTypeSelect(device)}
       <div class="pick">
-        <span>Entity</span>
+        <span>${t("Entity")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["binary_sensor", "alarm_control_panel"]}
@@ -3959,9 +4002,9 @@ class FloorCastPanel extends LitElement {
       </div>
       ${this.stateLine(device.entity)}
       <p class="muted">
-        A smoke, gas, carbon monoxide or water sensor, or an alarm panel. While it alarms,
-        ${room ? html`${room.name} pulses red` : "the card"} and a bar at the top of the card names it; otherwise a small grey
-        symbol shows where it is.
+        ${room
+          ? t("A smoke, gas, carbon monoxide or water sensor, or an alarm panel. While it alarms, {room} pulses red and a bar at the top of the card names it; otherwise a small grey symbol shows where it is.", { room: room.name })
+          : t("A smoke, gas, carbon monoxide or water sensor, or an alarm panel. While it alarms, a bar at the top of the card names it; otherwise a small grey symbol shows where it is.")}
       </p>
       ${this.deleteButton()}
     `;
@@ -3970,16 +4013,16 @@ class FloorCastPanel extends LitElement {
   private sensorTypeSelect(device: Device) {
     const type = device.sensorType ?? "generic";
     return html`<label class="field wide">
-      <span>Type</span>
+      <span>${t("Type")}</span>
       <select @change=${(e: Event) => this.change(() => (device.sensorType = (e.target as HTMLSelectElement).value as SensorType))}>
         ${(
           [
-            ["temperature", "Temperature"],
-            ["humidity", "Humidity"],
-            ["generic", "Other"],
-            ["alarm", "Alarm"],
+            ["temperature", N_("Temperature")],
+            ["humidity", N_("Humidity")],
+            ["generic", N_("Other")],
+            ["alarm", N_("Alarm")],
           ] as [SensorType, string][]
-        ).map(([value, label]) => html`<option value=${value} ?selected=${type === value}>${label}</option>`)}
+        ).map(([value, label]) => html`<option value=${value} ?selected=${type === value}>${t(label)}</option>`)}
       </select>
     </label>`;
   }
@@ -3987,7 +4030,7 @@ class FloorCastPanel extends LitElement {
   /** Battery sensor written beside a mower or vacuum on the card. */
   private batteryPicker(device: Device) {
     return html`<div class="pick">
-        <span>Battery</span>
+        <span>${t("Battery")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["sensor"]}
@@ -4004,9 +4047,9 @@ class FloorCastPanel extends LitElement {
     const pairs = device.pairs ?? [];
     const scale = calibrationScale(device);
     return html`
-      <h3>Vacuum</h3>
+      <h3>${t("Vacuum")}</h3>
       <div class="pick">
-        <span>Vacuum</span>
+        <span>${t("Vacuum")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["vacuum"]}
@@ -4016,7 +4059,7 @@ class FloorCastPanel extends LitElement {
         ></floorcast-entity-picker>
       </div>
       <div class="pick">
-        <span>Current room sensor</span>
+        <span>${t("Current room sensor")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["sensor"]}
@@ -4027,30 +4070,35 @@ class FloorCastPanel extends LitElement {
       </div>
       ${this.stateLine(device.entity)} ${this.stateLine(device.roomSensor)}
       ${this.batteryPicker(device)}
-      <h3>Calibration</h3>
+      <h3>${t("Calibration")}</h3>
       <p class="muted">
-        1. Place this marker on the dock and put the vacuum on it. 2. Send it somewhere easy to find, a corner of a room, and
-        mark that spot. Two spots give the turn of its map; one spot uses the rotation below.
+        ${t("1. Place this marker on the dock and put the vacuum on it. 2. Send it somewhere easy to find, a corner of a room, and mark that spot. Two spots give the turn of its map; one spot uses the rotation below.")}
       </p>
       <div class="row">
-        <button ?disabled=${!device.entity} @click=${() => this.markDock(device)}>Dock is here</button>
+        <button ?disabled=${!device.entity} @click=${() => this.markDock(device)}>${t("Dock is here")}</button>
         <button
           ?disabled=${!pairs.length}
           @click=${() => {
             this._tool = "mark";
-            this._message = "Click the spot where the vacuum stands now.";
+            this._message = t("Click the spot where the vacuum stands now.");
           }}
         >
-          Mark where it stands
+          ${t("Mark where it stands")}
         </button>
       </div>
       <p class="muted">
-        ${pairs.length === 0 ? "Not calibrated." : pairs.length === 1 ? "Dock marked." : `Two spots marked${scale ? `, distances agree to ${Math.round(scale * 100)}%` : ""}.`}
+        ${pairs.length === 0
+          ? t("Not calibrated.")
+          : pairs.length === 1
+            ? t("Dock marked.")
+            : scale
+              ? t("Two spots marked, distances agree to {percent}%.", { percent: Math.round(scale * 100) })
+              : t("Two spots marked.")}
       </p>
-      ${pairs.length < 2 ? this.number("Rotation", device.rotation ?? 0, (v) => (device.rotation = v), 1, "°") : nothing}
+      ${pairs.length < 2 ? this.number(t("Rotation"), device.rotation ?? 0, (v) => (device.rotation = v), 1, "°") : nothing}
       <label class="check"
         ><input type="checkbox" .checked=${!!device.mirror} @change=${(e: Event) => this.change(() => (device.mirror = (e.target as HTMLInputElement).checked))} />
-        Mirror the map</label
+        ${t("Mirror the map")}</label
       >
       ${this.deleteButton()}
     `;
@@ -4058,9 +4106,9 @@ class FloorCastPanel extends LitElement {
 
   private mowerProperties(device: Device) {
     return html`
-      <h3>Mower</h3>
+      <h3>${t("Mower")}</h3>
       <div class="pick">
-        <span>Mower</span>
+        <span>${t("Mower")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["lawn_mower"]}
@@ -4070,7 +4118,7 @@ class FloorCastPanel extends LitElement {
         ></floorcast-entity-picker>
       </div>
       <div class="pick">
-        <span>Map camera</span>
+        <span>${t("Map camera")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["camera"]}
@@ -4083,7 +4131,7 @@ class FloorCastPanel extends LitElement {
         ></floorcast-entity-picker>
       </div>
       <div class="pick">
-        <span>Camera</span>
+        <span>${t("Camera")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["camera"]}
@@ -4093,17 +4141,16 @@ class FloorCastPanel extends LitElement {
         ></floorcast-entity-picker>
       </div>
       ${this.stateLine(device.entity)} ${this.batteryPicker(device)}
-      ${this.number("Rotation", device.rotation ?? 0, (v) => (device.rotation = v), 0.5, "°")}
+      ${this.number(t("Rotation"), device.rotation ?? 0, (v) => (device.rotation = v), 0.5, "°")}
       <label class="check"
         ><input type="checkbox" .checked=${!!device.mirror} @change=${(e: Event) => this.change(() => (device.mirror = (e.target as HTMLInputElement).checked))} />
-        Mirror the map</label
+        ${t("Mirror the map")}</label
       >
       <div class="row">
-        <button @click=${() => this.loadMowerMap(device)}>${this._mapImages.has(device.id) ? "Reload map" : "Show map"}</button>
+        <button @click=${() => this.loadMowerMap(device)}>${this._mapImages.has(device.id) ? t("Reload map") : t("Show map")}</button>
       </div>
       <p class="muted">
-        Lay the map of the mower over the plan: drag it until its lawn covers the lawn here, turn it with the
-        corner handle and mirror it when it lies the wrong way round. The mower and its dock then appear where they are.
+        ${t("Lay the map of the mower over the plan: drag it until its lawn covers the lawn here, turn it with the corner handle and mirror it when it lies the wrong way round. The mower and its dock then appear where they are.")}
       </p>
       ${this.groundProperties(device)}
       ${this.deleteButton()}
@@ -4112,9 +4159,9 @@ class FloorCastPanel extends LitElement {
 
   private sprinklerProperties(device: Device) {
     return html`
-      <h3>Sprinkler</h3>
+      <h3>${t("Sprinkler")}</h3>
       <div class="pick">
-        <span>Valve</span>
+        <span>${t("Valve")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["valve", "switch"]}
@@ -4125,19 +4172,18 @@ class FloorCastPanel extends LitElement {
       </div>
       ${this.stateLine(device.entity)}
       <label class="field wide">
-        <span>Nozzle</span>
+        <span>${t("Nozzle")}</span>
         <select @change=${(e: Event) => this.change(() => (device.nozzle = (e.target as HTMLSelectElement).value as "rotor" | "spray"))}>
-          <option value="rotor" ?selected=${(device.nozzle ?? "rotor") === "rotor"}>Rotor (one sweeping stream)</option>
-          <option value="spray" ?selected=${device.nozzle === "spray"}>Spray (whole arc at once)</option>
+          <option value="rotor" ?selected=${(device.nozzle ?? "rotor") === "rotor"}>${t("Rotor (one sweeping stream)")}</option>
+          <option value="spray" ?selected=${device.nozzle === "spray"}>${t("Spray (whole arc at once)")}</option>
         </select>
       </label>
-      ${this.number("Throw", device.radius ?? DEFAULT_THROW, (v) => (device.radius = Math.max(0.5, v)), 0.5, "m")}
-      ${this.number("Start", device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 5, "°")}
-      ${this.number("Arc", device.arc ?? 360, (v) => (device.arc = Math.min(360, Math.max(5, v))), 5, "°")}
+      ${this.number(t("Throw"), device.radius ?? DEFAULT_THROW, (v) => (device.radius = Math.max(0.5, v)), 0.5, "m")}
+      ${this.number(t("Start"), device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 5, "°")}
+      ${this.number(t("Arc"), device.arc ?? 360, (v) => (device.arc = Math.min(360, Math.max(5, v))), 5, "°")}
       ${this.confirmCheck(device, true)}
       <p class="muted">
-        Start is a compass bearing: 0 north, 90 east. Drag the white handle to turn the arc and the blue one to widen it. On the
-        card a tap opens or closes the valve, holding opens its details.
+        ${t("Start is a compass bearing: 0 north, 90 east. Drag the white handle to turn the arc and the blue one to widen it. On the card a tap opens or closes the valve, holding opens its details.")}
       </p>
       ${this.deleteButton()}
     `;
@@ -4158,9 +4204,9 @@ class FloorCastPanel extends LitElement {
       ? this._plan!.levels.flatMap((level) => level.devices ?? []).filter((other) => other.entity === device.entity).length
       : 0;
     return html`
-      <h3>${device.to ? "Line light" : "Light"}</h3>
+      <h3>${device.to ? t("Line light") : t("Light")}</h3>
       <div class="pick">
-        <span>Entity</span>
+        <span>${t("Entity")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["light", "switch"]}
@@ -4170,17 +4216,17 @@ class FloorCastPanel extends LitElement {
         ></floorcast-entity-picker>
       </div>
       ${this.stateLine(device.entity)}
-      ${sharing > 1 ? html`<p class="muted">${sharing} light points use this entity and switch together.</p>` : nothing}
-      ${device.to ? html`<p class="muted">Length ${dist(device.at, device.to).toFixed(2)} m</p>` : nothing}
-      ${this.number(device.to ? "Glow width" : "Glow", device.radius ?? DEFAULT_GLOW, (v) => (device.radius = Math.max(0.2, v)), 0.25, "m")}
+      ${sharing > 1 ? html`<p class="muted">${t("{count} light points use this entity and switch together.", { count: sharing })}</p>` : nothing}
+      ${device.to ? html`<p class="muted">${t("Length {length} m", { length: dist(device.at, device.to).toFixed(2) })}</p>` : nothing}
+      ${this.number(device.to ? t("Glow width") : t("Glow"), device.radius ?? DEFAULT_GLOW, (v) => (device.radius = Math.max(0.2, v)), 0.25, "m")}
       ${this.confirmCheck(device)}
       <p class="muted">
         ${!room
-          ? "Outside any room."
+          ? t("Outside any room.")
           : device.confirm
-            ? html`In ${room.name}: tapping the room leaves this light out.`
-            : html`In ${room.name}: tapping the room switches this light with the others in it.`}
-        The glow stops at walls and reaches rooms open to this one.
+            ? t("In {room}: tapping the room leaves this light out.", { room: room.name })
+            : t("In {room}: tapping the room switches this light with the others in it.", { room: room.name })}
+        ${t("The glow stops at walls and reaches rooms open to this one.")}
       </p>
       ${this.deleteButton()}
     `;
@@ -4199,7 +4245,7 @@ class FloorCastPanel extends LitElement {
               target.confirm = checked === askByDefault ? undefined : checked;
             })}
         />
-        Ask before switching</label
+        ${t("Ask before switching")}</label
       >`;
   }
 
@@ -4338,8 +4384,8 @@ class FloorCastPanel extends LitElement {
       queueMicrotask(() => this.loadRegistry());
       return nothing;
     }
-    if (registry === "loading") return html`<p class="muted">Reading the areas of Home Assistant…</p>`;
-    if (registry === "failed") return html`<p class="muted">The areas of Home Assistant could not be read.</p>`;
+    if (registry === "loading") return html`<p class="muted">${t("Reading the areas of Home Assistant…")}</p>`;
+    if (registry === "failed") return html`<p class="muted">${t("The areas of Home Assistant could not be read.")}</p>`;
     const normal = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     const match = room.area === undefined ? registry.areas.find((area) => normal(area.name) === normal(room.name)) : undefined;
     const own = registry.floors.find((floor) => floor.id === this.level.floor)?.name;
@@ -4351,9 +4397,9 @@ class FloorCastPanel extends LitElement {
     );
     return html`
       <label class="field wide">
-        <span>Area</span>
+        <span>${t("Area")}</span>
         <select @change=${(e: Event) => this.change(() => (room.area = (e.target as HTMLSelectElement).value || null))}>
-          <option value="" ?selected=${!room.area}>None</option>
+          <option value="" ?selected=${!room.area}>${t("None")}</option>
           ${floors.map((floor) => {
             const options = registry.areas
               .filter((area) => area.floor === floor)
@@ -4364,7 +4410,7 @@ class FloorCastPanel extends LitElement {
       </label>
       ${match
         ? html`<div class="row">
-            <button @click=${() => this.change(() => (room.area = match.id))}>Use the area ${match.name}</button>
+            <button @click=${() => this.change(() => (room.area = match.id))}>${t("Use the area {name}", { name: match.name })}</button>
           </div>`
         : nothing}
       ${room.area
@@ -4374,7 +4420,7 @@ class FloorCastPanel extends LitElement {
                     const name = this.hass.states[row.entity]?.attributes.friendly_name ?? row.entity;
                     const openings = ON_OPENING.includes(row.kind) ? this.freeOpenings(room, row.entity, row.kind) : [];
                     const action = row.used
-                      ? html`<span class="muted">placed</span>`
+                      ? html`<span class="muted">${t("placed")}</span>`
                       : ON_OPENING.includes(row.kind)
                         ? openings.length
                           ? html`<select
@@ -4383,24 +4429,31 @@ class FloorCastPanel extends LitElement {
                                 if (opening) this.change(() => this.placeEntity(room, row.entity, row.kind, registry, undefined, opening));
                               }}
                             >
-                              <option value="">Put on…</option>
+                              <option value="">${t("Put on…")}</option>
                               ${openings.map((o, i) => html`<option value=${i}>${openingName(this.level, room, o)}</option>`)}
                             </select>`
-                          : html`<span class="muted">no free ${row.kind === "blind" ? "window" : row.kind === "gate" ? "gate" : row.kind === "lock" ? "door" : "door or window"}</span>`
-                        : html`<button @click=${() => this.change(() => this.placeEntity(room, row.entity, row.kind, registry))}>Place</button>`;
+                          : html`<span class="muted"
+                              >${row.kind === "blind"
+                                ? t("no free window")
+                                : row.kind === "gate"
+                                  ? t("no free gate")
+                                  : row.kind === "lock"
+                                    ? t("no free door")
+                                    : t("no free door or window")}</span
+                            >`
+                        : html`<button @click=${() => this.change(() => this.placeEntity(room, row.entity, row.kind, registry))}>${t("Place")}</button>`;
                     return html`<div class="area-row">
                       <span class="area-name" title=${row.entity}>${name}</span>
-                      <span class="muted">${AREA_KIND_NAMES[row.kind]}</span>
+                      <span class="muted">${t(AREA_KIND_NAMES[row.kind])}</span>
                       ${action}
                     </div>`;
                   })}
                 </div>`
-              : html`<p class="muted">The area has no lights, sensors, blinds or cameras the plan can show.</p>`}
+              : html`<p class="muted">${t("The area has no lights, sensors, blinds or cameras the plan can show.")}</p>`}
             ${free.length
-              ? html`<div class="row"><button @click=${() => this.placeAll(room, registry)}>Place all (${free.length})</button></div>
+              ? html`<div class="row"><button @click=${() => this.placeAll(room, registry)}>${t("Place all ({count})", { count: free.length })}</button></div>
                   <p class="muted">
-                    Place all puts lights across the middle of the room, sensors above them and alarms and cameras below; drag them
-                    where they are. A blind or contact goes on its own only where one door or window fits.
+                    ${t("Place all puts lights across the middle of the room, sensors above them and alarms and cameras below; drag them where they are. A blind or contact goes on its own only where one door or window fits.")}
                   </p>`
               : nothing}`
         : nothing}
@@ -4413,32 +4466,33 @@ class FloorCastPanel extends LitElement {
     const thermometers = roomThermometers(this.level, room);
     const sensors = room.occupancy ?? [];
     return html`
-      <h3>Room</h3>
-      ${this.text("Name", room.name, (v) => (room.name = v))}
+      <h3>${t("Room")}</h3>
+      ${this.text(t("Name"), room.name, (v) => (room.name = v))}
       ${this.areaSection(room)}
       <label class="check"
         ><input type="checkbox" .checked=${!!room.hideName} @change=${(e: Event) => this.change(() => (room.hideName = (e.target as HTMLInputElement).checked))} />
-        Hide the name on the card</label
+        ${t("Hide the name on the card")}</label
       >
       <label class="check"
         ><input type="checkbox" .checked=${!!room.stairs} @change=${(e: Event) => this.change(() => (room.stairs = (e.target as HTMLInputElement).checked))} />
-        Stairs</label
+        ${t("Stairs")}</label
       >
       <label class="check"
         ><input type="checkbox" .checked=${!!room.outdoor} @change=${(e: Event) => this.change(() => (room.outdoor = (e.target as HTMLInputElement).checked))} />
-        Outdoor zone (no floor)</label
+        ${t("Outdoor zone (no floor)")}</label
       >
       <label class="check"
         ><input type="checkbox" .checked=${!!room.garden} @change=${(e: Event) => this.change(() => (room.garden = (e.target as HTMLInputElement).checked))} />
-        Part of the garden (hidden with it)</label
+        ${t("Part of the garden (hidden with it)")}</label
       >
       <p class="muted">
-        Lights: ${lights.length ? lights.join(", ") : "none"}. Thermometers:
-        ${thermometers.length ? thermometers.map((t) => t.entity).join(", ") : "none"}. Place both in Devices; the room
-        takes what stands in it. People are counted by the radars and cameras that see the room.
+        ${t("Lights: {lights}. Thermometers: {thermometers}. Place both in Devices; the room takes what stands in it. People are counted by the radars and cameras that see the room.", {
+          lights: lights.length ? lights.join(", ") : t("none"),
+          thermometers: thermometers.length ? thermometers.map((thermometer) => thermometer.entity).join(", ") : t("none"),
+        })}
       </p>
       <div class="pick">
-        <span>Thermostat</span>
+        <span>${t("Thermostat")}</span>
         <floorcast-entity-picker
           .hass=${this.hass}
           .domains=${["climate"]}
@@ -4450,14 +4504,13 @@ class FloorCastPanel extends LitElement {
       ${this.stateLine(room.climate)}
       ${room.climate
         ? html`<p class="muted">
-            The card shows its target temperature under the room name, and its temperature when no sensor in the room shows one.
-            The room glows orange while it heats and blue while it cools; holding the room opens the thermostat.
+            ${t("The card shows its target temperature under the room name, and its temperature when no sensor in the room shows one. The room glows orange while it heats and blue while it cools; holding the room opens the thermostat.")}
           </p>`
         : nothing}
-      <h4>Presence sensors</h4>
+      <h4>${t("Presence sensors")}</h4>
       ${sensors.map(
         (entity, i) => html`<div class="pick">
-            <span>Sensor ${i + 1}</span>
+            <span>${t("Sensor {number}", { number: i + 1 })}</span>
             <floorcast-entity-picker
               .hass=${this.hass}
               .domains=${["binary_sensor"]}
@@ -4475,14 +4528,13 @@ class FloorCastPanel extends LitElement {
           ${this.stateLine(entity)}`,
       )}
       <div class="row">
-        <button @click=${() => this.change(() => (room.occupancy = [...sensors, ""]))}>Add a presence sensor</button>
+        <button @click=${() => this.change(() => (room.occupancy = [...sensors, ""]))}>${t("Add a presence sensor")}</button>
       </div>
       <p class="muted">
-        A motion, occupancy or presence sensor keeps the room occupied while it is on: the room's occupancy entity and the card
-        follow it. It does not count people.
+        ${t("A motion, occupancy or presence sensor keeps the room occupied while it is on: the room's occupancy entity and the card follow it. It does not count people.")}
       </p>
       ${this.hasRadar || sensors.length
-        ? this.number("Occupancy hold", room.hold ?? DEFAULT_ROOM_HOLD, (v) => (room.hold = Math.max(0, v)), 5, "s")
+        ? this.number(t("Occupancy hold"), room.hold ?? DEFAULT_ROOM_HOLD, (v) => (room.hold = Math.max(0, v)), 5, "s")
         : nothing}
       ${this.deleteButton()}
     `;
@@ -4506,27 +4558,26 @@ class FloorCastPanel extends LitElement {
           : { ...this._plan!.tracking, camera: { ...this._plan!.tracking?.camera, [key]: v } });
     // Label, key, radar default, camera default, step, unit, limits.
     const rows: [string, Key, number, number, number, string, number, number][] = [
-      ["Snap into rooms within", "snap_distance", 1, 1, 0.1, "m", 0, 3],
-      ["Merge closer than", "merge_distance", 0.8, 0.8, 0.1, "m", 0.1, 3],
-      ["Smoothing (1 = none)", "smoothing", 0.5, 0.6, 0.1, "", 0.1, 1],
-      ["Count a new person after", "confirm_delay", 1, 0.5, 0.5, "s", 0, 30],
-      ["Longest step", "jump_base", 1.5, 1.5, 0.1, "m", 0.5, 10],
-      ["Walking speed", "jump_speed", 2.5, 2.5, 0.1, "m/s", 0.5, 10],
-      ["Keep a missed person", "lost_hold", 5, 10, 1, "s", 0, 120],
-      ["Resting place hold", "stationary_hold", DEFAULT_STATIONARY_HOLD, DEFAULT_STATIONARY_HOLD, 30, "s", 0, 3600],
-      ["Remember a lost person", "sleep_hours", 12, 12, 1, "h", 0, 48],
+      [N_("Snap into rooms within"), "snap_distance", 1, 1, 0.1, "m", 0, 3],
+      [N_("Merge closer than"), "merge_distance", 0.8, 0.8, 0.1, "m", 0.1, 3],
+      [N_("Smoothing (1 = none)"), "smoothing", 0.5, 0.6, 0.1, "", 0.1, 1],
+      [N_("Count a new person after"), "confirm_delay", 1, 0.5, 0.5, "s", 0, 30],
+      [N_("Longest step"), "jump_base", 1.5, 1.5, 0.1, "m", 0.5, 10],
+      [N_("Walking speed"), "jump_speed", 2.5, 2.5, 0.1, "m/s", 0.5, 10],
+      [N_("Keep a missed person"), "lost_hold", 5, 10, 1, "s", 0, 120],
+      [N_("Resting place hold"), "stationary_hold", DEFAULT_STATIONARY_HOLD, DEFAULT_STATIONARY_HOLD, 30, "s", 0, 3600],
+      [N_("Remember a lost person"), "sleep_hours", 12, 12, 1, "h", 0, 48],
     ];
     // Folded: set once, then rarely touched; the lists of radars, cameras and zones stay in view.
     return html`<details class="settings">
-      <summary>${kind === "radar" ? "Radar tracking settings" : "Camera tracking settings"}</summary>
+      <summary>${kind === "radar" ? t("Radar tracking settings") : t("Camera tracking settings")}</summary>
       ${rows.map(([label, key, radarDefault, cameraDefault, step, unit, min, max]) =>
-        this.number(label, values[key] ?? (kind === "radar" ? radarDefault : cameraDefault), (v) => set(key, Math.min(max, Math.max(min, v))), step, unit),
+        this.number(t(label), values[key] ?? (kind === "radar" ? radarDefault : cameraDefault), (v) => set(key, Math.min(max, Math.max(min, v))), step, unit),
       )}
       <p class="muted">
-        A detection just outside the rooms its ${kind} sees is moved inside, up to the snap distance;
-        ${kind === "radar" ? "a radar target farther out is dropped." : "a camera keeps people farther out, in the garden."} A missed
-        person stays where they were for a while; seen again within walking distance, it is the same person.
-        ${kind === "camera" ? "A camera person next to a radar person counts once." : ""}
+        ${kind === "radar"
+          ? t("A detection just outside the rooms its radar sees is moved inside, up to the snap distance; a radar target farther out is dropped. A missed person stays where they were for a while; seen again within walking distance, it is the same person.")
+          : t("A detection just outside the rooms its camera sees is moved inside, up to the snap distance; a camera keeps people farther out, in the garden. A missed person stays where they were for a while; seen again within walking distance, it is the same person. A camera person next to a radar person counts once.")}
       </p>
     </details>`;
   }
@@ -4535,20 +4586,20 @@ class FloorCastPanel extends LitElement {
     if (!zone) return nothing;
     const defaultHold = zone.kind === "stationary" ? (this._plan!.tracking?.stationary_hold ?? DEFAULT_STATIONARY_HOLD) : DEFAULT_ROOM_HOLD;
     return html`
-      <h3>Zone</h3>
-      ${this.text("Name", zone.name, (v) => (zone.name = v))}
+      <h3>${t("Zone")}</h3>
+      ${this.text(t("Name"), zone.name, (v) => (zone.name = v))}
       <label class="field wide">
-        <span>Use</span>
+        <span>${t("Use")}</span>
         <select @change=${(e: Event) => this.change(() => (zone.kind = (e.target as HTMLSelectElement).value as Zone["kind"]))}>
           ${(Object.keys(ZONE_LABELS) as Zone["kind"][]).map(
-            (kind) => html`<option value=${kind} ?selected=${kind === zone.kind}>${ZONE_LABELS[kind]}</option>`,
+            (kind) => html`<option value=${kind} ?selected=${kind === zone.kind}>${t(ZONE_LABELS[kind])}</option>`,
           )}
         </select>
       </label>
       ${zone.kind === "count" || zone.kind === "stationary"
-        ? this.number(zone.kind === "count" ? "Occupancy hold" : "Keeps a still person", zone.hold ?? defaultHold, (v) => (zone.hold = Math.max(0, v)), 5, "s")
+        ? this.number(zone.kind === "count" ? t("Occupancy hold") : t("Keeps a still person"), zone.hold ?? defaultHold, (v) => (zone.hold = Math.max(0, v)), 5, "s")
         : nothing}
-      <p class="muted">${ZONE_HINTS[zone.kind]}</p>
+      <p class="muted">${t(ZONE_HINTS[zone.kind])}</p>
       ${this.deleteButton()}
     `;
   }
@@ -4556,20 +4607,20 @@ class FloorCastPanel extends LitElement {
   private itemProperties(item?: Item) {
     if (!item) return nothing;
     return html`
-      <h3>Object</h3>
+      <h3>${t("Object")}</h3>
       <label class="field wide">
-        <span>Type</span>
+        <span>${t("Type")}</span>
         <select @change=${(e: Event) => this.change(() => this.retype(item, (e.target as HTMLSelectElement).value as ItemType))}>
           ${(Object.keys(ITEM_LABELS) as ItemType[]).map(
-            (type) => html`<option value=${type} ?selected=${type === item.type}>${ITEM_LABELS[type]}</option>`,
+            (type) => html`<option value=${type} ?selected=${type === item.type}>${t(ITEM_LABELS[type])}</option>`,
           )}
         </select>
       </label>
-      ${this.text("Name", item.name ?? "", (v) => (item.name = v || undefined))}
+      ${this.text(t("Name"), item.name ?? "", (v) => (item.name = v || undefined))}
       ${item.center
         ? nothing
         : html`<label class="field wide">
-            <span>Corners</span>
+            <span>${t("Corners")}</span>
             <select
               @change=${(e: Event) =>
                 this.change(() => {
@@ -4578,26 +4629,26 @@ class FloorCastPanel extends LitElement {
                   else delete item.corners;
                 })}
             >
-              <option value="" ?selected=${!item.corners}>As the plan</option>
-              <option value="round" ?selected=${item.corners === "round"}>Rounded</option>
-              <option value="square" ?selected=${item.corners === "square"}>Square</option>
+              <option value="" ?selected=${!item.corners}>${t("As the plan")}</option>
+              <option value="round" ?selected=${item.corners === "round"}>${t("Rounded")}</option>
+              <option value="square" ?selected=${item.corners === "square"}>${t("Square")}</option>
             </select>
           </label>`}
       ${item.rect
         ? html`${this.number("X", item.rect[0], (v) => (item.rect![0] = v))} ${this.number("Y", item.rect[1], (v) => (item.rect![1] = v))}
-          ${this.number("Width", item.rect[2], (v) => (item.rect![2] = Math.max(0.1, v)))}
-          ${this.number("Length", item.rect[3], (v) => (item.rect![3] = Math.max(0.1, v)))}
-          ${this.number("Rotation", item.rotation ?? 0, (v) => (item.rotation = v), 5, "°")}`
+          ${this.number(t("Width"), item.rect[2], (v) => (item.rect![2] = Math.max(0.1, v)))}
+          ${this.number(t("Length"), item.rect[3], (v) => (item.rect![3] = Math.max(0.1, v)))}
+          ${this.number(t("Rotation"), item.rotation ?? 0, (v) => (item.rotation = v), 5, "°")}`
         : nothing}
       ${item.center
         ? html`${this.number("X", item.center[0], (v) => (item.center![0] = v))} ${this.number("Y", item.center[1], (v) => (item.center![1] = v))}
-          ${this.number("Diameter", item.diameter ?? 1, (v) => (item.diameter = Math.max(0.1, v)))}`
+          ${this.number(t("Diameter"), item.diameter ?? 1, (v) => (item.diameter = Math.max(0.1, v)))}`
         : nothing}
-      ${item.points ? html`<p class="muted">Drag corners; drag the middle of an edge to add a corner.</p>` : nothing}
+      ${item.points ? html`<p class="muted">${t("Drag corners; drag the middle of an edge to add a corner.")}</p>` : nothing}
       <div class="row">
         ${item.points
           ? html`<button
-              title="Turns the shape back into a rectangle around it"
+              title=${t("Turns the shape back into a rectangle around it")}
               @click=${() =>
                 this.change(() => {
                   const box = levelBoundsOf(item);
@@ -4606,12 +4657,12 @@ class FloorCastPanel extends LitElement {
                   delete item.points;
                 })}
             >
-              Rectangle
+              ${t("Rectangle")}
             </button>`
           : nothing}
         ${item.rect
           ? html`<button
-              title="Turns the rectangle into a shape with free corners"
+              title=${t("Turns the rectangle into a shape with free corners")}
               @click=${() =>
                 this.change(() => {
                   item.points = rectCorners(item).map((p) => [fix(p[0]), fix(p[1])] as Point);
@@ -4619,7 +4670,7 @@ class FloorCastPanel extends LitElement {
                   delete item.rotation;
                 })}
             >
-              Free shape
+              ${t("Free shape")}
             </button>`
           : nothing}
         ${this.deleteButton()}
@@ -5571,32 +5622,32 @@ class FloorCastPanel extends LitElement {
 }
 
 const ZONE_HINTS: Record<Zone["kind"], string> = {
-  count: "Gets its own people count and occupancy sensors, like a room the radar sees.",
-  entrance: "A person who appears here counts at once instead of after the confirm delay. Draw it at doors.",
-  exclude: "Targets born here never count, and nobody is reported inside it.",
-  stationary: "A person the radar loses here stays counted for the hold time, as someone lying still is often not seen.",
+  count: N_("Gets its own people count and occupancy sensors, like a room the radar sees."),
+  entrance: N_("A person who appears here counts at once instead of after the confirm delay. Draw it at doors."),
+  exclude: N_("Targets born here never count, and nobody is reported inside it."),
+  stationary: N_("A person the radar loses here stays counted for the hold time, as someone lying still is often not seen."),
 };
 
 const HINTS: Record<Tool, string> = {
-  select: "Click to select, click again for what lies below. Drag the selected thing to move it, drag elsewhere to move the plan.",
-  wall: "Click to start a wall and click again for each corner. Double click or Esc ends.",
-  door: "Click on a wall to place a door.",
-  window: "Click on a wall to place a window.",
-  gate: "Click on a wall to place a garage door or a driveway gate, then choose its cover.",
-  room: "Drag for a rectangular room, or click its corners one by one and close it on the first corner or with Enter.",
-  zone: "Drag or click corners like a room; then choose what the zone does for the radars.",
-  calibrate: "Click the same spot on the plan.",
-  screen: "Drag along the screen, then choose its power entity and its remote.",
-  sensor: "Click where the sensor is, then choose its type and what it shows, such as a temperature or the level of the septic tank.",
-  item: "Choose the kind of object, then drag to draw it.",
-  indicator: "Click where the device is: a washer, a pump, a heater, a socket. It glows while it runs.",
-  light: "Click where a light is, or choose Line and drag along a light strip; then choose its entity.",
-  sprinkler: "Click where a sprinkler head is, then choose its valve, throw and arc.",
-  mower: "Click on the lawn; the map of the mower appears there to be laid over the plan.",
-  vacuum: "Click where the dock of the vacuum stands.",
-  mark: "Click the spot where the vacuum stands now.",
-  camera: "Click where the camera hangs, then aim it with the handle at the end of its view.",
-  radar: "Click where the radar hangs, then aim it with the handle and check the dots follow people.",
+  select: N_("Click to select, click again for what lies below. Drag the selected thing to move it, drag elsewhere to move the plan."),
+  wall: N_("Click to start a wall and click again for each corner. Double click or Esc ends."),
+  door: N_("Click on a wall to place a door."),
+  window: N_("Click on a wall to place a window."),
+  gate: N_("Click on a wall to place a garage door or a driveway gate, then choose its cover."),
+  room: N_("Drag for a rectangular room, or click its corners one by one and close it on the first corner or with Enter."),
+  zone: N_("Drag or click corners like a room; then choose what the zone does for the radars."),
+  calibrate: N_("Click the same spot on the plan."),
+  screen: N_("Drag along the screen, then choose its power entity and its remote."),
+  sensor: N_("Click where the sensor is, then choose its type and what it shows, such as a temperature or the level of the septic tank."),
+  item: N_("Choose the kind of object, then drag to draw it."),
+  indicator: N_("Click where the device is: a washer, a pump, a heater, a socket. It glows while it runs."),
+  light: N_("Click where a light is, or choose Line and drag along a light strip; then choose its entity."),
+  sprinkler: N_("Click where a sprinkler head is, then choose its valve, throw and arc."),
+  mower: N_("Click on the lawn; the map of the mower appears there to be laid over the plan."),
+  vacuum: N_("Click where the dock of the vacuum stands."),
+  mark: N_("Click the spot where the vacuum stands now."),
+  camera: N_("Click where the camera hangs, then aim it with the handle at the end of its view."),
+  radar: N_("Click where the radar hangs, then aim it with the handle and check the dots follow people."),
 };
 
 /** Entity id part as Home Assistant makes it from plain ids: lower case, other characters as underscores. */

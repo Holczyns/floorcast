@@ -2,16 +2,24 @@
 
 import { LitElement, css, html, type TemplateResult } from "lit";
 import { defineElement } from "./define";
+import { currentLanguage } from "./i18n";
+import * as pl from "./i18n/pl/guide";
 
-interface Section {
+export interface GuideSection {
   icon: string;
   title: string;
   body: TemplateResult;
 }
 
+/** A guide written whole in one language: its sections and the words between FloorCast and the author in the footer. */
+interface Guide {
+  sections: GuideSection[];
+  footerBy: string;
+}
+
 const steps = (items: string[]) => html`<div class="steps">${items.map((item) => html`<span class="chip">${item}</span>`)}</div>`;
 
-const SECTIONS: Section[] = [
+const SECTIONS: GuideSection[] = [
   {
     icon: "mdi:information-outline",
     title: "What FloorCast does",
@@ -87,6 +95,13 @@ const SECTIONS: Section[] = [
         <li>Joined wall ends move together; hold <b>Shift</b> while dragging an end to detach it.</li>
         <li>On a touch screen two fingers zoom and move the plan.</li>
         <li>
+          An empty plan starts with a choice: the <b>example house</b> to look around in, a plan file, or drawing from
+          scratch. <b>Delete everything</b> in ⚙ Settings empties the plan again after you type the word it asks for.
+        </li>
+        <li>
+          <b>Language</b> in ⚙ Settings: as each user in Home Assistant, or one language for the editor and every card.
+        </li>
+        <li>
           <b>Appearance</b> in ⚙ Settings makes the plan dark, light or as Home Assistant, and changes any of its colours,
           separately for dark and light; ↺ brings a colour back.
         </li>
@@ -128,6 +143,18 @@ const SECTIONS: Section[] = [
           <i>Part of the garden</i>, hidden with the garden on the card.
         </li>
         <li>A room takes the lights and the temperature sensors standing in it. A tap on the room switches its lights.</li>
+        <li>
+          <b>Gate</b> (key G) is a garage door or a driveway gate on a wall, with its cover entity. It is drawn closed across
+          the opening for as much as the cover closes it; a tap on the card opens, closes or stops it after a question.
+        </li>
+        <li>
+          A door can have a <b>Lock</b>: a padlock beside it, grey and closed while locked, orange and open while unlocked,
+          red when jammed. A tap locks or unlocks it after a question.
+        </li>
+        <li>
+          A room can have a <b>Thermostat</b> (a climate entity): its target shows under the room name, its temperature too
+          when no sensor in the room shows one, and the room glows orange while it heats and blue while it cools.
+        </li>
       </ul>
     `,
   },
@@ -221,6 +248,18 @@ const SECTIONS: Section[] = [
         while all is well. While it alarms its room pulses red and a bar at the top of the card names the room and the alarm;
         a tap on the bar opens the sensor.
       </p>
+    `,
+  },
+  {
+    icon: "mdi:circle-slice-8",
+    title: "Indicators",
+    body: html`
+      <p>
+        An <b>Indicator</b> (key I) shows any entity as a dot with its name and state: a washer, a pump, a heater, a socket,
+        a player. The dot glows while the device runs: a state such as on, running, heating or cleaning, or a power sensor
+        above <i>Running from</i> (5 W by default).
+      </p>
+      <p>A tap on the card switches a switch, an input boolean or a fan, after a question when asked; any other one opens.</p>
     `,
   },
   {
@@ -326,6 +365,11 @@ filters:
           zones. A camera person next to a radar person counts once. Cars and animals are drawn on the plan too.
         </li>
         <li>A camera that sees someone opens its still by itself on the card (option <code>auto_preview</code>).</li>
+        <li>
+          <b>Detection sensor</b>: any binary sensor that is on while the camera sees someone, a person sensor of Frigate,
+          UniFi Protect or Reolink or a motion sensor. The editor offers one of the camera's own device. While it is on, the
+          view of the camera turns red and its still opens, also without Frigate.
+        </li>
         <li>
           <i>Preview</i> chooses what opens: the <i>Window</i> with the still, the <i>Ground</i> view, or both.
         </li>
@@ -568,17 +612,25 @@ data:
   },
 ];
 
+// Guides by language code; a new language adds its file under i18n/<code>/guide.ts and one line here.
+const GUIDES: Record<string, Guide> = {
+  pl: { sections: pl.sections, footerBy: pl.footerBy },
+};
+
+const ENGLISH: Guide = { sections: SECTIONS, footerBy: "by" };
+
 class FloorCastGuide extends LitElement {
   render() {
+    const guide = GUIDES[currentLanguage()] ?? ENGLISH;
     return html`<div class="guide">
-      ${SECTIONS.map(
+      ${guide.sections.map(
         (section, index) => html`<details class="card" ?open=${index === 0}>
           <summary><ha-icon icon=${section.icon}></ha-icon><span>${section.title}</span></summary>
           <div class="body">${section.body}</div>
         </details>`,
       )}
       <footer>
-        <a href="https://github.com/Holczyns/floorcast" target="_blank" rel="noreferrer">FloorCast</a> by Michal Holowko ·
+        <a href="https://github.com/Holczyns/floorcast" target="_blank" rel="noreferrer">FloorCast</a> ${guide.footerBy} Michal Holowko ·
         <a href="https://github.com/Holczyns/floorcast/blob/main/LICENSE" target="_blank" rel="noreferrer">GPL-3.0</a>
       </footer>
     </div>`;
