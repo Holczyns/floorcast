@@ -269,7 +269,10 @@ class FloorCastCard extends LitElement {
   protected willUpdate(changed: PropertyValues): void {
     // The language before drawing: the plan's choice, else the user's language in Home Assistant.
     if (changed.has("hass") || changed.has("_plan"))
-      useDictionary(CARD_LANGUAGES[pickLanguage(this._plan?.language, this.hass?.language, Object.keys(CARD_LANGUAGES))]);
+    {
+      const code = pickLanguage(this._plan?.language, this.hass?.language, Object.keys(CARD_LANGUAGES));
+      useDictionary(CARD_LANGUAGES[code], code);
+    }
   }
 
   protected updated(changed: PropertyValues): void {

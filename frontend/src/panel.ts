@@ -470,7 +470,8 @@ class FloorCastPanel extends LitElement {
 
   protected willUpdate(): void {
     // The language before drawing: the plan's choice, else the user's language in Home Assistant.
-    useDictionary(EDITOR_LANGUAGES[pickLanguage(this._plan?.language, this.hass?.language, Object.keys(EDITOR_LANGUAGES))]);
+    const code = pickLanguage(this._plan?.language, this.hass?.language, Object.keys(EDITOR_LANGUAGES));
+    useDictionary(EDITOR_LANGUAGES[code], code);
   }
 
   protected updated(changed: PropertyValues): void {

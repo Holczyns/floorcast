@@ -4,9 +4,21 @@
 export type Dictionary = Record<string, string>;
 
 let current: Dictionary = {};
+let language = "en";
 
-export function useDictionary(dictionary: Dictionary): void {
+export function useDictionary(dictionary: Dictionary, code = "en"): void {
   current = dictionary;
+  language = code;
+}
+
+/** Code of the language in use, for content written whole in each language, such as the guide. */
+export function currentLanguage(): string {
+  return language;
+}
+
+/** Marks an English text kept in a constant as one to translate; t() translates it where it is shown. */
+export function N_(text: string): string {
+  return text;
 }
 
 /** The text in the language in use, with {name} replaced by the given values. */
