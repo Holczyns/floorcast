@@ -1372,7 +1372,7 @@ data:
       ${this._live?bn(this.shown,this.hass.states,i*10):m}
       ${this._hidden.has("names")?m:this.shown.rooms.map(n=>{let[s,l]=P(n.points);return n.stairs?m:w`<text class="fc-label" x=${s} y=${l}>${n.name}</text>`})}
       ${this._mode==="radar"||this._mode==="cameras"?(this.shown.devices??[]).filter(n=>this._mode==="radar"?n.kind==="radar":n.kind==="camera").map(n=>w`<path class="radar-range ${n.kind}" d=${n.kind==="radar"?yt(n):$t(n)}></path>`):m}
-      ${(["radar","cameras","zones"].includes(this._mode)&&!(this._hidden.has("zones")&&this._mode!=="zones")?this.shown.zones??[]:[]).map(n=>{let s=n.points.map((c,d)=>`${d?"L":"M"}${c[0]} ${c[1]}`).join("")+"Z",[l,a]=P(n.points);return w`<g data-zone=${n.id} class="zone ${n.kind}">
+      ${(this._mode==="zones"||!this._hidden.has("zones")?this.shown.zones??[]:[]).map(n=>{let s=n.points.map((c,d)=>`${d?"L":"M"}${c[0]} ${c[1]}`).join("")+"Z",[l,a]=P(n.points);return w`<g data-zone=${n.id} class="zone ${n.kind}">
           <path class="area" d=${s}></path>
           <path class="edge" stroke-width=${i*10} d=${s}></path>
           <text class="zone-label" x=${l} y=${a} font-size=${i*11}>${n.name}</text>
@@ -2509,9 +2509,8 @@ data:
       .mode-building [data-item] {
         opacity: 0.55;
       }
-      /* Zones are edited in their tab; in the tabs of radars and cameras they only show. */
-      .mode-radar .zone,
-      .mode-cameras .zone {
+      /* Zones are edited in their tab; in the other tabs they show dimmed, unless the Zones layer is off. */
+      .plan:not(.mode-zones) .zone {
         opacity: 0.45;
       }
       .list-row.people em {

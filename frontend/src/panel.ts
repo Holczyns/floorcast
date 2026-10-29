@@ -2071,7 +2071,7 @@ class FloorCastPanel extends LitElement {
             .filter((d) => (this._mode === "radar" ? d.kind === "radar" : d.kind === "camera"))
             .map((d) => svg`<path class="radar-range ${d.kind}" d=${d.kind === "radar" ? radarView(d) : cameraView(d)}></path>`)
         : nothing}
-      ${(["radar", "cameras", "zones"].includes(this._mode) && !(this._hidden.has("zones") && this._mode !== "zones") ? (this.shown.zones ?? []) : []).map((zone) => {
+      ${(this._mode === "zones" || !this._hidden.has("zones") ? (this.shown.zones ?? []) : []).map((zone) => {
         const d = zone.points.map((q, i) => `${i ? "L" : "M"}${q[0]} ${q[1]}`).join("") + "Z";
         const [cx, cy] = centroid(zone.points);
         return svg`<g data-zone=${zone.id} class="zone ${zone.kind}">
@@ -4364,9 +4364,8 @@ class FloorCastPanel extends LitElement {
       .mode-building [data-item] {
         opacity: 0.55;
       }
-      /* Zones are edited in their tab; in the tabs of radars and cameras they only show. */
-      .mode-radar .zone,
-      .mode-cameras .zone {
+      /* Zones are edited in their tab; in the other tabs they show dimmed, unless the Zones layer is off. */
+      .plan:not(.mode-zones) .zone {
         opacity: 0.45;
       }
       .list-row.people em {
