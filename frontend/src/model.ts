@@ -66,6 +66,8 @@ export interface Room {
   sensors?: string[];
   /** Name left off the card; temperature and other readings stay. */
   hideName?: boolean;
+  /** Thermostat of the room (a climate entity): its target is shown, the room glows while it heats or cools. */
+  climate?: string | null;
   /** Home Assistant area of the room: the editor offers its devices for placing. */
   area?: string | null;
   /** Motion, occupancy or presence sensors keeping the room occupied while on; they count nobody. */
@@ -831,13 +833,14 @@ export function roomAt(level: Level, p: Point): Room | undefined {
 }
 
 /** What an entity of an area becomes on the plan; undefined for entities the plan does not show. */
-export type AreaKind = "light" | "sensor" | "alarm" | "presence" | "contact" | "blind" | "gate" | "lock" | "camera";
+export type AreaKind = "light" | "sensor" | "alarm" | "presence" | "climate" | "contact" | "blind" | "gate" | "lock" | "camera";
 
 export const AREA_KIND_NAMES: Record<AreaKind, string> = {
   light: "Light",
   sensor: "Sensor",
   alarm: "Alarm",
   presence: "Presence",
+  climate: "Thermostat",
   contact: "Door or window",
   blind: "Blind",
   gate: "Gate",
@@ -849,6 +852,7 @@ export function areaKind(entityId: string, stateObj: Reading): AreaKind | undefi
   const domain = entityId.split(".")[0];
   const deviceClass = stateObj?.attributes.device_class;
   if (domain === "light") return "light";
+  if (domain === "climate") return "climate";
   if (domain === "sensor" && ["temperature", "humidity", "carbon_dioxide"].includes(deviceClass)) return "sensor";
   if (domain === "alarm_control_panel" || (domain === "binary_sensor" && deviceClass in ALARM_CLASSES)) return "alarm";
   if (domain === "binary_sensor" && ["motion", "occupancy", "presence"].includes(deviceClass)) return "presence";
@@ -872,7 +876,7 @@ export function planEntities(plan: Plan): Set<string> {
       device.secondary?.forEach((value) => add(value.entity));
     }
     for (const opening of level.openings) [opening.contact, opening.cover, opening.lock].forEach(add);
-    for (const room of level.rooms) [...(room.occupancy ?? []), ...(room.lights ?? []), room.temperature, room.humidity].forEach(add);
+    for (const room of level.rooms) [...(room.occupancy ?? []), ...(room.lights ?? []), room.temperature, room.humidity, room.climate].forEach(add);
   }
   return used;
 }
@@ -1043,7 +1047,29 @@ export function roomHeat(
       if (reading !== undefined) return reading;
     }
   }
-  return undefined;
+  // Without a sensor of its own, the room takes the temperature its thermostat measures.
+  const climate = room.climate ? states[room.climate] : undefined;
+  const current = Number(climate?.attributes.current_temperature);
+  return kind === "temperature" && climate && Number.isFinite(current) ? current : undefined;
+}
+
+/**
+ * What the thermostat of a room says: the temperature it measures, its target, and whether it heats or cools now
+ * (by hvac_action, or by its mode while the device does not report one).
+ */
+export function roomClimate(
+  room: Room,
+  states: Record<string, { state: string; attributes: Record<string, any> }>,
+): { current?: number; target?: number; action?: "heating" | "cooling" } | undefined {
+  const climate = room.climate ? states[room.climate] : undefined;
+  if (!climate || climate.state === "unavailable") return undefined;
+  const number = (v: unknown) => (Number.isFinite(Number(v)) && v !== null && v !== undefined ? Number(v) : undefined);
+  const action = climate.attributes.hvac_action;
+  return {
+    current: number(climate.attributes.current_temperature),
+    target: climate.state === "off" ? undefined : number(climate.attributes.temperature),
+    action: action === "heating" || action === "preheating" ? "heating" : action === "cooling" ? "cooling" : undefined,
+  };
 }
 
 export function polygonPath(points: Point[], radius: number | number[] = 0): string {

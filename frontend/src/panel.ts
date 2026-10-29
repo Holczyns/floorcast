@@ -249,7 +249,7 @@ interface Registry {
 const ON_OPENING: AreaKind[] = ["blind", "gate", "lock", "contact"];
 
 /** Order of the kinds in the area list of a room. */
-const AREA_KINDS: AreaKind[] = ["light", "sensor", "alarm", "presence", "blind", "gate", "lock", "contact", "camera"];
+const AREA_KINDS: AreaKind[] = ["light", "sensor", "climate", "alarm", "presence", "blind", "gate", "lock", "contact", "camera"];
 
 interface View {
   x: number;
@@ -4035,6 +4035,7 @@ class FloorCastPanel extends LitElement {
       devices.push({ id: uid("camera"), kind: "camera", entity, at: spot, heading: 180, arc: DEFAULT_FIELD_OF_VIEW, radius: DEFAULT_CAMERA_RANGE });
     if (kind === "alarm") devices.push({ id: uid("sensor"), kind: "sensor", sensorType: "alarm", entity, at: spot });
     if (kind === "presence") room.occupancy = [...(room.occupancy ?? []), entity];
+    if (kind === "climate") room.climate = entity;
     if ((kind === "blind" || kind === "gate") && opening) opening.cover = entity;
     if (kind === "lock" && opening) opening.lock = entity;
     if (kind === "contact" && opening) opening.contact = entity;
@@ -4078,6 +4079,9 @@ class FloorCastPanel extends LitElement {
       const below = rows.filter((row) => row.kind === "alarm" || row.kind === "camera");
       spotsInRoom(room, below.length, 0.75).forEach((at, i) => this.placeEntity(room, below[i].entity, below[i].kind, registry, at));
       for (const row of rows.filter((row) => row.kind === "presence")) this.placeEntity(room, row.entity, "presence", registry);
+      // One thermostat per room: the first of the area, when the room has none yet.
+      const thermostat = rows.find((row) => row.kind === "climate");
+      if (thermostat && !room.climate) this.placeEntity(room, thermostat.entity, "climate", registry);
       for (const row of rows.filter((row) => ON_OPENING.includes(row.kind))) {
         const free = this.freeOpenings(room, row.entity, row.kind);
         if (free.length === 1) this.placeEntity(room, row.entity, row.kind, registry, undefined, free[0]);
@@ -4190,6 +4194,23 @@ class FloorCastPanel extends LitElement {
         ${thermometers.length ? thermometers.map((t) => t.entity).join(", ") : "none"}. Place both in Devices; the room
         takes what stands in it. People are counted by the radars and cameras that see the room.
       </p>
+      <div class="pick">
+        <span>Thermostat</span>
+        <floorcast-entity-picker
+          .hass=${this.hass}
+          .domains=${["climate"]}
+          .value=${room.climate ?? null}
+          optional
+          @value-changed=${(e: CustomEvent) => this.change(() => (room.climate = e.detail))}
+        ></floorcast-entity-picker>
+      </div>
+      ${this.stateLine(room.climate)}
+      ${room.climate
+        ? html`<p class="muted">
+            The card shows its target temperature under the room name, and its temperature when no sensor in the room shows one.
+            The room glows orange while it heats and blue while it cools; holding the room opens the thermostat.
+          </p>`
+        : nothing}
       <h4>Presence sensors</h4>
       ${sensors.map(
         (entity, i) => html`<div class="pick">

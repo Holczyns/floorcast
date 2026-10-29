@@ -117,6 +117,16 @@
         ["bedroom", "binary_sensor.bedroom_window", "off", { device_class: "window" }],
       ];
       for (const [, id, state, attributes] of UNPLACED) set(id, state, attributes);
+      // Thermostats: the first heats towards its target, the others hold theirs.
+      let thermostat = 0;
+      for (const level of plan.levels)
+        for (const room of level.rooms)
+          if (room.climate && !states[room.climate])
+            set(room.climate, "heat", {
+              current_temperature: thermostat ? 21 : 20.6,
+              temperature: thermostat ? 21 : 22.5,
+              hvac_action: thermostat++ ? "idle" : "heating",
+            });
       // Locks of doors: locked; gates: closed.
       for (const level of plan.levels)
         for (const o of level.openings) {

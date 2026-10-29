@@ -27,6 +27,7 @@ import { type CameraObject, type StillImage, type Device, type Level, type Track
   alarmState,
   heatColour,
   roomHeat,
+  roomClimate,
   type HeatKind,
   withoutGarden,
 } from "./model";
@@ -1431,6 +1432,7 @@ class FloorCastCard extends LitElement {
     const people = this.levelPeople(level).filter((person) => person.status !== "unconfirmed");
     const present = area ? area.occupied : people.some((person) => !room.outdoor && pointInPolygon([person.x, person.y], room.points));
     const thermometers = roomThermometers(level, room);
+    const climate = roomClimate(room, this.hass.states);
     // The room a vacuum reports cleaning, matched by name.
     const cleaning = (level.devices ?? []).some((device) => {
       if (device.kind !== "vacuum" || !device.roomSensor || !device.entity) return false;
@@ -1442,22 +1444,28 @@ class FloorCastCard extends LitElement {
     const nameSize = Math.max(0.26, NAME_PX / pxPerMetre);
     const rows: { text: string; cls: string; size: number }[] = [];
     if (room.name && !room.hideName && this._config.names !== false) rows.push({ text: room.name, cls: "fc-label", size: nameSize });
+    // The thermostat: its target, after the temperature it measures when no sensor in the room shows one.
+    if (climate && (climate.target !== undefined || (!thermometers.length && climate.current !== undefined))) {
+      const current = !thermometers.length && climate.current !== undefined ? `${climate.current.toFixed(1)}°` : "";
+      const target = climate.target !== undefined ? `→ ${climate.target.toFixed(1)}°` : "";
+      rows.push({ text: [current, target].filter(Boolean).join(" "), cls: `fc-target ${climate.action ?? ""}`, size: nameSize * 0.9 });
+    }
     const height = rows.reduce((sum, row) => sum + row.size * 1.15, 0);
     let y = cy - height / 2;
     const lines = rows.map((row) => {
       y += row.size * 1.15;
       return svg`<tspan class=${row.cls} x=${cx} y=${(y - row.size * 0.2).toFixed(3)} style="font-size:${row.size.toFixed(3)}px">${row.text}</tspan>`;
     });
-    const interactive = lights.length || thermometers.length;
+    const interactive = lights.length || thermometers.length || room.climate;
     const xs = room.points.map((p) => p[0]);
     const ys = room.points.map((p) => p[1]);
     const icon = Math.max(0.3, 13 / pxPerMetre);
     return svg`
       <path
-        class="room ${lit ? "lit" : ""} ${present ? "present" : ""} ${cleaning ? "cleaning" : ""} ${interactive ? "tap" : ""}"
+        class="room ${lit ? "lit" : ""} ${present ? "present" : ""} ${cleaning ? "cleaning" : ""} ${climate?.action ?? ""} ${interactive ? "tap" : ""}"
         d=${polygonPath(room.points, room.outdoor ? 0 : roomRadii(room, level.walls, planRadius(this._plan)))}
-        @pointerdown=${() => this.holdStart(() => this.moreInfo(thermometers, lights))}
-        @pointerup=${() => this.holdEnd(() => this.tapRoom(room, thermometers, lights))}
+        @pointerdown=${() => this.holdStart(() => (room.climate ? this.openMoreInfo(room.climate) : this.moreInfo(thermometers, lights)))}
+        @pointerup=${() => this.holdEnd(() => (!lights.length && room.climate ? this.openMoreInfo(room.climate) : this.tapRoom(room, thermometers, lights)))}
         @pointerleave=${() => window.clearTimeout(this._holdTimer)}
       ></path>
       ${present
@@ -1894,6 +1902,24 @@ class FloorCastCard extends LitElement {
       .lamp.on .lamp-core {
         fill: var(--lamp, var(--fc-light));
         opacity: 1;
+      }
+      /* The thermostat of the room heats or cools now. */
+      .room.heating {
+        fill: #ff7043;
+        fill-opacity: 0.1;
+      }
+      .room.cooling {
+        fill: #42a5f5;
+        fill-opacity: 0.1;
+      }
+      .fc-target {
+        fill: var(--fc-label);
+      }
+      .fc-target.heating {
+        fill: #ff7043;
+      }
+      .fc-target.cooling {
+        fill: #42a5f5;
       }
       .room.cleaning {
         fill: var(--fc-water);
