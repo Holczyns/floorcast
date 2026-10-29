@@ -85,6 +85,10 @@ interface RobotMessage {
   change?: { id: string; level: string; place: RobotPlace | null; added: Point[]; reset: boolean };
 }
 const GARDEN_KEY = "floorcast-card-garden";
+// Zoom: the closest view in metres across, and how far fingers or the mouse move before it is no tap.
+const MIN_ZOOM_WIDTH = 2;
+const DRAG_PX = 6;
+type Bounds = { x: number; y: number; w: number; h: number };
 const HEAT_KEY = "floorcast-card-heat";
 const HEAT_NAMES: Record<HeatKind, string> = { temperature: "Temperature", humidity: "Humidity", co2: "CO₂" };
 
@@ -123,6 +127,7 @@ class FloorCastCard extends LitElement {
     _active: { state: true },
     _garden: { state: true },
     _heat: { state: true },
+    _views: { state: true },
     _people: { state: true },
     _objects: { state: true },
     _pad: { state: true },
@@ -157,6 +162,13 @@ class FloorCastCard extends LitElement {
   });
   private _holdTimer?: number;
   private _held = false;
+  // Zoom: the view of each level while it differs from its default, the pointers on the plan, and
+  // whether the last gesture moved the plan, so its pointerup is no tap.
+  private _views: Record<string, Bounds> = {};
+  private _pointers = new Map<number, { x: number; y: number }>();
+  private _gesture?: { level: string; start: Bounds; points: { x: number; y: number }[]; rect: DOMRect };
+  private _dragged = false;
+  private _zoomTimer?: number;
   // Ids of gradients and clip paths must differ between cards on one dashboard.
   private _uid = `fc${Math.random().toString(36).slice(2, 8)}`;
   // Mowers and vacuums as the integration places them, with their tracks.
@@ -192,6 +204,8 @@ class FloorCastCard extends LitElement {
 
   setConfig(config: CardConfig): void {
     this._config = { layout: "auto", ...config };
+    // A new default view or zoom setting starts from the default view.
+    this.resetViews();
   }
 
   static getConfigElement(): HTMLElement {
@@ -221,6 +235,7 @@ class FloorCastCard extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.clearInterval(this._stillTimer);
+    window.clearTimeout(this._zoomTimer);
     this._resize.disconnect();
     this._unsubscribe?.then((unsubscribe) => unsubscribe());
     this._unsubscribe = undefined;
@@ -393,9 +408,147 @@ class FloorCastCard extends LitElement {
   }
 
   /** The part of the level the card shows: the crop chosen for it in the card editor, or all that is drawn. */
-  private viewBounds(level: Level): { x: number; y: number; w: number; h: number } {
+  /** The default view of a level: its visible part from the card configuration, or all of it. */
+  private defaultBounds(level: Level): Bounds {
     const crop = this._config.crop?.[level.id];
     return crop ? { x: crop[0], y: crop[1], w: crop[2], h: crop[3] } : drawnBounds(level);
+  }
+
+  /** What the card shows of a level now: its zoomed view, or the default one. */
+  private viewBounds(level: Level): Bounds {
+    return (this._config.zoom && this._views[level.id]) || this.defaultBounds(level);
+  }
+
+  /**
+   * A view of the level with the proportions of the default one, zoomed no closer than MIN_ZOOM_WIDTH and no
+   * farther than the whole level, and moved no farther than its edges.
+   */
+  private fitView(level: Level, view: Bounds): Bounds {
+    const home = this.defaultBounds(level);
+    const drawn = drawnBounds(level);
+    const limit = {
+      x: Math.min(home.x, drawn.x),
+      y: Math.min(home.y, drawn.y),
+      w: Math.max(home.x + home.w, drawn.x + drawn.w) - Math.min(home.x, drawn.x),
+      h: Math.max(home.y + home.h, drawn.y + drawn.h) - Math.min(home.y, drawn.y),
+    };
+    const ratio = home.h / home.w;
+    const w = Math.min(Math.max(view.w, MIN_ZOOM_WIDTH), Math.max(limit.w, limit.h / ratio, home.w));
+    const h = w * ratio;
+    const along = (start: number, size: number, low: number, room: number) =>
+      size >= room ? low - (size - room) / 2 : Math.min(Math.max(start, low), low + room - size);
+    return { x: along(view.x, w, limit.x, limit.w), y: along(view.y, h, limit.y, limit.h), w, h };
+  }
+
+  private setView(level: Level, view: Bounds): void {
+    this._views = { ...this._views, [level.id]: this.fitView(level, view) };
+    this.restartZoomReset();
+  }
+
+  /** Zooms a level by a factor about a point of the plan, which stays where it is on the screen. */
+  private zoomAt(level: Level, factor: number, about?: Point): void {
+    const view = this.viewBounds(level);
+    const [cx, cy] = about ?? [view.x + view.w / 2, view.y + view.h / 2];
+    const w = view.w / factor;
+    const h = view.h / factor;
+    this.setView(level, { x: cx - ((cx - view.x) * w) / view.w, y: cy - ((cy - view.y) * h) / view.h, w, h });
+  }
+
+  private resetViews(): void {
+    window.clearTimeout(this._zoomTimer);
+    this._views = {};
+  }
+
+  /** Rule of the wall tablet: a zoomed card goes back to its default view after a while without a touch. */
+  private restartZoomReset(): void {
+    window.clearTimeout(this._zoomTimer);
+    const seconds = this._config.zoom_reset ?? 60;
+    if (seconds > 0) this._zoomTimer = window.setTimeout(() => this.resetViews(), seconds * 1000);
+  }
+
+  /** A point of the screen on the plan of a level, by the rectangle its plan has on the screen. */
+  private toPlan(view: Bounds, rect: DOMRect, x: number, y: number): Point {
+    return [view.x + ((x - rect.left) / rect.width) * view.w, view.y + ((y - rect.top) / rect.height) * view.h];
+  }
+
+  /**
+   * Two fingers pinch and move the plan, the mouse drags it; one finger is left to the page and to taps. A gesture
+   * that moved the plan more than a few pixels is no tap.
+   */
+  private zoomDown(level: Level, event: PointerEvent): void {
+    if (!this._config.zoom) return;
+    if (this._pointers.size === 0) this._dragged = false;
+    this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const touches = event.pointerType === "touch" && this._pointers.size === 2;
+    const mouse = event.pointerType === "mouse" && event.button === 0;
+    if (!touches && !mouse) return;
+    const svg = (event.currentTarget as HTMLElement).querySelector("svg");
+    if (!svg) return;
+    this._gesture = { level: level.id, start: this.viewBounds(level), points: [...this._pointers.values()], rect: svg.getBoundingClientRect() };
+  }
+
+  private zoomMove(level: Level, event: PointerEvent): void {
+    if (!this._pointers.has(event.pointerId)) return;
+    this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const gesture = this._gesture;
+    if (!gesture || gesture.level !== level.id) return;
+    const now = [...this._pointers.values()];
+    if (now.length !== gesture.points.length) return;
+    const mid = (points: { x: number; y: number }[]) => ({
+      x: points.reduce((s, p) => s + p.x, 0) / points.length,
+      y: points.reduce((s, p) => s + p.y, 0) / points.length,
+    });
+    const spread = (points: { x: number; y: number }[]) =>
+      points.length < 2 ? 1 : Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
+    const from = mid(gesture.points);
+    const to = mid(now);
+    if (!this._dragged && Math.hypot(to.x - from.x, to.y - from.y) < DRAG_PX && Math.abs(spread(now) - spread(gesture.points)) < DRAG_PX) return;
+    this._dragged = true;
+    window.clearTimeout(this._holdTimer);
+    const factor = spread(now) / spread(gesture.points);
+    const start = gesture.start;
+    // The plan point under the first middle of the fingers stays under their middle now.
+    const [px, py] = this.toPlan(start, gesture.rect, from.x, from.y);
+    const w = start.w / factor;
+    const h = start.h / factor;
+    const x = px - ((to.x - gesture.rect.left) / gesture.rect.width) * w;
+    const y = py - ((to.y - gesture.rect.top) / gesture.rect.height) * h;
+    this.setView(level, { x, y, w, h });
+  }
+
+  private zoomUp(event: PointerEvent): void {
+    this._pointers.delete(event.pointerId);
+    // A finger left of two: the gesture ends; the other finger does nothing more.
+    this._gesture = undefined;
+  }
+
+  /** Ctrl with the mouse wheel, or a pinch on a touchpad, zooms about the pointer. */
+  private zoomWheel(level: Level, event: WheelEvent): void {
+    if (!this._config.zoom || !event.ctrlKey) return;
+    event.preventDefault();
+    const svg = (event.currentTarget as HTMLElement).querySelector("svg");
+    if (!svg) return;
+    const view = this.viewBounds(level);
+    this.zoomAt(level, Math.exp(-event.deltaY / 300), this.toPlan(view, svg.getBoundingClientRect(), event.clientX, event.clientY));
+  }
+
+  private renderZoomButtons(level: Level) {
+    if (!this._config.zoom) return nothing;
+    return html`<div class="zoom">
+      <button title="Zoom in" @click=${() => this.zoomAt(level, 1.5)}>+</button>
+      <button title="Zoom out" @click=${() => this.zoomAt(level, 1 / 1.5)}>−</button>
+      ${this._views[level.id]
+        ? html`<button
+            title="Default view"
+            @click=${() => {
+              const { [level.id]: _, ...rest } = this._views;
+              this._views = rest;
+            }}
+          >
+            ⌂
+          </button>`
+        : nothing}
+    </div>`;
   }
 
   /** Whether a point lies on the drawn part of the level, so people in a hidden garden are not drawn past the plan. */
@@ -504,7 +657,8 @@ class FloorCastCard extends LitElement {
     const levels = showGarden ? all : all.map(withoutGarden);
     const heatConfigured = this._config.heatmap && this._config.heatmap !== "none" ? this._config.heatmap : undefined;
     const width = Math.max(this._width - 8, 100);
-    const metres = levels.map((level) => this.viewBounds(level).w);
+    // Side by side the levels keep the widths of their default views, zoomed or not.
+    const metres = levels.map((level) => this.defaultBounds(level).w);
     const sideScale = width / metres.reduce((sum, w) => sum + w, 0);
     const fitsSide = sideScale * Math.min(...metres) >= MIN_SIDE_WIDTH;
     const side = this._config.layout === "side" || (this._config.layout === "auto" && fitsSide && levels.length > 1);
@@ -553,19 +707,36 @@ class FloorCastCard extends LitElement {
 
   private renderLevel(level: Level, width: number, scale?: number) {
     const b = this.viewBounds(level);
-    // Side by side every level uses the same scale, so a metre is equally long on each.
-    const style = scale ? `width:${(b.w * scale).toFixed(0)}px` : "width:100%";
-    const pxPerMetre = scale ?? width / b.w;
+    const home = this.defaultBounds(level);
+    // Side by side every level uses the same scale, so a metre is equally long on each; zoom enlarges it.
+    const style = scale ? `width:${(home.w * scale).toFixed(0)}px` : "width:100%";
+    const pxPerMetre = (scale ?? width / home.w) * (home.w / b.w);
+    const zoomed = !!this._config.zoom && !!this._views[level.id];
     return html`
-      <div class="level" style=${style}>
+      <div
+        class="level ${this._config.zoom ? "zoomable" : ""}"
+        style=${style}
+        @pointerdown=${(e: PointerEvent) => this.zoomDown(level, e)}
+        @pointermove=${(e: PointerEvent) => this.zoomMove(level, e)}
+        @pointerup=${(e: PointerEvent) => this.zoomUp(e)}
+        @pointercancel=${(e: PointerEvent) => this.zoomUp(e)}
+        @wheel=${(e: WheelEvent) => this.zoomWheel(level, e)}
+        @click=${{
+          handleEvent: (e: Event) => {
+            if (this._dragged) e.stopPropagation();
+          },
+          capture: true,
+        }}
+      >
         ${scale ? html`<div class="name">${level.name}</div>` : nothing}
-        <svg class=${this._config.crop?.[level.id] ? "cropped" : ""} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">
+        <svg class=${this._config.crop?.[level.id] || zoomed ? "cropped" : ""} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">
           ${PLAN_DEFS} ${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}
           ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
           ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)}
           ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)}
           ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}
         </svg>
+        ${this.renderZoomButtons(level)}
       </div>
     `;
   }
@@ -1175,7 +1346,7 @@ class FloorCastCard extends LitElement {
 
   private holdEnd(onTap: () => void): void {
     window.clearTimeout(this._holdTimer);
-    if (!this._held) onTap();
+    if (!this._held && !this._dragged) onTap();
   }
 
   /** A room switches all its lights together: off when any is on, otherwise on. */
@@ -1425,6 +1596,9 @@ class FloorCastCard extends LitElement {
       .levels {
         padding: 4px;
       }
+      .level {
+        position: relative;
+      }
       .levels.side {
         display: flex;
         gap: 0;
@@ -1437,9 +1611,34 @@ class FloorCastCard extends LitElement {
         /* Labels just outside the walls, such as the blind of a window, may run into the small margin. */
         overflow: visible;
       }
-      /* A cropped plan ends at its frame. */
+      /* A cropped or zoomed plan ends at its frame. */
       .level svg.cropped {
         overflow: hidden;
+      }
+      /* One finger scrolls the page; two fingers are the card's to zoom and move the plan. */
+      .level.zoomable svg {
+        touch-action: pan-x pan-y;
+      }
+      .zoom {
+        position: absolute;
+        right: 6px;
+        bottom: 6px;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .zoom button {
+        width: 32px;
+        height: 32px;
+        border-radius: 16px;
+        border: 1px solid var(--divider-color);
+        background: var(--card-background-color, #1c1f24);
+        color: var(--primary-text-color);
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0.85;
       }
       .name {
         color: var(--secondary-text-color);

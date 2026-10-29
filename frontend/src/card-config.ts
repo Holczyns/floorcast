@@ -23,6 +23,10 @@ export interface CardConfig {
   history?: boolean;
   /** Rooms coloured by the temperature, humidity or CO2 of the sensors in them, with a switch on the card; none by default. */
   heatmap?: "none" | "temperature" | "humidity" | "co2";
+  /** Zoom and pan on the dashboard with two fingers, the mouse and buttons; off by default. */
+  zoom?: boolean;
+  /** Seconds without a touch after which a zoomed card returns to its default view; 60 by default, 0 never. */
+  zoom_reset?: number;
   /** Part of a level shown, by level id: x, y, width and height in metres; the whole level without it. */
   crop?: Record<string, [number, number, number, number]>;
 }

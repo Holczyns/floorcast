@@ -279,6 +279,26 @@ export class FloorCastCardEditor extends LitElement {
         />
         Paths switch: where people walked over the last day
       </label>
+      <label class="check">
+        <input
+          type="checkbox"
+          .checked=${!!this._config.zoom}
+          @change=${(e: Event) => this.set("zoom", (e.target as HTMLInputElement).checked, false)}
+        />
+        Zoom and pan on the dashboard (two fingers, mouse, buttons); the visible part above is the default view
+      </label>
+      ${this._config.zoom
+        ? html`<label>
+            <span>Back to the default view after (s, 0 never)</span>
+            <input
+              type="number"
+              min="0"
+              step="10"
+              .value=${String(this._config.zoom_reset ?? 60)}
+              @change=${(e: Event) => this.set("zoom_reset", Number((e.target as HTMLInputElement).value), 60)}
+            />
+          </label>`
+        : nothing}
       <label>
         <span>Hold time (ms)</span>
         <input

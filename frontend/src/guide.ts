@@ -475,6 +475,19 @@ actions:
           </td>
         </tr>
         <tr>
+          <td><code>zoom</code></td>
+          <td><code>false</code></td>
+          <td>
+            Zoom and move the plan on the dashboard: two fingers, the mouse (drag, Ctrl with the wheel) and the + − ⌂ buttons.
+            Every opening of the dashboard starts from the default view, the visible part set by <code>crop</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>zoom_reset</code></td>
+          <td><code>60</code></td>
+          <td>Seconds without a touch after which a zoomed card returns to its default view; <code>0</code> never</td>
+        </tr>
+        <tr>
           <td><code>crop</code></td>
           <td>none</td>
           <td>Part of a level shown, by level id: <code>[x, y, width, height]</code> in metres</td>
