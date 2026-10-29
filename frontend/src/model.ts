@@ -298,6 +298,8 @@ export interface Device {
   frigate?: string | null;
   /** Camera: the same spots in its image (0..1 of width and height) and on the plan (m); four or more. */
   calibration?: { image: Point; plan: Point }[];
+  /** Camera: a binary sensor that is on while the camera sees someone (Frigate, UniFi Protect, Reolink, motion). */
+  detection?: string | null;
   /** Indicator: watts from which a power sensor counts as running; 5 without it. */
   threshold?: number;
   /** Camera: detect resolution of Frigate in pixels, when Frigate does not report it. */

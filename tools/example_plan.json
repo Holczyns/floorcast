@@ -98,7 +98,7 @@
     },
     { "id": "radar_living", "kind": "radar", "source": "radar_living_room", "at": [0.35, 4.35], "heading": 135, "arc": 120, "radius": 6.5 },
     { "id": "radar_kitchen", "kind": "radar", "source": "radar_kitchen", "at": [7.6, 0.4], "heading": 225, "arc": 120, "radius": 5 },
-    { "id": "camera_front", "kind": "camera", "entity": "camera.front", "frigate": "front", "at": [0.2, -0.4], "heading": 290, "arc": 100, "radius": 10 },
+    { "id": "camera_front", "kind": "camera", "entity": "camera.front", "detection": "binary_sensor.front_person", "frigate": "front", "at": [0.2, -0.4], "heading": 290, "arc": 100, "radius": 10 },
     {
      "id": "camera_garden", "kind": "camera", "entity": "camera.garden", "frigate": "garden", "at": [11.8, 9.4], "heading": 225, "arc": 100, "radius": 12, "preview": "window",
      "calibration": [

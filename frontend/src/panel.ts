@@ -2166,7 +2166,7 @@ class FloorCastPanel extends LitElement {
               </g>`
             : device.kind === "camera"
             ? svg`<g data-device=${device.id} class="camera-device">
-                ${renderCameraGlow(device, `editor-camera-${device.id}`)}
+                ${renderCameraGlow(device, `editor-camera-${device.id}`, this._live && !!device.detection && this.hass.states[device.detection]?.state === "on")}
                 <circle class="hit" cx=${device.at[0]} cy=${device.at[1]} r=${px * 9}></circle>
                 ${renderCameraIcon(device, px * 5)}
               </g>`
@@ -3276,9 +3276,61 @@ class FloorCastPanel extends LitElement {
       ${this.number("View", device.arc ?? DEFAULT_FIELD_OF_VIEW, (v) => (device.arc = Math.min(360, Math.max(10, v))), 5, "°")}
       ${this.number("Range", device.radius ?? DEFAULT_CAMERA_RANGE, (v) => (device.radius = Math.max(1, v)), 0.5, "m")}
       <p class="muted">Drag the handle at the end of the view to aim the camera. On the card a tap shows a still, holding opens the live view.</p>
-      ${this.frigateProperties(device)} ${this.groundProperties(device)}
+      ${this.detectionProperties(device)} ${this.frigateProperties(device)} ${this.groundProperties(device)}
       ${this.deleteButton()}
     `;
+  }
+
+  /**
+   * The sensor that says the camera sees someone, any binary sensor. One of the camera's own device is offered:
+   * a person sensor first, then motion or occupancy.
+   */
+  private detectionProperties(device: Device) {
+    const registry = typeof this._registry === "object" ? this._registry : undefined;
+    if (this._registry === undefined) queueMicrotask(() => this.loadRegistry());
+    const suggestion = device.detection ? undefined : this.detectionSuggestion(device, registry);
+    return html`
+      <div class="pick">
+        <span>Detection sensor</span>
+        <floorcast-entity-picker
+          .hass=${this.hass}
+          .domains=${["binary_sensor"]}
+          .value=${device.detection ?? null}
+          optional
+          @value-changed=${(e: CustomEvent) => this.change(() => (device.detection = e.detail))}
+        ></floorcast-entity-picker>
+      </div>
+      ${this.stateLine(device.detection)}
+      ${suggestion
+        ? html`<div class="row">
+            <button @click=${() => this.change(() => (device.detection = suggestion))}>Use ${this.entityName(suggestion) ?? suggestion}</button>
+          </div>`
+        : nothing}
+      <p class="muted">
+        While it is on, the view of the camera turns red on the card and its still opens by itself: a person sensor of Frigate,
+        UniFi Protect or Reolink, or any motion sensor.
+      </p>
+    `;
+  }
+
+  /** A detection sensor for a camera: of the same device, or named like the camera; a person sensor before motion. */
+  private detectionSuggestion(device: Device, registry: Registry | undefined): string | undefined {
+    if (!device.entity) return undefined;
+    const name = device.entity.split(".")[1];
+    const own = registry?.entityDevice[device.entity];
+    const candidates = Object.keys(this.hass.states).filter((id) => {
+      if (!id.startsWith("binary_sensor.")) return false;
+      const sameDevice = !!own && registry?.entityDevice[id] === own;
+      return sameDevice || id.startsWith(`binary_sensor.${name}_`);
+    });
+    const score = (id: string) => {
+      const cls = this.hass.states[id]?.attributes.device_class;
+      if (/person/.test(id)) return 0;
+      if (cls === "occupancy" || cls === "presence") return 1;
+      if (cls === "motion" || /motion/.test(id)) return 2;
+      return 9;
+    };
+    return candidates.filter((id) => score(id) < 9).sort((a, b) => score(a) - score(b))[0];
   }
 
   /** EXPERIMENTAL: shows the ground image of a device of the saved plan on the editor plan, a mower also in its dock. */

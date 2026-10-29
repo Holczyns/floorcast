@@ -127,6 +127,9 @@
               temperature: thermostat ? 21 : 22.5,
               hvac_action: thermostat++ ? "idle" : "heating",
             });
+      // Person sensors of the cameras: the front one sees someone with ?detect; the garden one offers itself in the editor.
+      set("binary_sensor.front_person", params.has("detect") ? "on" : "off", { device_class: "occupancy" });
+      set("binary_sensor.garden_person", "off", { device_class: "occupancy" });
       // Indicators: a power sensor draws a few hundred watts, a switch is off.
       for (const level of plan.levels)
         for (const d of level.devices ?? [])

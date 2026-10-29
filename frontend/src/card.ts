@@ -1165,7 +1165,7 @@ class FloorCastCard extends LitElement {
       .map((camera) => {
         const still = this._stills.has(camera.id) || this.autoStill(camera, level);
         return svg`
-          ${renderCameraGlow(camera, `${this._uid}-${level.id}-camera-${camera.id}`)}
+          ${renderCameraGlow(camera, `${this._uid}-${level.id}-camera-${camera.id}`, this.detects(camera))}
           <g class="camera-hit"
             @pointerdown=${() => this.holdStart(() => this.openMoreInfo(camera.entity!))}
             @pointerup=${() =>
@@ -1247,6 +1247,11 @@ class FloorCastCard extends LitElement {
     </g>`;
   }
 
+  /** Whether the detection sensor of a camera sees someone now. */
+  private detects(camera: Device): boolean {
+    return !!camera.detection && this.hass.states[camera.detection]?.state === "on";
+  }
+
   /** Ids of the people and objects a camera sees now. */
   private cameraSees(camera: Device, level: Level): string[] {
     if (!camera.frigate) return [];
@@ -1261,8 +1266,8 @@ class FloorCastCard extends LitElement {
    * camera sees someone it did not see then, or goes quiet.
    */
   private autoStill(camera: Device, level: Level): boolean {
-    if (this._config.auto_preview === false || !camera.frigate) return false;
-    const active = this._activeCameras.includes(camera.frigate);
+    if (this._config.auto_preview === false || (!camera.frigate && !camera.detection)) return false;
+    const active = (!!camera.frigate && this._activeCameras.includes(camera.frigate)) || this.detects(camera);
     const dismissed = this._dismissed.get(camera.id);
     if (dismissed && (!active || this.cameraSees(camera, level).some((id) => !dismissed.has(id)))) this._dismissed.delete(camera.id);
     // Closed by itself: next time it opens where it opens first, below the camera when that is free.
@@ -1272,7 +1277,8 @@ class FloorCastCard extends LitElement {
 
   private closeStill(device: Device, level: Level): void {
     this._stills.delete(device.id);
-    if (device.frigate && this._activeCameras.includes(device.frigate)) this._dismissed.set(device.id, new Set(this.cameraSees(device, level)));
+    const active = (!!device.frigate && this._activeCameras.includes(device.frigate)) || this.detects(device);
+    if (active) this._dismissed.set(device.id, new Set(this.cameraSees(device, level)));
     this._stillSpot.delete(device.id);
   }
 

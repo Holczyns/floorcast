@@ -401,7 +401,7 @@ export function cameraView(device: Device): string {
  * A short, faint grey glow in front of a camera: only a sign that it looks that way, not the
  * area it covers, whatever range is set for it.
  */
-export function renderCameraGlow(device: Device, id: string): SVGTemplateResult {
+export function renderCameraGlow(device: Device, id: string, detected = false): SVGTemplateResult {
   const [x, y] = device.at;
   const r = CAMERA_GLOW;
   const fov = device.arc ?? DEFAULT_FIELD_OF_VIEW;
@@ -413,7 +413,7 @@ export function renderCameraGlow(device: Device, id: string): SVGTemplateResult 
         <stop offset="1" class="fc-camera-glow-end"></stop>
       </radialGradient>
     </defs>
-    <path class="fc-camera-view" fill="url(#${id})" d=${shape}></path>
+    <path class="fc-camera-view ${detected ? "detected" : ""}" fill="url(#${id})" d=${shape}></path>
   `;
 }
 
@@ -1474,6 +1474,11 @@ export const planStyles = css`
   }
   .fc-camera-view {
     pointer-events: none;
+  }
+  /* The camera sees someone now: its view turns red. */
+  .fc-camera-view.detected {
+    fill: #f44336;
+    fill-opacity: 0.22;
   }
   .fc-camera-glow-start {
     stop-color: var(--fc-camera-glow);
