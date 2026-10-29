@@ -920,7 +920,7 @@ export function planEntities(plan: Plan): Set<string> {
   };
   for (const level of plan.levels) {
     for (const device of level.devices ?? []) {
-      [device.entity, device.remote, device.map, device.camera, device.battery, device.roomSensor].forEach(add);
+      [device.entity, device.remote, device.map, device.camera, device.battery, device.roomSensor, device.detection].forEach(add);
       device.secondary?.forEach((value) => add(value.entity));
     }
     for (const opening of level.openings) [opening.contact, opening.cover, opening.lock].forEach(add);

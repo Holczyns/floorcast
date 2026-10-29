@@ -22,6 +22,7 @@ import { type CameraObject, type StillImage, type Device, type Level, type Track
   radarTargets,
   roomAt,
   roomLights,
+  planEntities,
   roomThermometers,
   normalizeSensors,
   isPowered,
@@ -198,6 +199,8 @@ class FloorCastCard extends LitElement {
   private _headings = new Map<string, number>();
   private _robots = new Map<string, { level: string; place: RobotPlace | null; track: Point[] }>();
   private _unsubscribeRobots?: Promise<() => void>;
+  // Entities the levels of the card draw; undefined until the plan comes.
+  private _watched?: Set<string>;
   // Count and occupancy of rooms and zones, by level and id, as the integration decides them.
   private _areas: Record<string, Record<string, { count: number; occupied: boolean }>> = {};
   // Frigate cameras that see someone now or did a moment ago.
@@ -228,6 +231,7 @@ class FloorCastCard extends LitElement {
     this._config = { layout: "auto", ...config };
     // A new default view or zoom setting starts from the default view.
     this.resetViews();
+    if (this._plan && this.hass) this.followPlan();
   }
 
   static getConfigElement(): HTMLElement {
@@ -346,9 +350,69 @@ class FloorCastCard extends LitElement {
         // A plan saved before sensors were unified still draws its thermometers and second readings.
         message.plan.levels.forEach(normalizeSensors);
         this._plan = message.plan;
+        this.followPlan();
       },
       { type: "floorcast/plan/subscribe" },
     );
+  }
+
+  /**
+   * After every plan: the entities the card draws, so a change of any other entity in Home Assistant does not draw
+   * it again, and the streams it needs: people only with radars, cameras or presence sensors, objects only with
+   * Frigate cameras, robots only with a mower or a vacuum on the levels it shows.
+   */
+  private followPlan(): void {
+    const levels = this.levels();
+    const devices = levels.flatMap((level) => level.devices ?? []);
+    const watched = planEntities({ levels });
+    for (const radar of devices.filter((d) => d.kind === "radar" && d.source)) {
+      watched.add(`sensor.${radar.source}_presence_target_count`);
+      for (let i = 1; i <= 3; i++) for (const axis of ["x", "y"]) watched.add(`sensor.${radar.source}_target_${i}_${axis}`);
+    }
+    this._watched = watched;
+    const people = devices.some((d) => d.kind === "radar" || (d.kind === "camera" && !!d.frigate)) || levels.some((l) => l.rooms.some((r) => r.occupancy?.length));
+    const objects = devices.some((d) => d.kind === "camera" && !!d.frigate);
+    const robots = devices.some((d) => d.kind === "mower" || d.kind === "vacuum");
+    if (people && !this._unsubscribePeople) this.followPeople();
+    if (!people && this._unsubscribePeople) {
+      this._unsubscribePeople.then((unsubscribe) => unsubscribe()).catch(() => undefined);
+      this._unsubscribePeople = undefined;
+      this._people = undefined;
+      this._areas = {};
+    }
+    if (objects && !this._unsubscribeObjects) this.followObjects();
+    if (!objects && this._unsubscribeObjects) {
+      this._unsubscribeObjects.then((unsubscribe) => unsubscribe()).catch(() => undefined);
+      this._unsubscribeObjects = undefined;
+      this._objects = {};
+      this._activeCameras = [];
+    }
+    if (robots && !this._unsubscribeRobots) {
+      this._unsubscribeRobots = this.hass.connection.subscribeMessage<RobotMessage>((message) => this.followRobots(message), {
+        type: "floorcast/robots/subscribe",
+      });
+      this._unsubscribeRobots.catch(() => undefined);
+    }
+    if (!robots && this._unsubscribeRobots) {
+      this._unsubscribeRobots.then((unsubscribe) => unsubscribe()).catch(() => undefined);
+      this._unsubscribeRobots = undefined;
+      this._robots = new Map();
+    }
+  }
+
+  /**
+   * Draws again only when something it shows changed: its own state, the plan, the configuration, or an entity
+   * it draws; Home Assistant sends a new state object for every change of any entity.
+   */
+  protected shouldUpdate(changed: PropertyValues): boolean {
+    if (changed.size !== 1 || !changed.has("hass") || !this._watched) return true;
+    const before = changed.get("hass") as HomeAssistant | undefined;
+    if (!before || before.language !== this.hass.language || before.themes !== this.hass.themes) return true;
+    for (const id of this._watched) if (before.states[id] !== this.hass.states[id]) return true;
+    return false;
+  }
+
+  private followPeople(): void {
     this._unsubscribePeople = this.hass.connection.subscribeMessage<{
       people: Record<string, TrackedPerson[]>;
       areas?: Record<string, Record<string, { count: number; occupied: boolean }>>;
@@ -361,6 +425,9 @@ class FloorCastCard extends LitElement {
     );
     // Without the people tracking (not set up yet) the raw targets stay on the plan.
     this._unsubscribePeople.catch(() => (this._people = undefined));
+  }
+
+  private followObjects(): void {
     this._unsubscribeObjects = this.hass.connection.subscribeMessage<{ objects: Record<string, CameraObject[]>; active?: string[] }>(
       (message) => {
         this._objects = message.objects;
@@ -370,10 +437,6 @@ class FloorCastCard extends LitElement {
       { type: "floorcast/objects/subscribe" },
     );
     this._unsubscribeObjects.catch(() => (this._objects = {}));
-    this._unsubscribeRobots = this.hass.connection.subscribeMessage<RobotMessage>((message) => this.followRobots(message), {
-      type: "floorcast/robots/subscribe",
-    });
-    this._unsubscribeRobots.catch(() => undefined);
   }
 
   /** Robots from the integration: every one with its whole track first, then each change with its new points. */
