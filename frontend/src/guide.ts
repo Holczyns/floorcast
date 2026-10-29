@@ -64,7 +64,20 @@ const SECTIONS: Section[] = [
     title: "Working in the editor",
     body: html`
       <ul>
-        <li>Drag the empty plan to pan, use the wheel to zoom, and ⌖ to fit the whole level.</li>
+        <li>
+          A click selects whatever is there and opens the tab that edits it; a click again at the same spot selects what
+          lies below, such as the room under a lamp. Only the selected thing moves, and only once it is dragged.
+        </li>
+        <li>Drag anywhere else to pan, use the wheel to zoom, and ⌖ to fit the whole level.</li>
+        <li>
+          <b>Find</b> (or <b>/</b>) looks for rooms, devices, entities, doors, windows, zones and objects on all levels.
+          <b>Layers</b> hides devices, zones or room names; hidden parts cannot be clicked.
+        </li>
+        <li>
+          <b>🔒 Layout</b> keeps walls, doors, windows, rooms and objects where they are while you place devices; their forms
+          still work. While a tool places something a blue bar says what a click does; <b>Esc</b> stops it. After a change a
+          note with <b>Undo</b> shows for a few seconds.
+        </li>
         <li>Points snap to a 5 cm grid and to corners; hold <b>Alt</b> to place freely.</li>
         <li><b>Delete</b> removes the selection, <b>Ctrl+D</b> copies it, <b>Ctrl+Z</b> undoes, <b>Esc</b> cancels.</li>
         <li>

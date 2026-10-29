@@ -39,6 +39,7 @@ import {
   type TrackedPerson,
   type TrackingSettings,
   centroid,
+  itemPoints,
   AREA_KIND_NAMES,
   areaKind,
   openingName,
@@ -115,6 +116,65 @@ type Selection =
 /** Tab of the side panel; it decides what can be picked and drawn on the plan. */
 type Mode = "general" | "building" | "objects" | "devices" | "radar" | "cameras" | "zones";
 
+/** How far the pointer moves before a press is a drag and not a click, in pixels. */
+const DRAG_PX = 8;
+const LOCK_KEY = "floorcast-editor-lock";
+const LAYERS_KEY = "floorcast-editor-hidden";
+type Layer = "devices" | "zones" | "names";
+/** Tools that draw the layout, off while it is locked. */
+const LAYOUT_TOOLS: Tool[] = ["wall", "door", "window", "room", "item"];
+const TOOL_NAMES: Partial<Record<Tool, string>> = {
+  wall: "Wall",
+  door: "Door",
+  window: "Window",
+  room: "Room",
+  zone: "Zone",
+  item: "Object",
+  light: "Light",
+  sprinkler: "Sprinkler",
+  mower: "Mower",
+  vacuum: "Vacuum",
+  sensor: "Sensor",
+  screen: "Screen",
+  camera: "Camera",
+  radar: "Radar",
+  mark: "Mark the vacuum",
+  calibrate: "Calibrate",
+};
+
+/** A choice of the editor remembered in this browser; off without storage. */
+function stored(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function store(key: string, on: boolean): void {
+  try {
+    localStorage.setItem(key, on ? "1" : "0");
+  } catch {
+    // Without storage the choice lasts until the page reloads.
+  }
+}
+
+function storedList(key: string): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(key) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function storeList(key: string, values: string[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(values));
+  } catch {
+    // Without storage the choice lasts until the page reloads.
+  }
+}
+
 const MODES: { mode: Mode; label: string }[] = [
   { mode: "general", label: "General" },
   { mode: "building", label: "Building" },
@@ -178,7 +238,10 @@ interface View {
 
 type Drag =
   | { kind: "pan"; start: Point; view: View }
-  | { kind: "move"; start: Point; before: string; moved: boolean }
+  // A press on the plan with Select: a click selects what is there, a drag beyond DRAG_PX pans.
+  | { kind: "press"; screen: Point; view: View; candidates: Selection[] }
+  // The selected thing moves only after a drag beyond DRAG_PX, so a click never shifts it.
+  | { kind: "move"; start: Point; before: string; moved: boolean; screen: Point; armed: boolean; candidates?: Selection[] }
   | { kind: "wall-end"; end: "a" | "b"; origin: Point; alone: boolean; before: string }
   | { kind: "vertex"; index: number; before: string }
   | { kind: "corner"; index: number; before: string }
@@ -239,6 +302,11 @@ class FloorCastPanel extends LitElement {
     _view: { state: true },
     _draft: { state: true },
     _cursor: { state: true },
+    _locked: { state: true },
+    _toast: { state: true },
+    _find: { state: true },
+    _hidden: { state: true },
+    _layersOpen: { state: true },
     _message: { state: true },
     _saving: { state: true },
     _garden: { state: true },
@@ -310,6 +378,18 @@ class FloorCastPanel extends LitElement {
   /** The Guide is shown in place of the plan; the plan and its unsaved changes stay as they are. */
   private _guide = false;
   private _drag?: Drag;
+  /** Layout lock: walls, doors, windows, rooms and objects stay where they are; their forms still work. */
+  private _locked = stored(LOCK_KEY);
+  /** The last change made on the plan, with Undo, for a few seconds. */
+  private _toast?: string;
+  private _toastTimer?: number;
+  /** Text of the search box; its results show while it is not empty. */
+  private _find = "";
+  /** Layers left off the plan: devices, zones or room names. */
+  private _hidden = new Set<Layer>(storedList(LAYERS_KEY) as Layer[]);
+  private _layersOpen = false;
+  /** Where the last click selected, on the screen: a click there again selects what lies below. */
+  private _lastClick?: Point;
   private _history: string[] = [];
   private _loaded = false;
   /** People the integration tracks, per level, shown in the Radars tab; undefined without the tracking. */
@@ -469,6 +549,35 @@ class FloorCastPanel extends LitElement {
     if (before === this.snapshot()) return;
     this._history.push(before);
     if (this._history.length > HISTORY_LIMIT) this._history.shift();
+  }
+
+  /** A short note of what the last action on the plan changed, with Undo. */
+  private notify(text: string): void {
+    window.clearTimeout(this._toastTimer);
+    this._toast = text;
+    this._toastTimer = window.setTimeout(() => (this._toast = undefined), 5000);
+  }
+
+  /** Whether the layout lock keeps this thing where it is. */
+  private lockedKind(s: Selection | undefined): boolean {
+    return this._locked && !!s && ["wall", "opening", "room", "item"].includes(s.kind);
+  }
+
+  /** The tab that edits a thing. */
+  private modeFor(s: Selection): Mode {
+    if (s.kind === "wall" || s.kind === "opening" || s.kind === "room") return "building";
+    if (s.kind === "item") return "objects";
+    if (s.kind === "zone") return "zones";
+    const kind = this.findDevice(s.id)?.kind;
+    return kind === "radar" ? "radar" : kind === "camera" ? "cameras" : "devices";
+  }
+
+  /** Selects a thing and opens the tab that edits it. */
+  private select(s: Selection | undefined): void {
+    const message = this._message;
+    if (s && !this.editable(s)) this.setMode(this.modeFor(s));
+    this._selection = s;
+    this._message = message;
   }
 
   /** Runs a change of the plan as one undoable step. */
@@ -693,6 +802,47 @@ class FloorCastPanel extends LitElement {
   }
 
   /** The topmost thing under the pointer the open tab edits; a lamp over a room lets the room be picked in Building. */
+  /** Every thing under the pointer, topmost first, whatever tab edits it. */
+  private hitAll(event: PointerEvent): Selection[] {
+    const stack = (this.renderRoot as ShadowRoot).elementsFromPoint(event.clientX, event.clientY);
+    const found: Selection[] = [];
+    const seen = new Set<string>();
+    for (const top of stack) {
+      for (let element: Element | null = top; element && element.tagName !== "svg"; element = element.parentElement) {
+        const data = (element as HTMLElement).dataset ?? {};
+        const candidates: (Selection | undefined)[] = [
+          data.device ? { kind: "device", id: data.device } : undefined,
+          data.opening ? { kind: "opening", id: data.opening } : undefined,
+          data.wall ? { kind: "wall", id: data.wall } : undefined,
+          data.zone ? { kind: "zone", id: data.zone } : undefined,
+          data.item ? { kind: "item", id: data.item } : undefined,
+          data.room ? { kind: "room", id: data.room } : undefined,
+        ];
+        for (const c of candidates) {
+          if (!c || seen.has(`${c.kind}:${c.id}`)) continue;
+          seen.add(`${c.kind}:${c.id}`);
+          found.push(c);
+        }
+      }
+    }
+    // What the open tab edits comes first, so a click in Devices takes the lamp before the room around it.
+    return [...found.filter((c) => this.editable(c)), ...found.filter((c) => !this.editable(c))];
+  }
+
+  /** What a click at this point selects: the first thing there, or the next one when clicked again at the same spot. */
+  private pickFrom(candidates: Selection[], screen: Point): Selection | undefined {
+    const again = this._lastClick && Math.hypot(screen[0] - this._lastClick[0], screen[1] - this._lastClick[1]) < DRAG_PX;
+    this._lastClick = screen;
+    const current = this._selection;
+    const index = current ? candidates.findIndex((c) => c.kind === current.kind && c.id === current.id) : -1;
+    const next = again && index >= 0 ? candidates[(index + 1) % candidates.length] : candidates[0];
+    this._message =
+      candidates.length > 1
+        ? `${candidates.indexOf(next!) + 1} of ${candidates.length} here: click again to select what lies below.`
+        : "";
+    return next;
+  }
+
   private hit(event: PointerEvent): Selection | undefined {
     // Every shape under the pointer, topmost first, each followed by the groups holding it.
     const stack = (this.renderRoot as ShadowRoot).elementsFromPoint(event.clientX, event.clientY);
@@ -756,12 +906,25 @@ class FloorCastPanel extends LitElement {
     if (event.button !== 0) return;
     (event.currentTarget as Element).setPointerCapture(event.pointerId);
     const p = this.toPlan(event);
+    // Calibration and marking the vacuum change settings, not the plan: no note for them.
+    const placing = ["select", "mark", "calibrate"].includes(this._tool) ? undefined : this._tool;
+    const historyBefore = this._history.length;
+    // A tool that placed something at once ends here; one that drags tells on release.
+    queueMicrotask(() => {
+      if (placing && this._history.length > historyBefore) this.notify(`${TOOL_NAMES[placing] ?? "Item"} placed`);
+    });
     switch (this._tool) {
       case "select": {
-        const target = this.hit(event);
-        this._selection = target;
-        if (target) this._drag = { kind: "move", start: p, before: this.snapshot(), moved: false };
-        else this.startPan(event);
+        const candidates = this.hitAll(event);
+        const s = this._selection;
+        const onSelected = !!s && candidates.some((c) => c.kind === s.kind && c.id === s.id);
+        const screen: Point = [event.clientX, event.clientY];
+        // The selected thing under the pointer may be dragged; anything else is selected on release or the plan pans.
+        if (onSelected && !this.lockedKind(s)) {
+          this._drag = { kind: "move", start: p, before: this.snapshot(), moved: false, screen, armed: false, candidates };
+          return;
+        }
+        this._drag = { kind: "press", screen, view: { ...this._view }, candidates };
         return;
       }
       case "wall":
@@ -910,6 +1073,7 @@ class FloorCastPanel extends LitElement {
   }
 
   private startHandle(handle: string, index: string | undefined, p: Point, shift = false): void {
+    if (this.lockedKind(this._selection)) return;
     const before = this.snapshot();
     const i = Number(index ?? 0);
     if (handle === "wall-a" || handle === "wall-b") {
@@ -946,6 +1110,17 @@ class FloorCastPanel extends LitElement {
     const drag = this._drag;
     if (!drag) return;
     switch (drag.kind) {
+      case "press": {
+        if (Math.hypot(event.clientX - drag.screen[0], event.clientY - drag.screen[1]) < DRAG_PX) return;
+        this._drag = { kind: "pan", start: drag.screen, view: drag.view };
+        const k = this.pixel();
+        this._view = {
+          ...drag.view,
+          x: drag.view.x - (event.clientX - drag.screen[0]) * k,
+          y: drag.view.y - (event.clientY - drag.screen[1]) * k,
+        };
+        return;
+      }
       case "pan": {
         const k = this.pixel();
         this._view = {
@@ -956,6 +1131,10 @@ class FloorCastPanel extends LitElement {
         return;
       }
       case "move": {
+        if (!drag.armed) {
+          if (Math.hypot(event.clientX - drag.screen[0], event.clientY - drag.screen[1]) < DRAG_PX) return;
+          drag.armed = true;
+        }
         const delta: Point = event.altKey
           ? [p[0] - drag.start[0], p[1] - drag.start[1]]
           : [round(p[0] - drag.start[0]), round(p[1] - drag.start[1])];
@@ -1063,6 +1242,23 @@ class FloorCastPanel extends LitElement {
     const drag = this._drag;
     this._drag = undefined;
     if (!drag) return;
+    if (drag.kind === "press") {
+      this.select(this.pickFrom(drag.candidates, drag.screen));
+      return;
+    }
+    // A click on the selected thing without moving it: what lies below it, when clicked at the same spot.
+    if (drag.kind === "move" && !drag.armed && drag.candidates) {
+      this.select(this.pickFrom(drag.candidates, drag.screen));
+      return;
+    }
+    if (drag.kind === "move" && drag.moved) this.notify("Moved");
+    if (drag.kind === "create-item" || drag.kind === "create-light" || drag.kind === "create-room") {
+      const placing = this._tool;
+      const historyBefore = this._history.length;
+      queueMicrotask(() => {
+        if (this._history.length > historyBefore) this.notify(`${TOOL_NAMES[placing] ?? "Item"} placed`);
+      });
+    }
     if (drag.kind === "create-item") {
       this.createItem(drag.start, drag.current);
       return;
@@ -1121,8 +1317,14 @@ class FloorCastPanel extends LitElement {
       this.duplicateSelection();
       return;
     }
+    if (event.key === "/") {
+      event.preventDefault();
+      (this.renderRoot.querySelector("input.find") as HTMLInputElement | null)?.focus();
+      return;
+    }
     if (event.key === "Escape") {
       if (this._draft.length) this._draft = [];
+      else if (this._tool !== "select") this.cancelTool();
       else this._selection = undefined;
     } else if (event.key === "Enter" && (this._tool === "room" || this._tool === "zone")) this.closeRoom();
     else if ((event.key === "Delete" || event.key === "Backspace") && this._selection) this.deleteSelection();
@@ -1282,6 +1484,10 @@ class FloorCastPanel extends LitElement {
   private duplicateSelection(): void {
     const s = this._selection;
     if (!s) return;
+    if (this.lockedKind(s)) {
+      this.notify("The layout is locked");
+      return;
+    }
     const shift = (q: Point): Point => [fix(q[0] + 0.5), fix(q[1] + 0.5)];
     const level = this.level;
     let copy: Selection | undefined;
@@ -1494,6 +1700,11 @@ class FloorCastPanel extends LitElement {
   private deleteSelection(): void {
     const s = this._selection;
     if (!s) return;
+    if (this.lockedKind(s)) {
+      this.notify("The layout is locked");
+      return;
+    }
+    this.notify("Deleted");
     this.change(() => {
       const level = this.level;
       if (s.kind === "wall") {
@@ -1616,6 +1827,18 @@ class FloorCastPanel extends LitElement {
             Live
           </label>
           <span class="spacer"></span>
+          ${this.renderFind()} ${this.renderLayers()}
+          <button
+            class=${this._locked ? "on" : ""}
+            title=${this._locked ? "Walls, doors, windows, rooms and objects stay where they are. Click to unlock." : "Lock walls, doors, windows, rooms and objects where they are"}
+            @click=${() => {
+              this._locked = !this._locked;
+              store(LOCK_KEY, this._locked);
+              if (this._locked && LAYOUT_TOOLS.includes(this._tool)) this.cancelTool();
+            }}
+          >
+            ${this._locked ? "🔒" : "🔓"} Layout
+          </button>
           <button class=${this._guide ? "on" : ""} @click=${() => (this._guide = !this._guide)} title="How to draw the plan and what every part does">
             Guide
           </button>
@@ -1628,7 +1851,7 @@ class FloorCastPanel extends LitElement {
       <div class="main">
         ${this._guide ? html`<floorcast-guide class="guide"></floorcast-guide>` : nothing}
         <div class="canvas" ?hidden=${this._guide}>
-          ${this.renderCanvas()} ${this.renderBigImage()}
+          ${this.renderCanvas()} ${this.renderBigImage()} ${this.renderPlacing()} ${this.renderToast()}
           <div class="view-buttons">
             <button title="Zoom in" @click=${() => this.zoom(1 / 1.3)}>+</button>
             <button title="Zoom out" @click=${() => this.zoom(1.3)}>−</button>
@@ -1640,9 +1863,18 @@ class FloorCastPanel extends LitElement {
     `;
   }
 
+  private cancelTool(): void {
+    this._tool = "select";
+    this._draft = [];
+    this._message = "";
+  }
+
   private toolButton(tool: Tool, label: string) {
+    const locked = this._locked && LAYOUT_TOOLS.includes(tool);
     return html`<button
       class=${this._tool === tool ? "on" : ""}
+      ?disabled=${locked}
+      title=${locked ? "Unlock the layout to draw" : ""}
       @click=${() => {
         this._tool = tool;
         this._draft = [];
@@ -1654,12 +1886,151 @@ class FloorCastPanel extends LitElement {
     </button>`;
   }
 
+  /** While a tool places something: what a click does, and how to stop. */
+  /** A device left off the plan by the Devices layer; the tab that edits it always shows it. */
+  private hiddenDevice(device: Device): boolean {
+    return this._hidden.has("devices") && this.modeFor({ kind: "device", id: device.id }) !== this._mode;
+  }
+
+  private renderPlacing() {
+    if (this._tool === "select" || this._guide) return nothing;
+    const label = TOOL_NAMES[this._tool] ?? this._tool;
+    return html`<div class="placing-bar">
+      <b>${label}</b><span>${HINTS[this._tool]}</span>
+      <button @click=${() => this.cancelTool()}>Cancel (Esc)</button>
+    </div>`;
+  }
+
+  private renderToast() {
+    if (!this._toast) return nothing;
+    return html`<div class="toast">
+      <span>${this._toast}</span>
+      <button
+        @click=${() => {
+          this.undo();
+          this._toast = undefined;
+        }}
+      >
+        Undo
+      </button>
+    </div>`;
+  }
+
+  /** Things of all levels whose name, entity or kind holds every word of the search. */
+  private findResults(): { label: string; detail: string; level: Level; s: Selection; at: Point }[] {
+    const words = this._find.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    const results: { label: string; detail: string; level: Level; s: Selection; at: Point; text: string }[] = [];
+    const name = (entity?: string | null) => (entity ? String(this.hass.states[entity]?.attributes.friendly_name ?? "") : "");
+    for (const level of this._plan!.levels) {
+      for (const room of level.rooms)
+        results.push({ label: room.name, detail: `Room · ${level.name}`, level, s: { kind: "room", id: room.id }, at: centroid(room.points), text: `room ${room.name} ${room.area ?? ""}` });
+      for (const device of level.devices ?? []) {
+        const kind = device.kind === "sensor" && device.sensorType === "alarm" ? "Alarm" : DEVICE_LABELS[device.kind];
+        results.push({
+          label: device.label || name(device.entity) || device.entity || kind,
+          detail: `${kind} · ${device.entity ?? device.source ?? "no entity"} · ${level.name}`,
+          level,
+          s: { kind: "device", id: device.id },
+          at: device.at,
+          text: `${kind} ${device.kind} ${device.label ?? ""} ${device.entity ?? ""} ${name(device.entity)} ${device.source ?? ""}`,
+        });
+      }
+      for (const opening of level.openings) {
+        const wall = level.walls.find((w) => w.id === opening.wall);
+        if (!wall) continue;
+        const kind = opening.type === "door" ? "Door" : "Window";
+        results.push({
+          label: name(opening.cover) || name(opening.contact) || kind,
+          detail: `${kind} · ${[opening.contact, opening.cover].filter(Boolean).join(", ") || "no sensor"} · ${level.name}`,
+          level,
+          s: { kind: "opening", id: opening.id },
+          at: pointOnWall(wall, opening.at),
+          text: `${kind} ${opening.contact ?? ""} ${opening.cover ?? ""} ${name(opening.contact)} ${name(opening.cover)}`,
+        });
+      }
+      for (const zone of level.zones ?? [])
+        results.push({ label: zone.name, detail: `Zone · ${level.name}`, level, s: { kind: "zone", id: zone.id }, at: centroid(zone.points), text: `zone ${zone.name} ${zone.kind}` });
+      for (const item of level.items) {
+        const at = item.center ?? centroid(itemPoints(item));
+        results.push({ label: item.name || ITEM_LABELS[item.type], detail: `Object · ${level.name}`, level, s: { kind: "item", id: item.id }, at, text: `object ${ITEM_LABELS[item.type]} ${item.type} ${item.name ?? ""}` });
+      }
+    }
+    return results.filter((r) => words.every((w) => r.text.toLowerCase().includes(w))).slice(0, 12);
+  }
+
+  private goTo(result: { level: Level; s: Selection; at: Point }): void {
+    this._find = "";
+    if (result.level.id !== this.level.id) {
+      this._levelId = result.level.id;
+      this._draft = [];
+    }
+    this.setMode(this.modeFor(result.s));
+    this.pick(result.s, result.at);
+  }
+
+  private renderFind() {
+    const results = this.findResults();
+    return html`<div class="find-box">
+      <input
+        class="find"
+        type="search"
+        placeholder="Find (/)"
+        .value=${this._find}
+        @input=${(e: Event) => (this._find = (e.target as HTMLInputElement).value)}
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key === "Enter" && results[0]) this.goTo(results[0]);
+          if (e.key === "Escape") this._find = "";
+        }}
+      />
+      ${this._find.trim()
+        ? html`<div class="find-results">
+            ${results.length
+              ? results.map(
+                  (r) => html`<button @click=${() => this.goTo(r)}>
+                    <span>${r.label}</span><em>${r.detail}</em>
+                  </button>`,
+                )
+              : html`<p class="muted">Nothing found.</p>`}
+          </div>`
+        : nothing}
+    </div>`;
+  }
+
+  private renderLayers() {
+    const layer = (key: Layer, label: string) => html`<label class="check">
+      <input
+        type="checkbox"
+        .checked=${!this._hidden.has(key)}
+        @change=${() => {
+          const hidden = new Set(this._hidden);
+          if (hidden.has(key)) hidden.delete(key);
+          else hidden.add(key);
+          this._hidden = hidden;
+          storeList(LAYERS_KEY, [...hidden]);
+        }}
+      />
+      ${label}
+    </label>`;
+    return html`<div class="layers-box">
+      <button class=${this._hidden.size ? "on" : ""} @click=${() => (this._layersOpen = !this._layersOpen)} title="Show or hide parts of the plan">
+        Layers ▾
+      </button>
+      ${this._layersOpen
+        ? html`<div class="layers-menu">
+            ${layer("devices", "Devices")} ${layer("zones", "Zones")} ${layer("names", "Room names")}
+            <p class="muted">Hidden parts cannot be clicked.</p>
+          </div>`
+        : nothing}
+    </div>`;
+  }
+
   private renderCanvas() {
     const v = this._view;
     const level = this.level;
     const px = this.pixel();
     return html`<svg
-      class="plan mode-${this._mode}"
+      class="plan mode-${this._mode} ${this._tool !== "select" ? "placing" : ""}"
       viewBox="${v.x} ${v.y} ${v.w} ${v.h}"
       @pointerdown=${this.onDown}
       @pointermove=${this.onMove}
@@ -1689,16 +2060,18 @@ class FloorCastPanel extends LitElement {
       ${this._live ? renderGlows(this.shown, this.hass.states, "editor") : nothing}
       ${this._live ? renderScreenGlows(this.shown, this.hass.states, "editor") : nothing}
       ${this._live ? renderOpeningLabels(this.shown, this.hass.states, px * 10) : nothing}
-      ${this.shown.rooms.map((room) => {
-        const [cx, cy] = centroid(room.points);
-        return room.stairs ? nothing : svg`<text class="fc-label" x=${cx} y=${cy}>${room.name}</text>`;
-      })}
+      ${this._hidden.has("names")
+        ? nothing
+        : this.shown.rooms.map((room) => {
+            const [cx, cy] = centroid(room.points);
+            return room.stairs ? nothing : svg`<text class="fc-label" x=${cx} y=${cy}>${room.name}</text>`;
+          })}
       ${this._mode === "radar" || this._mode === "cameras"
         ? (this.shown.devices ?? [])
             .filter((d) => (this._mode === "radar" ? d.kind === "radar" : d.kind === "camera"))
             .map((d) => svg`<path class="radar-range ${d.kind}" d=${d.kind === "radar" ? radarView(d) : cameraView(d)}></path>`)
         : nothing}
-      ${(["radar", "cameras", "zones"].includes(this._mode) ? (this.shown.zones ?? []) : []).map((zone) => {
+      ${(["radar", "cameras", "zones"].includes(this._mode) && !(this._hidden.has("zones") && this._mode !== "zones") ? (this.shown.zones ?? []) : []).map((zone) => {
         const d = zone.points.map((q, i) => `${i ? "L" : "M"}${q[0]} ${q[1]}`).join("") + "Z";
         const [cx, cy] = centroid(zone.points);
         return svg`<g data-zone=${zone.id} class="zone ${zone.kind}">
@@ -1707,7 +2080,7 @@ class FloorCastPanel extends LitElement {
           <text class="zone-label" x=${cx} y=${cy} font-size=${px * 11}>${zone.name}</text>
         </g>`;
       })}
-      ${(this.shown.devices ?? []).map(
+      ${(this.shown.devices ?? []).filter((device) => !this.hiddenDevice(device)).map(
         (device) => svg`<g class="kind kind-${device.kind}">${
           device.kind === "radar"
             ? svg`<g data-device=${device.id} class="camera-device">
@@ -4211,7 +4584,96 @@ class FloorCastPanel extends LitElement {
         flex: 1;
         min-width: 0;
       }
-      .area-list {
+      .plan.placing {
+        cursor: crosshair;
+      }
+      .placing-bar {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: calc(100% - 24px);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px 6px 14px;
+        border-radius: 20px;
+        background: var(--primary-color);
+        color: #fff;
+        font-size: 13px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+      .placing-bar span {
+        opacity: 0.9;
+      }
+      .placing-bar button {
+        flex: none;
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border-color: transparent;
+      }
+      .toast {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 6px 6px 14px;
+        border-radius: 20px;
+        background: var(--card-background-color, #1c1f24);
+        border: 1px solid var(--divider-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        font-size: 13px;
+      }
+      .find-box,
+      .layers-box {
+        position: relative;
+      }
+      .find {
+        width: 180px;
+        font: inherit;
+        padding: 5px 8px;
+        color: var(--primary-text-color);
+        background: var(--primary-background-color);
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+      }
+      .find-results,
+      .layers-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        z-index: 5;
+        min-width: 280px;
+        max-height: 60vh;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px;
+        border-radius: 10px;
+        background: var(--card-background-color, #1c1f24);
+        border: 1px solid var(--divider-color);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      }
+      .find-results button {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+        border: none;
+        background: transparent;
+      }
+      .find-results button:hover {
+        background: var(--secondary-background-color, #2a2e35);
+      }
+      .find-results em {
+        font-style: normal;
+        font-size: 11px;
+        color: var(--secondary-text-color);
+      }
+            .area-list {
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -4439,7 +4901,7 @@ const ZONE_HINTS: Record<Zone["kind"], string> = {
 };
 
 const HINTS: Record<Tool, string> = {
-  select: "Click to select, drag to move. Handles change the size.",
+  select: "Click to select, click again for what lies below. Drag the selected thing to move it, drag elsewhere to move the plan.",
   wall: "Click to start a wall and click again for each corner. Double click or Esc ends.",
   door: "Click on a wall to place a door.",
   window: "Click on a wall to place a window.",
