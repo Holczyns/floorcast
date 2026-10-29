@@ -31,7 +31,8 @@ someone to the kitchen counter.
 - **Plan editor** in the sidebar: walls with wall types, doors, windows, rooms, several levels, garden objects and
   furniture, with snapping, typed wall lengths, undo, import and export.
 - **Dashboard card** that draws the saved plan with live states and follows every save. It fits phones, tablets and
-  wall panels, with levels side by side or in tabs and an optional crop, and zoom and pan on the dashboard if you allow it.
+  wall panels, with levels side by side or in tabs and an optional crop. Zoom and pan on the dashboard can be allowed;
+  the card starts from its default view each time.
 - **Lights** as points or strips, glowing in their colour and brightness; a tap on a room switches all its lights.
 - **Doors, windows and blinds** following their contact sensors and covers.
 - **Sensors** written where they stand: a header, the main value and up to two secondary values.
