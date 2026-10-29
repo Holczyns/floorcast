@@ -34,8 +34,12 @@ someone to the kitchen counter.
   wall panels, with levels side by side or in tabs and an optional crop. Zoom and pan on the dashboard can be allowed;
   the card starts from its default view each time.
 - **Lights** as points or strips, glowing in their colour and brightness; a tap on a room switches all its lights.
-- **Doors, windows and blinds** following their contact sensors and covers.
+- **Doors, windows and blinds** following their contact sensors and covers; **gates and garage doors** and **door
+  locks** that open, close, lock and unlock on a tap after a question.
 - **Sensors** written where they stand: a header, the main value and up to two secondary values.
+- **Thermostats**: the target under the room name, the room glowing while it heats or cools.
+- **Indicators**: any entity as a dot with its state that glows while the device runs, such as a washer by its power
+  or a pump by its switch.
 - **Screens** (projector, TV) with the light they throw and a remote control on the card.
 - **Sprinklers** with their throw and arc, showing the water while the valve is open; a tap opens or closes the
   valve after a question.
@@ -44,10 +48,11 @@ someone to the kitchen counter.
 - **Counting**: a count and an occupancy entity for every room and counting zone, ready for automations; motion and
   presence sensors keep a room occupied too.
 - **Mower and vacuum** placed on the plan from their maps, with their tracks and battery.
-- **Camera stills** beside the camera, refreshed while shown, opening by themselves when someone is seen.
+- **Camera stills** beside the camera, refreshed while shown, opening by themselves and turning the view red when the
+  camera's person or motion sensor sees someone.
 - **Ground view** (experimental): the camera image laid on the plan, also ahead of the moving mower.
-- **Rooms linked to areas**: a room offers the lights, sensors, blinds and contacts of its Home Assistant area, and
-  **Place all** puts them in at once.
+- **Rooms linked to areas** and levels to floors: a room offers the lights, sensors, blinds and contacts of its Home
+  Assistant area, and **Place all** puts them in at once.
 - **Alarms**: smoke, gas, carbon monoxide and water sensors pulse their room red and name it at the top of the card.
 - **Heat map**: rooms coloured by temperature, humidity or CO₂, with a switch on the card.
 - **Ask before switching** for a pump, a server or a gate.
