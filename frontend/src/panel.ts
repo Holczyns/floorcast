@@ -2482,7 +2482,7 @@ class FloorCastPanel extends LitElement {
   /** Content of the tab when nothing is selected. */
   private renderList() {
     if (this._mode === "settings") return this.levelProperties();
-    if (this._mode === "plan") return html`${this.filterBox()} ${this.buildingList()} ${this.objectList()}`;
+    if (this._mode === "plan") return html`${this.levelsSection()} ${this.filterBox()} ${this.buildingList()} ${this.objectList()}`;
     if (this._mode === "devices") return this.deviceList();
     return html`${this.radarList()} ${this.cameraList()} ${this.zoneList()}`;
   }
@@ -2842,8 +2842,8 @@ class FloorCastPanel extends LitElement {
     </nav>`;
   }
 
-  /** Settings of the whole plan: its levels, wall types, corners, colours and file. */
-  private levelProperties() {
+  /** The levels of the plan, in the Plan tab: their names, order, adding and deleting. */
+  private levelsSection() {
     const levels = this._plan!.levels;
     const moveLevel = (index: number, by: number) =>
       this.change(() => {
@@ -2896,6 +2896,12 @@ class FloorCastPanel extends LitElement {
           Add level
         </button>
       </div>
+    `;
+  }
+
+  /** Settings of the whole plan: wall types, corners, colours and file. */
+  private levelProperties() {
+    return html`
       <h3>Wall types</h3>
       ${this.wallTypes.map(
         (type) => html`<div class="type-row">
@@ -4936,6 +4942,9 @@ class FloorCastPanel extends LitElement {
         font-style: normal;
         font-size: 11px;
         margin: -2px 0 4px 2px;
+      }
+      .level-row + .row {
+        margin-bottom: 12px;
       }
       .level-row.current input {
         border-color: var(--primary-color);

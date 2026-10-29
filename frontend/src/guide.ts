@@ -37,7 +37,7 @@ const SECTIONS: Section[] = [
     title: "First steps",
     body: html`
       <ol>
-        <li>In <b>⚙ Settings</b>, name the level (for example <i>Ground floor</i>) and set the wall types you build with.</li>
+        <li>In <b>Plan</b>, under <b>Levels</b>, name the level (for example <i>Ground floor</i>); in <b>⚙ Settings</b> set the wall types you build with.</li>
         <li>
           In <b>Plan</b>, draw the outer walls with <b>+ Add → Wall</b> (key W), then the inner walls. Place doors and windows on them and
           draw the rooms.
