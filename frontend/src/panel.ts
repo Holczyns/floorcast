@@ -4,20 +4,17 @@ import { LitElement, html, nothing, svg, type PropertyValues } from "lit";
 import "./entity-picker";
 import "./guide";
 import { GroundFeed } from "./ground";
-import { LANGUAGE_NAMES, N_, pickLanguage, t, useDictionary } from "./i18n";
+import { N_, pickLanguage, t, useDictionary } from "./i18n";
 import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
 import examplePlan from "../../tools/example_plan.json";
 import { type HomeAssistant } from "./ha";
 import {
   CIRCLE_TYPES,
-  DEFAULT_CORNER_RADIUS,
   DEFAULT_CAMERA_RANGE,
   DEFAULT_FIELD_OF_VIEW,
   DEFAULT_GLOW,
   DEFAULT_RADAR_RANGE,
   DEFAULT_RADAR_VIEW,
-  DEFAULT_ROOM_HOLD,
-  DEFAULT_STATIONARY_HOLD,
   DEFAULT_THROW,
   type Device,
   radarSources,
@@ -33,8 +30,6 @@ import {
   type ItemType,
   type Level,
   type Opening,
-  type Appearance,
-  type PaletteKey,
   type Plan,
   type Point,
   type Room,
@@ -42,44 +37,24 @@ import {
   type WallType,
   type Zone,
   type TrackedPerson,
-  type TrackingSettings,
   centroid,
   OPENING_NAMES,
   indicatorState,
-  SWITCHABLE_DOMAINS,
   itemPoints,
-  AREA_KIND_NAMES,
-  areaKind,
-  openingName,
-  planEntities,
-  roomOpenings,
-  spotsInRoom,
-  type AreaKind,
   dist,
   emptyLevel,
   levelBounds,
   planRadius,
   pointOnWall,
-  deviceCentre,
-  roomAt,
-  pointInPolygon,
-  roomLights,
-  roomThermometers,
   normalizeSensors,
-  MAX_SECONDARY,
-  type SensorType,
-  type SensorValue,
   isPowered,
   projectOnWall,
   rectCorners,
   rotate,
   uid,
   homography,
-  MIN_GROUND_SPOTS,
-  type PreviewMode,
   imageToPlan,
   readingText,
-  ALARM_CLASSES,
   alarmState,
   wallDirection,
   wallLength,
@@ -92,9 +67,6 @@ import {
   planStyles,
   applyPalette,
   planPalette,
-  DARK_PALETTE,
-  LIGHT_PALETTE,
-  PALETTE_GROUPS,
   radarView,
   renderCameraGlow,
   renderCameraIcon,
@@ -113,8 +85,6 @@ import {
   renderScreen,
   renderScreenGlows,
   screenLight,
-  DEFAULT_SCREEN_THROW,
-  DEFAULT_SCREEN_SPREAD,
   renderMower,
   renderSpray,
   sprinklerArea,
@@ -140,32 +110,24 @@ import {
   KEY_TOOLS,
   DEVICE_LABELS,
   Registry,
-  INDICATOR_DOMAINS,
-  ON_OPENING,
-  AREA_KINDS,
   View,
   Drag,
   ITEM_LABELS,
-  ZONE_LABELS,
-  isNumberedLevel,
-  inContext,
-  GRID,
   SNAP_RADIUS,
   CORNER_SNAP,
   HISTORY_LIMIT,
   round,
   fix,
   clone,
-  ZONE_HINTS,
   HINTS,
-  slug,
-  levelBoundsOf,
   aheadToPlan,
-  planToAhead,
 } from "./panel-defs";
 import { panelStyles } from "./panel-styles";
+import { mowerPose, pairsOf, renderBigImage, setPairs } from "./panel-devices";
+import { renderProperties } from "./panel-forms";
+import { loadWalks, renderList } from "./panel-lists";
 
-class FloorCastPanel extends LitElement {
+export class FloorCastPanel extends LitElement {
   static properties = {
     hass: { attribute: false },
     narrow: { attribute: false },
@@ -214,56 +176,56 @@ class FloorCastPanel extends LitElement {
 
   hass!: HomeAssistant;
   narrow = false;
-  private _plan?: Plan;
-  private _saved = "";
-  private _levelId = "";
-  private _tool: Tool = "select";
-  private _mode: Mode = "plan";
+  _plan?: Plan;
+  _saved = "";
+  _levelId = "";
+  _tool: Tool = "select";
+  _mode: Mode = "plan";
   /** The palette edited in Settings, dark or light; the one the plan shows without a choice. */
-  private _paletteMode?: "dark" | "light";
+  _paletteMode?: "dark" | "light";
   /** The start screen of an empty plan was closed to draw from scratch. */
   private _startClosed = false;
   /** What was typed to confirm Delete everything. */
-  private _wipeText = "";
+  _wipeText = "";
   /** A level whose delete was pressed once; a second press within a few seconds deletes it. */
-  private _deleteLevel?: string;
+  _deleteLevel?: string;
   /** Delete was pressed once: a second press within a few seconds deletes. */
-  private _confirmDelete = false;
-  private _confirmTimer?: number;
+  _confirmDelete = false;
+  _confirmTimer?: number;
   /** Text the lists of the panel are narrowed to. */
-  private _filter = "";
+  _filter = "";
   /** Spot clicked in the camera image, waiting for the same spot on the plan. */
-  private _imagePoint?: Point;
+  _imagePoint?: Point;
   /** The camera image is shown large over the plan while spots are picked, and how far it is zoomed in. */
-  private _bigImage = false;
-  private _imageZoom = { scale: 1, origin: [50, 50] as Point };
+  _bigImage = false;
+  _imageZoom = { scale: 1, origin: [50, 50] as Point };
   /** Width to height of the camera image, known once it loaded; it sizes the large image to fill the view. */
-  private _imageAspect = 16 / 9;
+  _imageAspect = 16 / 9;
   /** Which spots the large image adds to: the Frigate calibration, or the ground or mower calibration (experimental). */
-  private _calibrationTarget: "frigate" | "ground" | "mower" = "frigate";
+  _calibrationTarget: "frigate" | "ground" | "mower" = "frigate";
   /** EXPERIMENTAL: camera images on the ground of the saved plan, shown while previewed. */
   /** Devices whose ground image is previewed; the feed runs while there is one. */
-  private _groundPreview = new Set<string>();
-  private _groundFeed = new GroundFeed(() => this.requestUpdate());
+  _groundPreview = new Set<string>();
+  _groundFeed = new GroundFeed(() => this.requestUpdate());
   /** Cameras of Frigate, read once when a camera is edited; empty without Frigate. */
-  private _frigateCameras?: { name: string; size: [number, number] | null }[];
+  _frigateCameras?: { name: string; size: [number, number] | null }[];
   /** Where people walked in recent Frigate events of a camera, in image points, for checking its calibration. */
-  private _paths = new Map<string, Point[][]>();
+  _paths = new Map<string, Point[][]>();
   private _itemType: ItemType = "obstacle";
   private _wallType = "outer";
-  private _selection?: Selection;
-  private _view: View = { x: -5, y: -5, w: 10, h: 10 };
+  _selection?: Selection;
+  _view: View = { x: -5, y: -5, w: 10, h: 10 };
   private _draft: Point[] = [];
   private _cursor?: Point;
-  private _message = "";
-  private _saving = false;
+  _message = "";
+  _saving = false;
   /** Length typed while drawing a wall, as "3.5" or "3.5<90" (angle counter-clockwise from east). */
   private _typed = "";
   private _lightShape: "point" | "line" = "point";
   /** Images of mower maps, loaded for calibration only; they are not part of the plan. */
-  private _mapImages = new Map<string, string>();
+  _mapImages = new Map<string, string>();
   /** Wall ends move alone instead of dragging joined walls along. */
-  private _endsAlone = false;
+  _endsAlone = false;
   private _pointers = new Map<number, Point>();
   private _pinch?: { distance: number; mid: Point; view: View };
   private _garden = true;
@@ -287,10 +249,10 @@ class FloorCastPanel extends LitElement {
   private _history: string[] = [];
   private _loaded = false;
   /** People the integration tracks, per level, shown in People; undefined without the tracking. */
-  private _people?: Record<string, TrackedPerson[]>;
+  _people?: Record<string, TrackedPerson[]>;
   /** Where people walked on this level in the chosen hours, while shown in People. */
-  private _walks?: Point[][];
-  private _walkHours = 24;
+  _walks?: Point[][];
+  _walkHours = 24;
   /** Camera people before the rules, per level and camera. */
   private _raw: Record<string, Record<string, Point[]>> = {};
   private _unsubscribePeople?: Promise<() => void>;
@@ -416,26 +378,26 @@ class FloorCastPanel extends LitElement {
     this.updateComplete.then(() => this.fit());
   }
 
-  private get wallTypes(): WallType[] {
+  get wallTypes(): WallType[] {
     this._plan!.wallTypes ??= clone(DEFAULT_WALL_TYPES);
     return this._plan!.wallTypes;
   }
 
-  private wallType(id: string | undefined): WallType {
+  wallType(id: string | undefined): WallType {
     return this.wallTypes.find((type) => type.id === id) ?? this.wallTypes[0] ?? DEFAULT_WALL_TYPES[0];
   }
 
   /** A changed thickness of a type reaches every wall of that type on every level. */
-  private applyWallType(type: WallType): void {
+  applyWallType(type: WallType): void {
     for (const level of this._plan!.levels) for (const wall of level.walls) if (wall.type === type.id) wall.t = type.t;
   }
 
-  private get level(): Level {
+  get level(): Level {
     return this._plan!.levels.find((level) => level.id === this._levelId) ?? this._plan!.levels[0];
   }
 
   /** The level as drawn: without the garden when it is hidden, so hidden things cannot be picked. */
-  private get shown(): Level {
+  get shown(): Level {
     return this._garden ? this.level : withoutGarden(this.level);
   }
 
@@ -456,14 +418,14 @@ class FloorCastPanel extends LitElement {
   }
 
   /** A short note of what the last action on the plan changed, with Undo. */
-  private notify(text: string): void {
+  notify(text: string): void {
     window.clearTimeout(this._toastTimer);
     this._toast = text;
     this._toastTimer = window.setTimeout(() => (this._toast = undefined), 5000);
   }
 
   /** Whether the layout lock keeps this thing where it is. */
-  private lockedKind(s: Selection | undefined): boolean {
+  lockedKind(s: Selection | undefined): boolean {
     return this._locked && !!s && ["wall", "opening", "room", "item"].includes(s.kind);
   }
 
@@ -475,7 +437,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** Selects a thing and opens the tab that edits it. */
-  private select(s: Selection | undefined): void {
+  select(s: Selection | undefined): void {
     this._confirmDelete = false;
     const message = this._message;
     if (s && !this.editable(s)) this.setMode(this.modeFor(s));
@@ -484,7 +446,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** Runs a change of the plan as one undoable step. */
-  private change(mutate: () => void): void {
+  change(mutate: () => void): void {
     const before = this.snapshot();
     mutate();
     this.remember(before);
@@ -500,7 +462,7 @@ class FloorCastPanel extends LitElement {
 
   // ---- view ----
 
-  private fit(): void {
+  fit(): void {
     const b = levelBounds(this.shown, 1);
     const box = this.renderRoot?.querySelector?.(".canvas") as HTMLElement | null;
     const aspect = box ? box.clientWidth / Math.max(box.clientHeight, 1) : 1.4;
@@ -655,27 +617,27 @@ class FloorCastPanel extends LitElement {
 
   // ---- finding things ----
 
-  private findWall(id: string): Wall | undefined {
+  findWall(id: string): Wall | undefined {
     return this.level.walls.find((wall) => wall.id === id);
   }
 
-  private findOpening(id: string): Opening | undefined {
+  findOpening(id: string): Opening | undefined {
     return this.level.openings.find((opening) => opening.id === id);
   }
 
-  private findRoom(id: string): Room | undefined {
+  findRoom(id: string): Room | undefined {
     return this.level.rooms.find((room) => room.id === id);
   }
 
-  private findZone(id: string): Zone | undefined {
+  findZone(id: string): Zone | undefined {
     return (this.level.zones ?? []).find((zone) => zone.id === id);
   }
 
-  private findItem(id: string): Item | undefined {
+  findItem(id: string): Item | undefined {
     return this.level.items.find((item) => item.id === id);
   }
 
-  private findDevice(id: string): Device | undefined {
+  findDevice(id: string): Device | undefined {
     return (this.level.devices ?? []).find((device) => device.id === id);
   }
 
@@ -777,7 +739,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** Selects something from a list and brings it into the middle of the view. */
-  private pick(selection: Selection, at: Point): void {
+  pick(selection: Selection, at: Point): void {
     this._selection = selection;
     this._tool = "select";
     const v = this._view;
@@ -911,15 +873,15 @@ class FloorCastPanel extends LitElement {
       case "calibrate": {
         const device = this._selection?.kind === "device" ? this.findDevice(this._selection.id) : undefined;
         if (!device || !this._imagePoint) return;
-        if (this._calibrationTarget === "mower" && !this.mowerPose(device)) {
+        if (this._calibrationTarget === "mower" && !mowerPose(this, device)) {
           this._message = t("The mower reports no heading now; the spot is not kept.");
           return;
         }
         const pair = { image: this._imagePoint, plan: this.snap(p, event) };
-        this.change(() => this.setPairs(device, [...this.pairsOf(device), pair]));
+        this.change(() => setPairs(this, device, [...pairsOf(this, device), pair]));
         this._imagePoint = undefined;
         this._tool = "select";
-        const count = this.pairsOf(device).length;
+        const count = pairsOf(this, device).length;
         this._message =
           count < 4
             ? t("{count} of at least 4 spots. Click the next one in the image.", { count })
@@ -1282,7 +1244,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** Reads the projection of the mower map and its image, for laying the map on the plan. */
-  private async loadMowerMap(device: Device): Promise<void> {
+  async loadMowerMap(device: Device): Promise<void> {
     const camera = device.map ? this.hass.states[device.map] : undefined;
     const path = camera?.attributes.mowing_map_api_path as string | undefined;
     if (!path) {
@@ -1345,7 +1307,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** First pair: the dock, where the vacuum stands and where the device was placed on the plan. */
-  private async markDock(device: Device): Promise<void> {
+  async markDock(device: Device): Promise<void> {
     if (!device.entity) return;
     const robot = await this.vacuumPosition(device.entity);
     if (!robot) return;
@@ -1398,7 +1360,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** A copy half a metre aside, selected, so it can be dragged into place. */
-  private duplicateSelection(): void {
+  duplicateSelection(): void {
     const s = this._selection;
     if (!s) return;
     if (this.lockedKind(s)) {
@@ -1614,7 +1576,7 @@ class FloorCastPanel extends LitElement {
     this.requestUpdate();
   }
 
-  private deleteSelection(): void {
+  deleteSelection(): void {
     const s = this._selection;
     if (!s) return;
     if (this.lockedKind(s)) {
@@ -1650,7 +1612,7 @@ class FloorCastPanel extends LitElement {
 
   // ---- saving, import, export ----
 
-  private async save(): Promise<void> {
+  async save(): Promise<void> {
     if (!this._plan) return;
     this._saving = true;
     try {
@@ -1664,7 +1626,7 @@ class FloorCastPanel extends LitElement {
     }
   }
 
-  private exportPlan(): void {
+  exportPlan(): void {
     const blob = new Blob([JSON.stringify(this._plan, null, 1)], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -1673,7 +1635,7 @@ class FloorCastPanel extends LitElement {
     URL.revokeObjectURL(link.href);
   }
 
-  private importPlan(event: Event): void {
+  importPlan(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     file.text().then((text) => {
@@ -1707,7 +1669,7 @@ class FloorCastPanel extends LitElement {
                   this._selection = undefined;
                   this._draft = [];
                   this.fit();
-                  if (this._walks) this.loadWalks(this._walkHours);
+                  if (this._walks) loadWalks(this, this._walkHours);
                 }}
               >
                 ${level.name}
@@ -1768,7 +1730,7 @@ class FloorCastPanel extends LitElement {
       <div class="main">
         ${this._guide ? html`<floorcast-guide class="guide"></floorcast-guide>` : nothing}
         <div class="canvas" ?hidden=${this._guide}>
-          ${this.renderCanvas()} ${this.renderBigImage()} ${this.renderPlacing()} ${this.renderToast()} ${this.renderStart()}
+          ${this.renderCanvas()} ${renderBigImage(this)} ${this.renderPlacing()} ${this.renderToast()} ${this.renderStart()}
           <div class="view-buttons">
             <button title=${t("Zoom in")} @click=${() => this.zoom(1 / 1.3)}>+</button>
             <button title=${t("Zoom out")} @click=${() => this.zoom(1.3)}>−</button>
@@ -1843,7 +1805,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** Delete everything: one empty level instead of the whole plan, after the word is typed. */
-  private wipePlan(): void {
+  wipePlan(): void {
     const level = emptyLevel(t("Ground floor"));
     this.change(() => (this._plan = { levels: [level] }));
     this._levelId = level.id;
@@ -2219,7 +2181,7 @@ class FloorCastPanel extends LitElement {
   }
 
   /** State of an entity as a short line, and a button to try it, for checking a device is the right one. */
-  private stateLine(entity: string | null | undefined) {
+  stateLine(entity: string | null | undefined) {
     if (!entity) return nothing;
     const stateObj = this.hass.states[entity];
     if (!stateObj) return html`<p class="muted">${t("{entity} does not exist.", { entity })}</p>`;
@@ -2302,7 +2264,7 @@ class FloorCastPanel extends LitElement {
           [0, p.height],
         ].map((q) => mapToPlan(device, q as Point));
         // Camera spots of the mower where they lie from where it stands now (experimental).
-        const pose = this.mowerPose(device);
+        const pose = mowerPose(this, device);
         const spots = pose ? (device.ground?.spots ?? []).map((spot) => aheadToPlan(spot.ahead, pose)) : [];
         return svg`
           ${image ? svg`<image class="mower-map" href=${image} width=${p.width} height=${p.height} transform=${mapTransform(device)}></image>` : nothing}
@@ -2409,8 +2371,8 @@ class FloorCastPanel extends LitElement {
         : nothing}
       ${this._selection
         ? html`<button class="back" @click=${() => (this._selection = undefined)}>‹ ${t(MODES.find((m) => m.mode === this._mode)!.label)}</button>
-            ${this.renderProperties()}`
-        : this.renderList()}
+            ${renderProperties(this)}`
+        : renderList(this)}
       ${this._message ? html`<p class="message">${this._message}</p>` : nothing}
     `;
   }
@@ -2437,2075 +2399,14 @@ class FloorCastPanel extends LitElement {
     return nothing;
   }
 
-  /** Content of the tab when nothing is selected. */
-  private renderList() {
-    if (this._mode === "settings") return this.levelProperties();
-    if (this._mode === "plan") return html`${this.levelsSection()} ${this.filterBox()} ${this.buildingList()} ${this.objectList()}`;
-    if (this._mode === "devices") return this.deviceList();
-    return html`${this.radarList()} ${this.cameraList()} ${this.zoneList()}`;
-  }
-
-  private filterBox() {
-    return html`<input
-      class="filter"
-      type="search"
-      placeholder=${t("Filter")}
-      .value=${this._filter}
-      @input=${(e: Event) => (this._filter = (e.target as HTMLInputElement).value)}
-    />`;
-  }
-
-  private passesFilter(...texts: (string | null | undefined)[]): boolean {
-    const wanted = this._filter.trim().toLowerCase();
-    return !wanted || texts.some((text) => text?.toLowerCase().includes(wanted));
-  }
-
-  private listRow(label: string, detail: unknown, onPick: () => void, cls = "") {
-    return html`<button class="list-row ${cls}" @click=${onPick}>
-      <span>${label}</span><em>${detail}</em>
-    </button>`;
-  }
-
-  private entityName(id: string | null | undefined): string | undefined {
-    return id ? (this.hass.states[id]?.attributes.friendly_name ?? id) : undefined;
-  }
-
-  private shortState(id: string | null | undefined): string {
-    if (!id) return t("no entity");
-    const stateObj = this.hass.states[id];
-    if (!stateObj) return t("missing");
-    const unit = stateObj.attributes.unit_of_measurement;
-    return unit ? `${stateObj.state} ${unit}` : stateObj.state;
-  }
-
-  private buildingList() {
-    const level = this.shown;
-    const rooms = level.rooms.filter((room) => this.passesFilter(room.name));
-    return html`
-      <p class="muted">
-        ${t("{walls} walls · {doors} doors · {windows} windows. Click a wall, door or window on the plan to edit it.", {
-          walls: level.walls.length,
-          doors: level.openings.filter((o) => o.type === "door").length,
-          windows: level.openings.filter((o) => o.type === "window").length,
-        })}
-      </p>
-      <h3>${t("Rooms")}</h3>
-      ${rooms.map((room) =>
-        this.listRow(
-          room.name,
-          roomThermometers(level, room)[0] ? this.shortState(roomThermometers(level, room)[0].entity) : room.stairs ? t("stairs") : room.outdoor ? t("outdoor") : "",
-          () => this.pick({ kind: "room", id: room.id }, centroid(room.points)),
-        ),
-      )}
-    `;
-  }
-
-  private objectList() {
-    const items = this.shown.items.filter((item) => this.passesFilter(item.name, t(ITEM_LABELS[item.type])));
-    const size = (item: Item) =>
-      item.rect
-        ? `${item.rect[2].toFixed(2)} × ${item.rect[3].toFixed(2)} m`
-        : item.center
-          ? `⌀ ${(item.diameter ?? 1).toFixed(2)} m`
-          : t("free shape");
-    const centre = (item: Item): Point => {
-      const b = levelBoundsOf(item);
-      return [b.x + b.w / 2, b.y + b.h / 2];
-    };
-    return html`
-      <h3>${t("Garden and furniture")}</h3>
-      ${items.map((item) =>
-        this.listRow(item.name || t(ITEM_LABELS[item.type]), size(item), () => this.pick({ kind: "item", id: item.id }, centre(item))),
-      )}
-      ${items.length ? nothing : html`<p class="muted">${t("No objects. Choose Garden, furniture under Add and drag on the plan.")}</p>`}
-    `;
-  }
-
-  /** Devices by the room they stand in, then those outside the rooms; a device without an entity is marked. */
-  private deviceList() {
-    const level = this.shown;
-    const kindName = (device: Device) => t(device.kind === "sensor" && device.sensorType === "alarm" ? N_("Alarm") : DEVICE_LABELS[device.kind]);
-    const devices = (level.devices ?? []).filter(
-      (device) => device.kind !== "radar" && this.passesFilter(kindName(device), device.entity, this.entityName(device.entity), device.label),
-    );
-    const byRoom = new Map<string, Device[]>();
-    for (const device of devices) {
-      const key = roomAt(level, deviceCentre(device))?.id ?? "";
-      byRoom.set(key, [...(byRoom.get(key) ?? []), device]);
-    }
-    const unset = devices.filter((device) => !device.entity).length;
-    const rows = (list: Device[]) =>
-      list.map((device) =>
-        this.listRow(
-          this.entityName(device.entity) ?? device.label ?? t("{kind} without entity", { kind: kindName(device) }),
-          device.entity ? `${kindName(device)} · ${this.shortState(device.entity)}` : kindName(device),
-          () => this.pick({ kind: "device", id: device.id }, deviceCentre(device)),
-          device.entity ? "" : "unset",
-        ),
-      );
-    return html`
-      ${this.filterBox()}
-      ${unset ? html`<p class="muted warn">${t("{count} without an entity: they are marked below.", { count: unset })}</p>` : nothing}
-      ${level.rooms
-        .filter((room) => byRoom.has(room.id))
-        .map(
-          (room) => html`<h3 class="link" @click=${() => this.pick({ kind: "room", id: room.id }, centroid(room.points))}>${room.name}</h3>
-            ${rows(byRoom.get(room.id)!)}`,
-        )}
-      ${byRoom.has("") ? html`<h3>${t("Outside the rooms")}</h3>${rows(byRoom.get("")!)}` : nothing}
-      ${devices.length ? nothing : html`<p class="muted">${t("No devices. Choose one under Add and click on the plan, or link a room to its area.")}</p>`}
-    `;
-  }
-
-  private radarList() {
-    const radars = (this.shown.devices ?? []).filter((device) => device.kind === "radar");
-    return html`
-      <h3>${t("Radars")}</h3>
-      ${radars.map((radar) => {
-        const seen = radarTargets(radar, this.hass.states).length;
-        const online = !!radar.source && this.hass.states[`sensor.${radar.source}_target_1_x`]?.state !== "unavailable";
-        return this.listRow(
-          radar.source ?? t("Radar without sensors"),
-          online ? t("sees {count}", { count: seen }) : t("offline"),
-          () => this.pick({ kind: "device", id: radar.id }, radar.at),
-          online ? "" : "unset",
-        );
-      })}
-      ${radars.length ? nothing : html`<p class="muted">${t("No radars on this level. Choose Radar under Add and click where one hangs.")}</p>`}
-      ${radars.length ? this.trackingProperties("radar") : nothing}
-      <p class="muted">
-        ${t("Blue dots are people after the rules, grey dots the raw targets of the radars. Select a radar to see only its own targets and the people it sees. Zones work the same for radars and cameras.")}
-      </p>
-    `;
-  }
-
-  /** Cameras with their Frigate camera, calibration and the people they see now; the settings of camera tracking. */
-  private cameraList() {
-    const cameras = (this.shown.devices ?? []).filter((device) => device.kind === "camera");
-    const people = this._people?.[this.level.id] ?? [];
-    return html`
-      <h3>${t("Cameras")}</h3>
-      ${cameras.map((camera) => {
-        const spots = camera.calibration?.length ?? 0;
-        const seen = people.filter((p) => p.camera && p.camera === camera.frigate).length;
-        const detail = !camera.frigate ? t("no Frigate camera") : spots < 4 ? t("{count} of 4 spots", { count: spots }) : t("sees {count}", { count: seen });
-        return this.listRow(
-          this.entityName(camera.entity) ?? camera.frigate ?? t("Camera without entity"),
-          detail,
-          () => this.pick({ kind: "device", id: camera.id }, camera.at),
-          camera.frigate && spots >= 4 ? "" : "unset",
-        );
-      })}
-      ${cameras.length ? nothing : html`<p class="muted">${t("No cameras on this level. Add one in Devices, then calibrate it here to count people.")}</p>`}
-      ${cameras.some((camera) => camera.frigate && (camera.calibration?.length ?? 0) >= 4) ? this.trackingProperties("camera") : nothing}
-      <p class="muted">
-        ${t("Select a camera to choose its Frigate camera and calibrate it: four spots on the ground, in the image and on the plan. People a calibrated camera sees are tracked as purple dots and counted with the radar people in the same rooms and zones. A selected camera also shows its raw detections in grey, before snapping into rooms and tracking.")}
-      </p>
-    `;
-  }
-
-  /** People counted in a room or zone now: the entity of the integration, or the people shown on the plan. */
-  private countIn(id: string, points: Point[]): string {
-    const entity = this.hass.states[`sensor.floorcast_${slug(`${this.level.id}_${id}`)}_count`];
-    if (entity) return entity.state;
-    const people = (this._people?.[this.level.id] ?? []).filter((p) => p.status !== "unconfirmed");
-    return String(people.filter((p) => pointInPolygon([p.x, p.y], points)).length);
-  }
-
-  /** Rooms as the basic zones with their people, and the zones drawn on them. */
-  private zoneList() {
-    const level = this.shown;
-    const zones = level.zones ?? [];
-    const rooms = level.rooms.filter((room) => !room.stairs);
-    return html`
-      <h3>${t("Rooms")}</h3>
-      ${rooms.map((room) =>
-        this.listRow(room.name, this.countIn(room.id, room.points), () => this.centreOn(centroid(room.points)), "people"),
-      )}
-      <h3>${t("Where people walked")}</h3>
-      <div class="row">
-        <label class="check"
-          ><input type="checkbox" .checked=${!!this._walks} @change=${(e: Event) => this.showWalks((e.target as HTMLInputElement).checked)} />
-          ${t("Show")}</label
-        >
-        <select @change=${(e: Event) => this.loadWalks(Number((e.target as HTMLSelectElement).value))}>
-          ${[1, 6, 24].map((hours) => html`<option value=${hours} ?selected=${hours === this._walkHours}>${hours} h</option>`)}
-        </select>
-        <button class="danger" @click=${() => this.clearWalks()}>${t("Clear")}</button>
-      </div>
-      <h3>${t("Zones")}</h3>
-      ${zones.map((zone) =>
-        this.listRow(
-          zone.name,
-          zone.kind === "count" ? this.countIn(zone.id, zone.points) : t(ZONE_LABELS[zone.kind]).replace(/ \(.*\)$/, ""),
-          () => this.pick({ kind: "zone", id: zone.id }, centroid(zone.points)),
-          zone.kind === "count" ? "people" : "",
-        ),
-      )}
-      ${zones.length ? nothing : html`<p class="muted">${t("No zones. Draw one with Zone to count a part of a room, mark a door or ignore a fan.")}</p>`}
-      <p class="muted">
-        ${t("Every room a radar or a calibrated camera sees counts its people; zones count a part of a room or steer the tracking. The rules are the same for people seen by radars and by cameras.")}
-      </p>
-    `;
-  }
-
-  private showWalks(on: boolean): void {
-    if (on) this.loadWalks(this._walkHours);
-    else this._walks = undefined;
-  }
-
-  /** Walks of the chosen hours from the history the integration keeps. */
-  private async loadWalks(hours: number): Promise<void> {
-    this._walkHours = hours;
-    try {
-      const result = await this.hass.callWS<{ walks: Point[][] }>({ type: "floorcast/history/get", level: this.level.id, hours });
-      this._walks = result.walks;
-      this._message = result.walks.length ? "" : t("Nobody walked here in that time.");
-    } catch (err) {
-      this._message = t("History not read: {error}", { error: String((err as { message?: string }).message ?? err) });
-    }
-  }
-
-  private async clearWalks(): Promise<void> {
-    if (!confirm(t("Clear the history of where people walked on every level?"))) return;
-    await this.hass.callWS({ type: "floorcast/history/clear" });
-    if (this._walks) this._walks = [];
-  }
-
-  private centreOn(at: Point): void {
-    const v = this._view;
-    this._view = { ...v, x: at[0] - v.w / 2, y: at[1] - v.h / 2 };
-  }
-
-  private renderProperties() {
-    const s = this._selection;
-    const body =
-      s?.kind === "wall"
-        ? this.wallProperties(this.findWall(s.id))
-        : s?.kind === "opening"
-          ? this.openingProperties(this.findOpening(s.id))
-          : s?.kind === "room"
-            ? this.roomProperties(this.findRoom(s.id))
-            : s?.kind === "zone"
-            ? this.zoneProperties(this.findZone(s.id))
-            : s?.kind === "item"
-              ? this.itemProperties(this.findItem(s.id))
-              : s?.kind === "device"
-                ? this.deviceProperties(this.findDevice(s.id))
-                : this.levelProperties();
-    return html`${this.breadcrumb()} ${body}`;
-  }
-
-  private number(label: string, value: number, apply: (v: number) => void, step = 0.05, unit = "m") {
-    return html`<label class="field">
-      <span>${label}</span>
-      <input
-        type="number"
-        step=${step}
-        .value=${String(fix(value))}
-        @change=${(e: Event) => {
-          const v = Number((e.target as HTMLInputElement).value);
-          if (Number.isFinite(v)) this.change(() => apply(v));
-        }}
-      />
-      <em>${unit}</em>
-    </label>`;
-  }
-
-  private text(label: string, value: string, apply: (v: string) => void) {
-    return html`<label class="field wide">
-      <span>${label}</span>
-      <input type="text" .value=${value} @change=${(e: Event) => this.change(() => apply((e.target as HTMLInputElement).value))} />
-    </label>`;
-  }
-
-  /**
-   * The end of every form: the position of a device typed in metres, then Duplicate and Delete. Delete asks for a
-   * second press, so a stray click removes nothing.
-   */
-  private deleteButton() {
-    const s = this._selection;
-    const device = s?.kind === "device" ? this.findDevice(s.id) : undefined;
-    const locked = this.lockedKind(s);
-    return html`
-      ${device ? this.positionFields(device) : nothing}
-      <div class="row end">
-        <button title=${t("Copy (Ctrl+D)")} ?disabled=${locked} @click=${() => this.duplicateSelection()}>${t("Duplicate")}</button>
-        <button
-          class="danger ${this._confirmDelete ? "armed" : ""}"
-          ?disabled=${locked}
-          title=${locked ? t("Unlock the layout to delete") : t("Delete (Del)")}
-          @click=${() => {
-            if (!this._confirmDelete) {
-              this._confirmDelete = true;
-              window.clearTimeout(this._confirmTimer);
-              this._confirmTimer = window.setTimeout(() => (this._confirmDelete = false), 3000);
-              return;
-            }
-            this._confirmDelete = false;
-            this.deleteSelection();
-          }}
-        >
-          ${this._confirmDelete ? t("Click again to delete") : t("Delete")}
-        </button>
-      </div>
-    `;
-  }
-
-  /** Where a device stands, typed in metres; a strip or screen moves with both its ends. */
-  private positionFields(device: Device) {
-    const move = (axis: 0 | 1, value: number) => {
-      const delta = value - device.at[axis];
-      device.at = axis === 0 ? [fix(value), device.at[1]] : [device.at[0], fix(value)];
-      if (device.to) device.to = axis === 0 ? [fix(device.to[0] + delta), device.to[1]] : [device.to[0], fix(device.to[1] + delta)];
-    };
-    return html`<details class="settings">
-      <summary>${t("Position")}</summary>
-      ${this.number(t("x (east)"), device.at[0], (v) => move(0, v))} ${this.number(t("y (south)"), device.at[1], (v) => move(1, v))}
-    </details>`;
-  }
-
-  /** Where the selection is: the level, the room it stands in, and what it is; the room can be picked from here. */
-  private breadcrumb() {
-    const s = this._selection;
-    if (!s) return nothing;
-    const level = this.level;
-    let at: Point | undefined;
-    let what = "";
-    if (s.kind === "device") {
-      const device = this.findDevice(s.id);
-      at = device && deviceCentre(device);
-      what = device ? t(device.kind === "sensor" && device.sensorType === "alarm" ? N_("Alarm") : DEVICE_LABELS[device.kind]) : "";
-    } else if (s.kind === "opening") {
-      const opening = this.findOpening(s.id);
-      const wall = opening && this.findWall(opening.wall);
-      at = opening && wall ? pointOnWall(wall, opening.at) : undefined;
-      what = opening ? t(OPENING_NAMES[opening.type]) : "";
-    } else if (s.kind === "item") {
-      const item = this.findItem(s.id);
-      at = item ? (item.center ?? centroid(itemPoints(item))) : undefined;
-      what = item ? item.name || t(ITEM_LABELS[item.type]) : "";
-    } else if (s.kind === "wall") what = t("Wall");
-    else if (s.kind === "zone") what = t("Zone");
-    const room = s.kind === "room" ? this.findRoom(s.id) : at ? roomAt(level, at) : undefined;
-    return html`<nav class="crumbs">
-      <span>${level.name}</span>
-      ${room
-        ? html`› ${s.kind === "room"
-              ? html`<span>${room.name}</span>`
-              : html`<a @click=${() => this.select({ kind: "room", id: room.id })}>${room.name}</a>`}`
-        : nothing}
-      ${what ? html`› <span>${what}</span>` : nothing}
-    </nav>`;
-  }
-
-  /** The levels of the plan, in the Plan tab: their names, order, floor of Home Assistant, adding and deleting. */
-  private levelsSection() {
-    const levels = this._plan!.levels;
-    if (this._registry === undefined) queueMicrotask(() => this.loadRegistry());
-    const registry = typeof this._registry === "object" ? this._registry : undefined;
-    const missing = registry?.floors.filter((floor) => !levels.some((level) => level.floor === floor.id)) ?? [];
-    const addLevel = (name: string, floor?: string) => {
-      const level = emptyLevel(name);
-      if (floor) level.floor = floor;
-      this.change(() => this._plan!.levels.push(level));
-      this._levelId = level.id;
-      this.fit();
-    };
-    const moveLevel = (index: number, by: number) =>
-      this.change(() => {
-        const list = [...levels];
-        const [level] = list.splice(index, 1);
-        list.splice(index + by, 0, level);
-        this._plan!.levels = list;
-      });
-    return html`
-      <h3>${t("Levels")}</h3>
-      ${levels.map(
-        (level, i) => html`<div class="level-row ${level.id === this.level.id ? "current" : ""}">
-          <input
-            type="text"
-            .value=${level.name}
-            @change=${(e: Event) => this.change(() => (level.name = (e.target as HTMLInputElement).value.trim() || level.name))}
-          />
-          <button class="small" title=${t("Up")} ?disabled=${i === 0} @click=${() => moveLevel(i, -1)}>↑</button>
-          <button class="small" title=${t("Down")} ?disabled=${i === levels.length - 1} @click=${() => moveLevel(i, 1)}>↓</button>
-          <button
-            class="small danger ${this._deleteLevel === level.id ? "armed" : ""}"
-            title=${levels.length < 2 ? t("The plan needs one level") : t("Delete the level with everything on it")}
-            ?disabled=${levels.length < 2}
-            @click=${() => {
-              if (this._deleteLevel !== level.id) {
-                this._deleteLevel = level.id;
-                window.setTimeout(() => (this._deleteLevel = undefined), 3000);
-                return;
-              }
-              this._deleteLevel = undefined;
-              this.change(() => (this._plan!.levels = levels.filter((l) => l.id !== level.id)));
-              if (this._levelId === level.id) this._levelId = this._plan!.levels[0].id;
-              this.notify(t("Level {name} deleted", { name: level.name }));
-              this.fit();
-            }}
-          >
-            ${this._deleteLevel === level.id ? t("Delete?") : "×"}
-          </button>
-          <em class="muted">${t("{rooms} rooms · {devices} devices", { rooms: level.rooms.length, devices: (level.devices ?? []).length })}</em>
-          ${registry?.floors.length
-            ? html`<select
-                class="floor"
-                title=${t("The floor of Home Assistant this level is")}
-                @change=${(e: Event) =>
-                  this.change(() => {
-                    const id = (e.target as HTMLSelectElement).value || null;
-                    const floor = registry.floors.find((f) => f.id === id);
-                    level.floor = id;
-                    // A level still named as it was added takes the name of its floor.
-                    if (floor && isNumberedLevel(level.name)) level.name = floor.name;
-                  })}
-              >
-                <option value="" ?selected=${!level.floor}>${t("No floor of Home Assistant")}</option>
-                ${registry.floors.map((f) => html`<option value=${f.id} ?selected=${level.floor === f.id}>${t("Floor: {name}", { name: f.name })}</option>`)}
-              </select>`
-            : nothing}
-        </div>`,
-      )}
-      <div class="row">
-        <button @click=${() => addLevel(t("Level {number}", { number: levels.length + 1 }))}>${t("Add level")}</button>
-        ${missing.map((floor) => html`<button title=${t("A level for this floor of Home Assistant")} @click=${() => addLevel(floor.name, floor.id)}>${t("Add {name}", { name: floor.name })}</button>`)}
-      </div>
-    `;
-  }
-
-  /** Settings of the whole plan: wall types, corners, colours and file. */
-  private levelProperties() {
-    return html`
-      <h3>${t("Wall types")}</h3>
-      ${this.wallTypes.map(
-        (type) => html`<div class="type-row">
-          <input
-            type="text"
-            .value=${type.name}
-            @change=${(e: Event) => this.change(() => (type.name = (e.target as HTMLInputElement).value || type.name))}
-          />
-          <input
-            type="number"
-            step="0.5"
-            .value=${String(fix(type.t * 100))}
-            @change=${(e: Event) => {
-              const v = Number((e.target as HTMLInputElement).value);
-              if (Number.isFinite(v) && v > 0)
-                this.change(() => {
-                  type.t = fix(v / 100);
-                  this.applyWallType(type);
-                });
-            }}
-          />
-          <em>cm</em>
-          <button
-            class="small"
-            title=${t("Remove the type; its walls keep their thickness")}
-            ?disabled=${this.wallTypes.length < 2}
-            @click=${() =>
-              this.change(() => {
-                for (const level of this._plan!.levels) for (const wall of level.walls) if (wall.type === type.id) delete wall.type;
-                this._plan!.wallTypes = this.wallTypes.filter((t) => t !== type);
-              })}
-          >
-            ×
-          </button>
-        </div>`,
-      )}
-      <div class="row">
-        <button @click=${() => this.change(() => this.wallTypes.push({ id: uid("walltype"), name: t("New wall"), t: 0.2 }))}>${t("Add wall type")}</button>
-      </div>
-      <label class="check"
-        ><input
-          type="checkbox"
-          .checked=${!!this._plan!.roundCorners}
-          @change=${(e: Event) => this.change(() => (this._plan!.roundCorners = (e.target as HTMLInputElement).checked))}
-        />
-        ${t("Rounded corners")}</label
-      >
-      ${this._plan!.roundCorners
-        ? this.number(
-            t("Radius"),
-            (this._plan!.cornerRadius ?? DEFAULT_CORNER_RADIUS) * 100,
-            (v) => (this._plan!.cornerRadius = Math.max(0, v) / 100),
-            1,
-            "cm",
-          )
-        : nothing}
-      ${this.appearanceProperties()}
-      <h3>${t("Language")}</h3>
-      <label class="field wide">
-        <span>${t("Language")}</span>
-        <select @change=${(e: Event) => this.change(() => (this._plan!.language = (e.target as HTMLSelectElement).value))}>
-          <option value="auto" ?selected=${(this._plan!.language ?? "auto") === "auto"}>${t("As each user in Home Assistant")}</option>
-          ${Object.keys(EDITOR_LANGUAGES).map(
-            (code) => html`<option value=${code} ?selected=${this._plan!.language === code}>${LANGUAGE_NAMES[code] ?? code}</option>`,
-          )}
-        </select>
-      </label>
-      <p class="muted">${t("For the editor and every card. A text without a translation shows in English.")}</p>
-      <h3>${t("Plan file")}</h3>
-      <div class="row">
-        <button @click=${() => this.exportPlan()}>${t("Export")}</button>
-        <label class="button">${t("Import")}<input type="file" accept="application/json,.json" hidden @change=${this.importPlan} /></label>
-      </div>
-      <h3 class="danger-title">${t("Delete everything")}</h3>
-      <p class="muted">
-        ${t("Removes every level with its walls, rooms, objects, devices and zones, and the colours. Export the plan first to keep a copy. Until you save, Undo brings it back.")}
-      </p>
-      <label class="field wide">
-        <span>${t("Type {word}", { word: t("DELETE") })}</span>
-        <input type="text" .value=${this._wipeText} @input=${(e: Event) => (this._wipeText = (e.target as HTMLInputElement).value)} />
-      </label>
-      <div class="row">
-        <button class="danger" ?disabled=${this._wipeText.trim() !== t("DELETE")} @click=${() => this.wipePlan()}>
-          ${t("Delete everything")}
-        </button>
-      </div>
-    `;
-  }
-
-  /** Theme of the plan and its colours, dark and light, each with its own changes over the defaults. */
-  private appearanceProperties() {
-    const plan = this._plan!;
-    const appearance = plan.appearance ?? {};
-    const current = planPalette(appearance, this.hass?.themes?.darkMode).mode;
-    const mode = this._paletteMode ?? current;
-    const own = appearance[mode] ?? {};
-    const defaults = mode === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
-    const setColour = (key: PaletteKey, value: string | undefined) =>
-      this.change(() => {
-        const next = { ...(plan.appearance?.[mode] ?? {}) };
-        if (value && value !== defaults[key]) next[key] = value;
-        else delete next[key];
-        plan.appearance = { ...plan.appearance, [mode]: next };
-      });
-    return html`
-      <h3>${t("Appearance")}</h3>
-      <label class="field wide">
-        <span>${t("Theme")}</span>
-        <select
-          @change=${(e: Event) =>
-            this.change(() => (plan.appearance = { ...plan.appearance, theme: (e.target as HTMLSelectElement).value as Appearance["theme"] }))}
-        >
-          <option value="auto" ?selected=${(appearance.theme ?? "auto") === "auto"}>${t("As Home Assistant (dark or light)")}</option>
-          <option value="dark" ?selected=${appearance.theme === "dark"}>${t("Dark")}</option>
-          <option value="light" ?selected=${appearance.theme === "light"}>${inContext(N_("Light (theme)"), "Light")}</option>
-        </select>
-      </label>
-      <div class="row">
-        <span class="muted">${t("Colours of")}</span>
-        ${(["dark", "light"] as const).map(
-          (m) => html`<button class=${mode === m ? "on" : ""} @click=${() => (this._paletteMode = m)}>${m === "dark" ? t("Dark") : inContext(N_("Light (theme)"), "Light")}</button>`,
-        )}
-      </div>
-      ${PALETTE_GROUPS.map(
-        (group) => html`<details class="settings" ?open=${group.name === "Building"}>
-          <summary>${t(group.name)}</summary>
-          ${group.keys.map(
-            ([key, label]) => html`<div class="colour-row">
-              <span>${t(label)}</span>
-              <input type="color" .value=${own[key] ?? defaults[key]} @change=${(e: Event) => setColour(key, (e.target as HTMLInputElement).value)} />
-              ${own[key] ? html`<button class="small" title=${t("Back to the default colour")} @click=${() => setColour(key, undefined)}>↺</button>` : html`<span></span>`}
-            </div>`,
-          )}
-        </details>`,
-      )}
-      <div class="row">
-        <button
-          ?disabled=${!Object.keys(own).length}
-          @click=${() =>
-            this.change(() => {
-              const next = { ...plan.appearance };
-              delete next[mode];
-              plan.appearance = next;
-            })}
-        >
-          ${mode === "dark" ? t("Reset the dark colours") : t("Reset the light colours")}
-        </button>
-      </div>
-      <p class="muted">
-        ${t("The plan in this editor shows the colours you edit. Every card uses them; a card can still choose dark or light for itself.")}
-      </p>
-    `;
-  }
-
-  private wallProperties(wall?: Wall) {
-    if (!wall) return nothing;
-    return html`
-      <h3>${t("Wall")}</h3>
-      <label class="field wide">
-        <span>${t("Type")}</span>
-        <select
-          @change=${(e: Event) =>
-            this.change(() => {
-              const id = (e.target as HTMLSelectElement).value;
-              if (!id) {
-                delete wall.type;
-                return;
-              }
-              wall.type = id;
-              wall.t = this.wallType(id).t;
-            })}
-        >
-          ${this.wallTypes.map(
-            (type) => html`<option value=${type.id} ?selected=${type.id === wall.type}>${type.name} ${(type.t * 100).toFixed(1)} cm</option>`,
-          )}
-          <option value="" ?selected=${!wall.type}>${t("Own thickness")}</option>
-        </select>
-      </label>
-      ${this.number(
-        t("Thickness"),
-        wall.t * 100,
-        (v) => {
-          // A thickness typed for one wall makes it a wall of its own thickness.
-          wall.t = Math.max(1, v) / 100;
-          delete wall.type;
-        },
-        0.5,
-        "cm",
-      )}
-      <p class="muted">${t("Length {length} m", { length: wallLength(wall).toFixed(2) })}</p>
-      <label class="check" title=${t("Same as holding Shift while dragging an end")}
-        ><input type="checkbox" .checked=${this._endsAlone} @change=${(e: Event) => (this._endsAlone = (e.target as HTMLInputElement).checked)} />
-        ${t("Move ends alone (detach from joined walls)")}</label
-      >
-      ${this.deleteButton()}
-    `;
-  }
-
-  private openingProperties(opening?: Opening) {
-    if (!opening) return nothing;
-    return html`
-      <h3>${t(OPENING_NAMES[opening.type])}</h3>
-      <label class="field wide">
-        <span>${t("Type")}</span>
-        <select @change=${(e: Event) => this.change(() => (opening.type = (e.target as HTMLSelectElement).value as Opening["type"]))}>
-          <option value="door" ?selected=${opening.type === "door"}>${t("Door")}</option>
-          <option value="window" ?selected=${opening.type === "window"}>${t("Window")}</option>
-          <option value="gate" ?selected=${opening.type === "gate"}>${t("Gate or garage door")}</option>
-        </select>
-      </label>
-      ${this.number(t("Width"), opening.width * 100, (v) => (opening.width = Math.max(10, v) / 100), 5, "cm")}
-      ${opening.type === "door"
-        ? html`<div class="row">
-            <button title=${t("Moves the hinge to the other side of the door")} @click=${() => this.change(() => (opening.hingeEnd = !opening.hingeEnd))}>
-              ${t("Flip hinge")}
-            </button>
-            <button title=${t("Opens the door into the other room")} @click=${() => this.change(() => (opening.swingRight = !opening.swingRight))}>
-              ${t("Flip side")}
-            </button>
-          </div>`
-        : nothing}
-      <div class="pick">
-        <span>${t("Open/closed sensor")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["binary_sensor"]}
-          .value=${opening.contact ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (opening.contact = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(opening.contact)}
-      ${opening.type === "door"
-        ? html`<div class="pick">
-              <span>${t("Lock")}</span>
-              <floorcast-entity-picker
-                .hass=${this.hass}
-                .domains=${["lock"]}
-                .value=${opening.lock ?? null}
-                optional
-                @value-changed=${(e: CustomEvent) => this.change(() => (opening.lock = e.detail))}
-              ></floorcast-entity-picker>
-            </div>
-            ${this.stateLine(opening.lock)}
-            ${opening.lock
-              ? html`${this.confirmCheck(opening, true)}
-                  <p class="muted">${t("A padlock beside the door: a tap on the card locks or unlocks it, holding opens it.")}</p>`
-              : nothing}
-            <label class="field wide">
-              <span>${t("Drawn as")}</span>
-              <select @change=${(e: Event) => this.change(() => (opening.drawn = (e.target as HTMLSelectElement).value as "open" | "closed"))}>
-                <option value="open" ?selected=${opening.drawn !== "closed"}>${inContext(N_("Open (state)"), "Open")}</option>
-                <option value="closed" ?selected=${opening.drawn === "closed"}>${t("Closed")}</option>
-              </select>
-            </label>
-            <p class="muted">${t("With a sensor the door follows it; this is how it is drawn without one or while the sensor is unavailable.")}</p>`
-        : opening.type === "gate"
-          ? html`<div class="pick">
-                <span>${t("Gate")}</span>
-                <floorcast-entity-picker
-                  .hass=${this.hass}
-                  .domains=${["cover"]}
-                  .value=${opening.cover ?? null}
-                  optional
-                  @value-changed=${(e: CustomEvent) => this.change(() => (opening.cover = e.detail))}
-                ></floorcast-entity-picker>
-              </div>
-              ${this.stateLine(opening.cover)} ${this.confirmCheck(opening, true)}
-              <p class="muted">
-                ${t("Drawn closed across the opening for as much as the cover closes it. A tap on the card opens, closes or stops it.")}
-              </p>`
-          : html`<div class="pick">
-              <span>${t("Blind")}</span>
-              <floorcast-entity-picker
-                .hass=${this.hass}
-                .domains=${["cover"]}
-                .value=${opening.cover ?? null}
-                optional
-                @value-changed=${(e: CustomEvent) => this.change(() => (opening.cover = e.detail))}
-              ></floorcast-entity-picker>
-            </div>
-            ${this.stateLine(opening.cover)}
-            ${opening.cover
-              ? html`<div class="row">
-                    <button title=${t("Draws the blind on the other side of the wall")} @click=${() => this.change(() => (opening.blindFlip = !opening.blindFlip))}>
-                      ${t("Flip blind side")}
-                    </button>
-                  </div>
-                  ${this.confirmCheck(opening)}
-                  <p class="muted">${t("The bar outside the window is as long as the blind covers it; the number is its position, 100% open.")}</p>`
-              : nothing}`}
-      ${this.deleteButton()}
-    `;
-  }
-
-  private radarProperties(device: Device) {
-    const sources = radarSources(this.hass.states);
-    const seen = radarTargets(device, this.hass.states).length;
-    return html`
-      <h3>${t("Radar")}</h3>
-      <label class="field wide">
-        <span>${t("Sensors")}</span>
-        <select @change=${(e: Event) => this.change(() => (device.source = (e.target as HTMLSelectElement).value || null))}>
-          <option value="" ?selected=${!device.source}>–</option>
-          ${sources.map((source) => html`<option value=${source} ?selected=${source === device.source}>sensor.${source}_target_…</option>`)}
-        </select>
-      </label>
-      <p class="muted">
-        ${device.source
-          ? seen === 1
-            ? t("Sees 1 person now.")
-            : t("Sees {count} people now.", { count: seen })
-          : t("Choose the target sensors of the radar.")}
-      </p>
-      ${this.number(t("Heading"), device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 1, "°")}
-      ${this.number(t("View"), device.arc ?? DEFAULT_RADAR_VIEW, (v) => (device.arc = Math.min(180, Math.max(10, v))), 5, "°")}
-      ${this.number(t("Range"), device.radius ?? DEFAULT_RADAR_RANGE, (v) => (device.radius = Math.max(1, v)), 0.5, "m")}
-      <label class="check"
-        ><input type="checkbox" .checked=${!!device.mirror} @change=${(e: Event) => this.change(() => (device.mirror = (e.target as HTMLInputElement).checked))} />
-        ${t("Mirror (people move the wrong way sideways)")}</label
-      >
-      <p class="muted">
-        ${t("Place the radar where it hangs and aim it with the handle. Walk across the room and watch the dot: turn the radar until the dot follows you, and mirror it when it goes left as you go right. Targets beyond the range are ignored.")}
-      </p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  private cameraProperties(device: Device) {
-    return html`
-      <h3>${t("Camera")}</h3>
-      <div class="pick">
-        <span>${t("Camera")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["camera"]}
-          .value=${device.entity ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.entity)}
-      ${this.number(t("Heading"), device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 5, "°")}
-      ${this.number(t("View"), device.arc ?? DEFAULT_FIELD_OF_VIEW, (v) => (device.arc = Math.min(360, Math.max(10, v))), 5, "°")}
-      ${this.number(t("Range"), device.radius ?? DEFAULT_CAMERA_RANGE, (v) => (device.radius = Math.max(1, v)), 0.5, "m")}
-      <p class="muted">${t("Drag the handle at the end of the view to aim the camera. On the card a tap shows a still, holding opens the live view.")}</p>
-      ${this.detectionProperties(device)} ${this.frigateProperties(device)} ${this.groundProperties(device)}
-      ${this.deleteButton()}
-    `;
-  }
-
-  /**
-   * The sensor that says the camera sees someone, any binary sensor. One of the camera's own device is offered:
-   * a person sensor first, then motion or occupancy.
-   */
-  private detectionProperties(device: Device) {
-    const registry = typeof this._registry === "object" ? this._registry : undefined;
-    if (this._registry === undefined) queueMicrotask(() => this.loadRegistry());
-    const suggestion = device.detection ? undefined : this.detectionSuggestion(device, registry);
-    return html`
-      <div class="pick">
-        <span>${t("Detection sensor")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["binary_sensor"]}
-          .value=${device.detection ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.detection = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.detection)}
-      ${suggestion
-        ? html`<div class="row">
-            <button @click=${() => this.change(() => (device.detection = suggestion))}>${t("Use {name}", { name: String(this.entityName(suggestion) ?? suggestion) })}</button>
-          </div>`
-        : nothing}
-      <p class="muted">
-        ${t("While it is on, the view of the camera turns red on the card and its still opens by itself: a person sensor of Frigate, UniFi Protect or Reolink, or any motion sensor.")}
-      </p>
-    `;
-  }
-
-  /** A detection sensor for a camera: of the same device, or named like the camera; a person sensor before motion. */
-  private detectionSuggestion(device: Device, registry: Registry | undefined): string | undefined {
-    if (!device.entity) return undefined;
-    const name = device.entity.split(".")[1];
-    const own = registry?.entityDevice[device.entity];
-    const candidates = Object.keys(this.hass.states).filter((id) => {
-      if (!id.startsWith("binary_sensor.")) return false;
-      const sameDevice = !!own && registry?.entityDevice[id] === own;
-      return sameDevice || id.startsWith(`binary_sensor.${name}_`);
-    });
-    const score = (id: string) => {
-      const cls = this.hass.states[id]?.attributes.device_class;
-      if (/person/.test(id)) return 0;
-      if (cls === "occupancy" || cls === "presence") return 1;
-      if (cls === "motion" || /motion/.test(id)) return 2;
-      return 9;
-    };
-    return candidates.filter((id) => score(id) < 9).sort((a, b) => score(a) - score(b))[0];
-  }
-
-  /** EXPERIMENTAL: shows the ground image of a device of the saved plan on the editor plan, a mower also in its dock. */
-  private toggleGroundPreview(device: Device): void {
-    const previews = new Set(this._groundPreview);
-    if (previews.has(device.id)) previews.delete(device.id);
-    else previews.add(device.id);
-    this._groundPreview = previews;
-    // The feed asks for the devices previewed now, so it starts again with the new set.
-    this._groundFeed.stop();
-    if (previews.size) this._groundFeed.start(this.hass, [...previews], true);
-  }
-
-  /** EXPERIMENTAL: preview switch and the button that saves the plan, so the integration draws the new settings. */
-  private groundPreviewRow(device: Device) {
-    const unsaved = !!this._plan && JSON.stringify(this._plan) !== this._saved;
-    return html`<div class="row">
-        <button class=${this._groundPreview.has(device.id) ? "primary" : ""} @click=${() => this.toggleGroundPreview(device)}>
-          ${this._groundPreview.has(device.id) ? t("Hide preview") : t("Preview")}
-        </button>
-        <button ?disabled=${!unsaved || this._saving} @click=${() => this.save()}>${t("Save and redraw")}</button>
-      </div>
-      <p class="muted">${t("The integration draws the saved plan; save after a change to see it.")}</p>`;
-  }
-
-  /**
-   * EXPERIMENTAL: the ground view of a camera or of a mower camera, in the same order for both: where the
-   * image lies, its calibration spots, its visible range, then what only a mower has, and the preview.
-   */
-  private groundProperties(device: Device) {
-    const mower = device.kind === "mower";
-    const entity = mower ? device.camera : device.entity;
-    if (!entity) return mower ? html`<h3>${t("Ground view (experimental)")}</h3><p class="muted">${t("Choose the camera of the mower above first.")}</p>` : nothing;
-    const ground = device.ground ?? {};
-    const set = (apply: (ground: NonNullable<Device["ground"]>) => void) => {
-      const next = { ...device.ground };
-      apply(next);
-      device.ground = next;
-    };
-    const target = mower ? "mower" : "ground";
-    const pairs = this.pairsOf(device, target);
-    const pose = mower ? this.mowerPose(device) : undefined;
-    const areas = [...(this.level.zones ?? []), ...this.level.rooms];
-    const chosen = new Set(ground.zones ?? []);
-    const toggle = (id: string, on: boolean) =>
-      this.change(() => set((g) => (g.zones = on ? [...(g.zones ?? []).filter((zone) => zone !== id), id] : (g.zones ?? []).filter((zone) => zone !== id))));
-    return html`
-      <h3>${t("Ground view (experimental)")}</h3>
-      <p class="muted">
-        ${t("The camera image is laid on the plan like the top view of a car. Only flat ground lies true; walls, fences and people stretch.")}
-      </p>
-      <label class="field wide">
-        <span>${t("Preview")}</span>
-        <select
-          @change=${(e: Event) =>
-            this.change(() => {
-              const mode = (e.target as HTMLSelectElement).value as PreviewMode;
-              if (mode === "window") delete device.preview;
-              else device.preview = mode;
-            })}
-        >
-          ${(
-            [
-              ["window", N_("Window")],
-              ["ground", N_("Ground")],
-              ["both", N_("Ground and window")],
-            ] as [PreviewMode, string][]
-          ).map(([mode, label]) => html`<option value=${mode} ?selected=${(device.preview ?? "window") === mode}>${t(label)}</option>`)}
-        </select>
-      </label>
-      <p class="muted">
-        ${mower
-          ? t("What the card shows when the preview opens: a tap on the mower.")
-          : t("What the card shows when the preview opens: the camera sees someone, or a tap on it.")}
-        ${t("The ground needs {count} calibration spots.", { count: MIN_GROUND_SPOTS })}
-      </p>
-      ${mower
-        ? nothing
-        : html`<p class="muted">${t("Lay it on these zones or rooms; tick only the paving or the terrace.")}</p>
-            ${areas.map(
-              (area) => html`<label class="check"
-                ><input type="checkbox" .checked=${chosen.has(area.id)} @change=${(e: Event) => toggle(area.id, (e.target as HTMLInputElement).checked)} />
-                ${area.name}</label
-              >`,
-            )}`}
-      <h4>${t("Calibration")}</h4>
-      <p class="muted">
-        ${pairs.length >= MIN_GROUND_SPOTS
-          ? t("Calibrated with {count} spots.", { count: pairs.length })
-          : t("{count} of at least {needed} spots; the image is not laid until then.", { count: pairs.length, needed: MIN_GROUND_SPOTS })}
-        ${mower
-          ? t("Click a spot on the ground in the image, then the same spot on the plan, with the mower standing still.")
-          : t("Click a spot on the ground in the image, then the same spot on the plan.")}
-      </p>
-      ${this.spotList(device, target)}
-      <div class="row">
-        <button ?disabled=${mower && !pose} @click=${() => this.openBigImage(target)}>${t("Calibrate")}</button>
-        ${mower
-          ? nothing
-          : html`<button
-              ?disabled=${!(device.calibration?.length ?? 0)}
-              @click=${() => this.change(() => set((g) => (g.calibration = structuredClone(device.calibration ?? []))))}
-            >
-              ${t("Copy from Frigate")}
-            </button>`}
-        <button ?disabled=${!pairs.length} @click=${() => this.change(() => set((g) => (mower ? (g.spots = []) : (g.calibration = []))))}>${t("Clear")}</button>
-      </div>
-      ${mower && !pose ? html`<p class="muted">${t("The mower reports no heading now, so it cannot be calibrated.")}</p>` : nothing}
-      <h4>${t("Range")}</h4>
-      ${this.number(
-        t("Visible range"),
-        ground.range ?? (mower ? ground.reach ?? 2 : device.radius ?? DEFAULT_CAMERA_RANGE),
-        (v) => set((g) => (g.range = Math.min(30, Math.max(0.3, v)))),
-        mower ? 0.1 : 0.5,
-        "m",
-      )}
-      <p class="muted">
-        ${mower
-          ? t("The image is whole up to half the range from the mower and fades out at the range.")
-          : t("The image is whole up to half the range from the camera and fades out at the range.")}
-      </p>
-      ${mower
-        ? html`
-            ${this.number(t("Position delay"), ground.delay ?? 0, (v) => set((g) => (g.delay = Math.min(10, Math.max(0, v)))), 0.5, "s")}
-            <p class="muted">
-              ${t("The mower and its track are shown this late and move smoothly between the places it reports, every few seconds; set it to the time between reports or more.")}
-            </p>
-            ${this.number(t("View delay"), ground.viewDelay ?? 0, (v) => set((g) => (g.viewDelay = Math.min(10, Math.max(0, v)))), 0.5, "s")}
-            <p class="muted">
-              ${t("The camera image on the ground is laid this late. It keeps pace with the mower at the position delay less the time its images come late; change it until the image stops running ahead of or behind the plan while the mower drives along an edge.")}
-            </p>
-          `
-        : nothing}
-      ${this.groundPreviewRow(device)}
-    `;
-  }
-
-  /** Frigate camera and the calibration that places its objects on the plan. */
-  private frigateProperties(device: Device) {
-    if (!this._frigateCameras) {
-      this._frigateCameras = [];
-      this.hass
-        .callWS<{ cameras: { name: string; size: [number, number] | null }[] }>({ type: "floorcast/frigate/cameras" })
-        .then((result) => (this._frigateCameras = result.cameras))
-        .catch(() => undefined);
-    }
-    const cameras = this._frigateCameras;
-    const known = cameras.find((camera) => camera.name === device.frigate);
-    const pairs = device.calibration ?? [];
-    const picture = device.entity ? this.hass.states[device.entity]?.attributes.entity_picture : undefined;
-    return html`
-      <h3>${t("Objects from Frigate")}</h3>
-      <label class="field wide">
-        <span>Frigate</span>
-        <select @change=${(e: Event) => this.change(() => (device.frigate = (e.target as HTMLSelectElement).value || null))}>
-          <option value="" ?selected=${!device.frigate}>–</option>
-          ${cameras.map((camera) => html`<option value=${camera.name} ?selected=${camera.name === device.frigate}>${camera.name}</option>`)}
-          ${device.frigate && !known ? html`<option selected value=${device.frigate}>${device.frigate}</option>` : nothing}
-        </select>
-      </label>
-      ${device.frigate && !known?.size
-        ? html`${this.number(t("Detect width"), device.detect?.[0] ?? 1280, (v) => (device.detect = [v, device.detect?.[1] ?? 720]), 1, "px")}
-          ${this.number(t("Detect height"), device.detect?.[1] ?? 720, (v) => (device.detect = [device.detect?.[0] ?? 1280, v]), 1, "px")}`
-        : nothing}
-      ${device.frigate
-        ? html`<p class="muted">
-              ${t("Click a spot on the ground in the image, then the same spot on the plan: corners of the terrace, of the paving, a post. Four or more spots, spread as wide as the camera sees.")}
-            </p>
-            ${picture
-              ? html`<div class="row">
-                    <button class="primary" @click=${() => this.openBigImage("frigate")}>${t("Calibrate on a large image")}</button>
-                  </div>
-                  <div class="calibration-image" @click=${() => this.openBigImage("frigate")}>
-                  <img src=${picture} alt="" draggable="false" />
-                  ${pairs.map(
-                    (pair, i) =>
-                      html`<span class="mark" style="left:${pair.image[0] * 100}%;top:${pair.image[1] * 100}%">${i + 1}</span>`,
-                  )}
-                  ${this._imagePoint
-                    ? html`<span class="mark waiting" style="left:${this._imagePoint[0] * 100}%;top:${this._imagePoint[1] * 100}%">?</span>`
-                    : nothing}
-                </div>`
-              : html`<p class="muted">${t("Choose the camera entity above to see its image.")}</p>`}
-            ${this.spotList(device, "frigate")}
-            <p class="muted">
-              ${pairs.length < 4
-                ? t("{count} of at least 4 spots.", { count: pairs.length })
-                : homography(pairs)
-                  ? t("Calibrated with {count} spots.", { count: pairs.length })
-                  : t("These spots do not fix the view; spread them wider, not along one line.")}
-            </p>
-            <div class="row">
-              <button ?disabled=${!homography(pairs)} @click=${() => this.loadPaths(device)}>${t("Show recent paths")}</button>
-            </div>`
-        : nothing}
-    `;
-  }
-
-  /** Calibration spots of a camera: the Frigate ones, or the ground ones while those are calibrated. */
-  private pairsOf(device: Device, target = this._calibrationTarget): { image: Point; plan: Point }[] {
-    if (target === "mower") {
-      const pose = this.mowerPose(device);
-      return (device.ground?.spots ?? []).map((spot) => ({ image: spot.image, plan: pose ? aheadToPlan(spot.ahead, pose) : spot.ahead }));
-    }
-    return (target === "ground" ? device.ground?.calibration : device.calibration) ?? [];
-  }
-
-  /** Mower spots are kept relative to the mower, from where it stands now; without its pose they stay as they are. */
-  private setPairs(device: Device, pairs: { image: Point; plan: Point }[], target = this._calibrationTarget): void {
-    if (target === "mower") {
-      const pose = this.mowerPose(device);
-      if (pose) device.ground = { ...device.ground, spots: pairs.map((pair) => ({ image: pair.image, ahead: planToAhead(pair.plan, pose) })) };
-      return;
-    }
-    if (target === "ground") device.ground = { ...device.ground, calibration: pairs };
-    else device.calibration = pairs;
-  }
-
-  /**
-   * Calibration spots of one kind, each with where it lies in the image and on the plan and a button that
-   * removes it; a mower without its pose keeps its spots, as they cannot be placed.
-   */
-  private spotList(device: Device, target: "frigate" | "ground" | "mower") {
-    const pairs = this.pairsOf(device, target);
-    const fixed = target !== "mower" || !!this.mowerPose(device);
-    return pairs.map(
-      (pair, i) => html`<div class="list-row static">
-        <span
-          >${t("{number}. image {imageX}, {imageY} → plan {planX}, {planY}", {
-            number: i + 1,
-            imageX: pair.image[0].toFixed(2),
-            imageY: pair.image[1].toFixed(2),
-            planX: pair.plan[0].toFixed(2),
-            planY: pair.plan[1].toFixed(2),
-          })}</span
-        >
-        <button
-          class="small"
-          title=${t("Remove this spot")}
-          ?disabled=${!fixed}
-          @click=${() => this.change(() => this.setPairs(device, pairs.filter((_, j) => j !== i), target))}
-        >
-          ×
-        </button>
-      </div>`,
-    );
-  }
-
-  /** EXPERIMENTAL: where a mower stands now and where it heads, from its map camera; undefined without a heading. */
-  private mowerPose(device: Device): { at: Point; heading: number } | undefined {
-    const place = device.map ? mowerPlace(device, this.hass.states[device.map]?.attributes) : undefined;
-    return place && place.heading !== undefined ? { at: place.at, heading: place.heading } : undefined;
-  }
-
-  private openBigImage(target: "frigate" | "ground" | "mower"): void {
-    const device = this._selection?.kind === "device" ? this.findDevice(this._selection.id) : undefined;
-    if (target === "mower" && device && !this.mowerPose(device)) {
-      this._message = t("The mower reports no heading now; calibrate it when its map shows where it heads.");
-      return;
-    }
-    this._calibrationTarget = target;
-    this._bigImage = true;
-    this._imagePoint = undefined;
-    this._imageZoom = { scale: 1, origin: [50, 50] };
-    this._message = t("Click a spot on the ground in the image; the wheel zooms in.");
-  }
-
-  /**
-   * The camera image over the plan, for picking spots precisely. It hides while the same spot is
-   * picked on the plan and comes back for the next one until Done.
-   */
-  private renderBigImage() {
-    const device = this._selection?.kind === "device" ? this.findDevice(this._selection.id) : undefined;
-    const entity = device?.kind === "camera" ? device.entity : device?.kind === "mower" ? device.camera : undefined;
-    const picture = entity ? this.hass.states[entity]?.attributes.entity_picture : undefined;
-    if (!this._bigImage || !device || !picture || this._imagePoint) return nothing;
-    const pairs = this.pairsOf(device);
-    const zoom = this._imageZoom;
-    return html`<div class="big-image" @wheel=${(e: WheelEvent) => this.zoomImage(e)}>
-      <div class="big-image-bar">
-        <span>
-          ${pairs.length === 1
-            ? t("1 spot, at least 4 needed. Click a spot on the ground.")
-            : pairs.length < 4
-              ? t("{count} spots, at least 4 needed. Click a spot on the ground.", { count: pairs.length })
-              : t("{count} spots. Click a spot on the ground.", { count: pairs.length })}
-        </span>
-        <button ?disabled=${!pairs.length} @click=${() => this.change(() => this.setPairs(device, pairs.slice(0, -1)))}>${t("Remove last")}</button>
-        <button @click=${() => (this._imageZoom = { scale: 1, origin: [50, 50] })}>${t("Fit")}</button>
-        <button class="primary" @click=${() => {
-          this._bigImage = false;
-          this._message = "";
-        }}>${t("Done")}</button>
-      </div>
-      <div class="big-image-spots">${this.spotList(device, this._calibrationTarget)}</div>
-      <div class="big-image-view">
-        <div
-          class="calibration-image big"
-          style="width:min(100%, calc((100vh - 190px) * ${this._imageAspect.toFixed(4)}));transform:scale(${zoom.scale});transform-origin:${zoom.origin[0]}% ${zoom.origin[1]}%"
-          @click=${(e: MouseEvent) => this.pickImagePoint(e)}
-        >
-          <img
-            src=${picture}
-            alt=""
-            draggable="false"
-            @load=${(e: Event) => {
-              const img = e.target as HTMLImageElement;
-              if (img.naturalHeight) this._imageAspect = img.naturalWidth / img.naturalHeight;
-              this.requestUpdate();
-            }}
-          />
-          ${pairs.map(
-            (pair, i) =>
-              html`<span class="mark" style="left:${pair.image[0] * 100}%;top:${pair.image[1] * 100}%;transform:translate(-50%,-50%) scale(${1 / zoom.scale})">${i + 1}</span>`,
-          )}
-        </div>
-      </div>
-    </div>`;
-  }
-
-  /** The wheel zooms the image around the pointer, up to six times. */
-  private zoomImage(event: WheelEvent): void {
-    event.preventDefault();
-    const frame = this.renderRoot.querySelector(".calibration-image.big") as HTMLElement | null;
-    if (!frame) return;
-    const box = frame.getBoundingClientRect();
-    const origin: Point = [
-      Math.min(100, Math.max(0, ((event.clientX - box.left) / box.width) * 100)),
-      Math.min(100, Math.max(0, ((event.clientY - box.top) / box.height) * 100)),
-    ];
-    const scale = Math.min(6, Math.max(1, this._imageZoom.scale * (event.deltaY < 0 ? 1.25 : 0.8)));
-    this._imageZoom = { scale, origin: scale === 1 ? [50, 50] : origin };
-  }
-
-  private pickImagePoint(event: MouseEvent): void {
-    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const u = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
-    const v = Math.min(1, Math.max(0, (event.clientY - box.top) / box.height));
-    this._imagePoint = [fix(u), fix(v)];
-    this._tool = "calibrate";
-    this._message = t("Now click the same spot on the plan.");
-  }
-
-  /** Paths of the last people events of the camera, from the Frigate integration. */
-  private async loadPaths(device: Device): Promise<void> {
-    try {
-      const events = await this.hass.callWS<{ data?: { path_data?: [Point, number][] } }[]>({
-        type: "frigate/events/get",
-        instance_id: "frigate",
-        cameras: [device.frigate],
-        labels: ["person"],
-        limit: 15,
-      });
-      const paths = events.map((e) => (e.data?.path_data ?? []).map(([q]) => q)).filter((path) => path.length > 1);
-      this._paths = new Map(this._paths).set(device.id, paths);
-      this._message = paths.length
-        ? t("{count} recent paths drawn on the plan.", { count: paths.length })
-        : t("No recent paths of people from this camera.");
-    } catch (err) {
-      this._message = t("Paths not read: {error}", { error: String((err as { message?: string }).message ?? err) });
-    }
-  }
-
-  private screenProperties(device: Device) {
-    const picker = (label: string, domains: string[], value: string | null | undefined, apply: (id: string | null) => void) => html`<div class="pick">
-        <span>${label}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${domains}
-          .value=${value ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => apply(e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(value)}`;
-    return html`
-      <h3>${t("Screen")}</h3>
-      ${picker(t("Power"), ["remote", "media_player", "switch"], device.entity, (id) => (device.entity = id))}
-      ${picker(t("Remote"), ["remote"], device.remote, (id) => (device.remote = id))}
-      ${this.number(t("Light reach"), device.radius ?? DEFAULT_SCREEN_THROW, (v) => (device.radius = Math.max(0.5, v)), 0.5, "m")}
-      ${this.number(t("Light spread"), device.arc ?? DEFAULT_SCREEN_SPREAD, (v) => (device.arc = Math.min(160, Math.max(0, v))), 5, "°")}
-      <div class="row">
-        <button title=${t("Lets the light fall on the other side of the screen")} @click=${() => this.change(() => (device.flip = !device.flip))}>
-          ${t("Flip light side")}
-        </button>
-      </div>
-      ${this.confirmCheck(device)}
-      <p class="muted">
-        ${t("Draw the screen as a line: a projector screen, a TV or a monitor. While it is on, its light falls into the room as shown when selected. On the card a tap switches it on or off; holding opens a remote control with arrows, OK, back, home, volume and play, sent to the remote entity.")}
-      </p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  /** How one value of a sensor is written: its unit, whether the unit shows, and its decimals. */
-  private sensorValueSettings(value: SensorValue, apply: (change: (value: SensorValue) => void) => void) {
-    return html`<label class="field wide">
-        <span>${t("Unit")}</span>
-        <select @change=${(e: Event) => apply((v) => (v.unit = (e.target as HTMLSelectElement).value as SensorValue["unit"]))}>
-          <option value="auto" ?selected=${(value.unit ?? "auto") === "auto"}>${t("Short (°, %, or the entity's)")}</option>
-          <option value="entity" ?selected=${value.unit === "entity"}>${t("The entity's")}</option>
-          <option value="custom" ?selected=${value.unit === "custom"}>${t("Custom")}</option>
-        </select>
-      </label>
-      ${value.unit === "custom" ? this.text(t("Unit text"), value.unitText ?? "", (v) => apply((s) => (s.unitText = v))) : nothing}
-      <label class="field wide">
-        <span>${t("Decimals")}</span>
-        <select
-          @change=${(e: Event) => {
-            const chosen = (e.target as HTMLSelectElement).value;
-            apply((v) => (chosen === "auto" ? delete v.decimals : (v.decimals = Number(chosen))));
-          }}
-        >
-          ${["auto", "0", "1", "2", "3"].map(
-            (d) => html`<option value=${d} ?selected=${(value.decimals === undefined ? "auto" : String(value.decimals)) === d}>${d === "auto" ? t("Auto") : d}</option>`,
-          )}
-        </select>
-      </label>
-      <label class="check"
-        ><input type="checkbox" .checked=${value.showUnit !== false} @change=${(e: Event) => apply((v) => (v.showUnit = (e.target as HTMLInputElement).checked))} />
-        ${t("Show the unit")}</label
-      >`;
-  }
-
-  /**
-   * A sensor: its type, an optional header, the main value and up to MAX_SECONDARY values under it, each
-   * with its unit, unit visibility and decimals; a secondary value may also have a label.
-   */
-  private sensorProperties(device: Device) {
-    const type = device.sensorType ?? "generic";
-    if (type === "alarm") return this.alarmProperties(device);
-    const deviceClass = type === "generic" ? undefined : type;
-    const domains = ["sensor", "input_number", "number", "counter", "binary_sensor", "input_text", "input_select"];
-    const picker = (label: string, value: string | null | undefined, apply: (id: string | null) => void, only?: string) => html`<div class="pick">
-        <span>${label}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${only ? ["sensor"] : domains}
-          .deviceClass=${only}
-          .value=${value ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => apply(e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(value)}`;
-    const secondary = device.secondary ?? [];
-    const room = roomAt(this.level, device.at);
-    return html`
-      <h3>${t("Sensor")}</h3>
-      ${this.sensorTypeSelect(device)}
-      ${this.text(t("Header"), device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
-      <h4>${t("Main value")}</h4>
-      ${picker(t("Entity"), device.entity, (id) => (device.entity = id), deviceClass)}
-      ${this.sensorValueSettings(device.main ?? {}, (change) =>
-        this.change(() => {
-          device.main = { ...device.main };
-          change(device.main);
-        }),
-      )}
-      ${secondary.map(
-        (value, i) => html`<h4>${t("Secondary value {number}", { number: i + 1 })}</h4>
-          ${picker(t("Entity"), value.entity, (id) => (value.entity = id))}
-          ${this.text(t("Label"), value.label ?? "", (v) => (v.trim() ? (value.label = v.trim()) : delete value.label))}
-          ${this.sensorValueSettings(value, (change) => this.change(() => change(value)))}
-          <div class="row">
-            <button @click=${() => this.change(() => (device.secondary = secondary.filter((_, j) => j !== i)))}>${t("Remove this value")}</button>
-          </div>`,
-      )}
-      ${secondary.length < MAX_SECONDARY
-        ? html`<div class="row">
-            <button @click=${() => this.change(() => (device.secondary = [...secondary, { entity: null }]))}>${t("Add a secondary value")}</button>
-          </div>`
-        : nothing}
-      <p class="muted">
-        ${t("The header stands above the main value, the secondary values under it in smaller type; the card shows them when it is large enough. Holding the sensor on the card opens its main value.")}
-        ${type === "temperature"
-          ? room
-            ? t("Holding {room} on the card opens this temperature.", { room: room.name })
-            : t("Outside the rooms.")
-          : ""}
-      </p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  /** An indicator: any entity, running by its state or power, switched on a tap when it is a switch. */
-  private indicatorProperties(device: Device) {
-    const stateObj = device.entity ? this.hass.states[device.entity] : undefined;
-    const shown = indicatorState(device, stateObj);
-    const switchable = !!device.entity && SWITCHABLE_DOMAINS.includes(device.entity.split(".")[0]);
-    return html`
-      <h3>${t("Indicator")}</h3>
-      <div class="pick">
-        <span>${t("Entity")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${INDICATOR_DOMAINS}
-          .value=${device.entity ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.entity)}
-      ${this.text(t("Name"), device.label ?? "", (v) => (v.trim() ? (device.label = v.trim()) : delete device.label))}
-      ${shown.power ? this.number(t("Running from"), device.threshold ?? 5, (v) => (device.threshold = Math.max(0, v)), 1, "W") : nothing}
-      ${switchable ? this.confirmCheck(device) : nothing}
-      <p class="muted">
-        ${t("A dot with the name and state of any entity; it glows while the device runs: a state such as on, running, heating or cleaning, or a power sensor above the watts set.")}
-        ${switchable ? t("A tap on the card switches it.") : t("A tap on the card opens it.")}
-      </p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  /** An Alarm sensor: a smoke, gas, carbon monoxide or water sensor, or an alarm panel; it warns on the card. */
-  private alarmProperties(device: Device) {
-    const room = roomAt(this.level, device.at);
-    return html`
-      <h3>${t("Sensor")}</h3>
-      ${this.sensorTypeSelect(device)}
-      <div class="pick">
-        <span>${t("Entity")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["binary_sensor", "alarm_control_panel"]}
-          .deviceClass=${Object.keys(ALARM_CLASSES)}
-          .value=${device.entity ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.entity)}
-      <p class="muted">
-        ${room
-          ? t("A smoke, gas, carbon monoxide or water sensor, or an alarm panel. While it alarms, {room} pulses red and a bar at the top of the card names it; otherwise a small grey symbol shows where it is.", { room: room.name })
-          : t("A smoke, gas, carbon monoxide or water sensor, or an alarm panel. While it alarms, a bar at the top of the card names it; otherwise a small grey symbol shows where it is.")}
-      </p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  private sensorTypeSelect(device: Device) {
-    const type = device.sensorType ?? "generic";
-    return html`<label class="field wide">
-      <span>${t("Type")}</span>
-      <select @change=${(e: Event) => this.change(() => (device.sensorType = (e.target as HTMLSelectElement).value as SensorType))}>
-        ${(
-          [
-            ["temperature", N_("Temperature")],
-            ["humidity", N_("Humidity")],
-            ["generic", N_("Other")],
-            ["alarm", N_("Alarm")],
-          ] as [SensorType, string][]
-        ).map(([value, label]) => html`<option value=${value} ?selected=${type === value}>${t(label)}</option>`)}
-      </select>
-    </label>`;
-  }
-
-  /** Battery sensor written beside a mower or vacuum on the card. */
-  private batteryPicker(device: Device) {
-    return html`<div class="pick">
-        <span>${t("Battery")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["sensor"]}
-          .deviceClass=${"battery"}
-          .value=${device.battery ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.battery = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.battery)}`;
-  }
-
-  private vacuumProperties(device: Device) {
-    const pairs = device.pairs ?? [];
-    const scale = calibrationScale(device);
-    return html`
-      <h3>${t("Vacuum")}</h3>
-      <div class="pick">
-        <span>${t("Vacuum")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["vacuum"]}
-          .value=${device.entity ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      <div class="pick">
-        <span>${t("Current room sensor")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["sensor"]}
-          .value=${device.roomSensor ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.roomSensor = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.entity)} ${this.stateLine(device.roomSensor)}
-      ${this.batteryPicker(device)}
-      <h3>${t("Calibration")}</h3>
-      <p class="muted">
-        ${t("1. Place this marker on the dock and put the vacuum on it. 2. Send it somewhere easy to find, a corner of a room, and mark that spot. Two spots give the turn of its map; one spot uses the rotation below.")}
-      </p>
-      <div class="row">
-        <button ?disabled=${!device.entity} @click=${() => this.markDock(device)}>${t("Dock is here")}</button>
-        <button
-          ?disabled=${!pairs.length}
-          @click=${() => {
-            this._tool = "mark";
-            this._message = t("Click the spot where the vacuum stands now.");
-          }}
-        >
-          ${t("Mark where it stands")}
-        </button>
-      </div>
-      <p class="muted">
-        ${pairs.length === 0
-          ? t("Not calibrated.")
-          : pairs.length === 1
-            ? t("Dock marked.")
-            : scale
-              ? t("Two spots marked, distances agree to {percent}%.", { percent: Math.round(scale * 100) })
-              : t("Two spots marked.")}
-      </p>
-      ${pairs.length < 2 ? this.number(t("Rotation"), device.rotation ?? 0, (v) => (device.rotation = v), 1, "°") : nothing}
-      <label class="check"
-        ><input type="checkbox" .checked=${!!device.mirror} @change=${(e: Event) => this.change(() => (device.mirror = (e.target as HTMLInputElement).checked))} />
-        ${t("Mirror the map")}</label
-      >
-      ${this.deleteButton()}
-    `;
-  }
-
-  private mowerProperties(device: Device) {
-    return html`
-      <h3>${t("Mower")}</h3>
-      <div class="pick">
-        <span>${t("Mower")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["lawn_mower"]}
-          .value=${device.entity ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      <div class="pick">
-        <span>${t("Map camera")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["camera"]}
-          .value=${device.map ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => {
-            this.change(() => (device.map = e.detail));
-            this.loadMowerMap(device);
-          }}
-        ></floorcast-entity-picker>
-      </div>
-      <div class="pick">
-        <span>${t("Camera")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["camera"]}
-          .value=${device.camera ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.camera = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.entity)} ${this.batteryPicker(device)}
-      ${this.number(t("Rotation"), device.rotation ?? 0, (v) => (device.rotation = v), 0.5, "°")}
-      <label class="check"
-        ><input type="checkbox" .checked=${!!device.mirror} @change=${(e: Event) => this.change(() => (device.mirror = (e.target as HTMLInputElement).checked))} />
-        ${t("Mirror the map")}</label
-      >
-      <div class="row">
-        <button @click=${() => this.loadMowerMap(device)}>${this._mapImages.has(device.id) ? t("Reload map") : t("Show map")}</button>
-      </div>
-      <p class="muted">
-        ${t("Lay the map of the mower over the plan: drag it until its lawn covers the lawn here, turn it with the corner handle and mirror it when it lies the wrong way round. The mower and its dock then appear where they are.")}
-      </p>
-      ${this.groundProperties(device)}
-      ${this.deleteButton()}
-    `;
-  }
-
-  private sprinklerProperties(device: Device) {
-    return html`
-      <h3>${t("Sprinkler")}</h3>
-      <div class="pick">
-        <span>${t("Valve")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["valve", "switch"]}
-          .value=${device.entity ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.entity)}
-      <label class="field wide">
-        <span>${t("Nozzle")}</span>
-        <select @change=${(e: Event) => this.change(() => (device.nozzle = (e.target as HTMLSelectElement).value as "rotor" | "spray"))}>
-          <option value="rotor" ?selected=${(device.nozzle ?? "rotor") === "rotor"}>${t("Rotor (one sweeping stream)")}</option>
-          <option value="spray" ?selected=${device.nozzle === "spray"}>${t("Spray (whole arc at once)")}</option>
-        </select>
-      </label>
-      ${this.number(t("Throw"), device.radius ?? DEFAULT_THROW, (v) => (device.radius = Math.max(0.5, v)), 0.5, "m")}
-      ${this.number(t("Start"), device.heading ?? 0, (v) => (device.heading = ((v % 360) + 360) % 360), 5, "°")}
-      ${this.number(t("Arc"), device.arc ?? 360, (v) => (device.arc = Math.min(360, Math.max(5, v))), 5, "°")}
-      ${this.confirmCheck(device, true)}
-      <p class="muted">
-        ${t("Start is a compass bearing: 0 north, 90 east. Drag the white handle to turn the arc and the blue one to widen it. On the card a tap opens or closes the valve, holding opens its details.")}
-      </p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  private deviceProperties(device?: Device) {
-    if (!device) return nothing;
-    if (device.kind === "sprinkler") return this.sprinklerProperties(device);
-    if (device.kind === "mower") return this.mowerProperties(device);
-    if (device.kind === "vacuum") return this.vacuumProperties(device);
-    if (device.kind === "camera") return this.cameraProperties(device);
-    if (device.kind === "radar") return this.radarProperties(device);
-    if (device.kind === "sensor") return this.sensorProperties(device);
-    if (device.kind === "screen") return this.screenProperties(device);
-    if (device.kind === "indicator") return this.indicatorProperties(device);
-    const room = roomAt(this.level, deviceCentre(device));
-    const sharing = device.entity
-      ? this._plan!.levels.flatMap((level) => level.devices ?? []).filter((other) => other.entity === device.entity).length
-      : 0;
-    return html`
-      <h3>${device.to ? t("Line light") : t("Light")}</h3>
-      <div class="pick">
-        <span>${t("Entity")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["light", "switch"]}
-          .value=${device.entity ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (device.entity = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(device.entity)}
-      ${sharing > 1 ? html`<p class="muted">${t("{count} light points use this entity and switch together.", { count: sharing })}</p>` : nothing}
-      ${device.to ? html`<p class="muted">${t("Length {length} m", { length: dist(device.at, device.to).toFixed(2) })}</p>` : nothing}
-      ${this.number(device.to ? t("Glow width") : t("Glow"), device.radius ?? DEFAULT_GLOW, (v) => (device.radius = Math.max(0.2, v)), 0.25, "m")}
-      ${this.confirmCheck(device)}
-      <p class="muted">
-        ${!room
-          ? t("Outside any room.")
-          : device.confirm
-            ? t("In {room}: tapping the room leaves this light out.", { room: room.name })
-            : t("In {room}: tapping the room switches this light with the others in it.", { room: room.name })}
-        ${t("The glow stops at walls and reaches rooms open to this one.")}
-      </p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  /** Ask before switching: the card asks before a tap switches the device or moves the blind. */
-  private confirmCheck(target: { confirm?: boolean }, askByDefault = false) {
-    const asks = askByDefault ? target.confirm !== false : !!target.confirm;
-    return html`<label class="check"
-        ><input
-          type="checkbox"
-          .checked=${asks}
-          @change=${(e: Event) =>
-            this.change(() => {
-              const checked = (e.target as HTMLInputElement).checked;
-              target.confirm = checked === askByDefault ? undefined : checked;
-            })}
-        />
-        ${t("Ask before switching")}</label
-      >`;
-  }
-
   /** Areas of Home Assistant and the area of every entity, read once when a room form needs them. */
-  private _registry?: Registry | "loading" | "failed";
-
-  private async loadRegistry(): Promise<void> {
-    this._registry = "loading";
-    type Entry = { entity_id: string; area_id: string | null; device_id: string | null; entity_category: string | null; hidden_by: string | null; disabled_by: string | null };
-    try {
-      const [areas, devices, entities, floors] = await Promise.all([
-        this.hass.callWS<{ area_id: string; name: string; floor_id?: string | null }[]>({ type: "config/area_registry/list" }),
-        this.hass.callWS<{ id: string; area_id: string | null }[]>({ type: "config/device_registry/list" }),
-        this.hass.callWS<Entry[]>({ type: "config/entity_registry/list" }),
-        this.hass.callWS<{ floor_id: string; name: string }[]>({ type: "config/floor_registry/list" }).catch(() => []),
-      ]);
-      const deviceArea = new Map(devices.map((device) => [device.id, device.area_id]));
-      const floorNames = new Map(floors.map((floor) => [floor.floor_id, floor.name]));
-      const entityArea: Record<string, string> = {};
-      const entityDevice: Record<string, string> = {};
-      for (const entry of entities) {
-        if (entry.disabled_by || entry.hidden_by || entry.entity_category) continue;
-        const area = entry.area_id ?? (entry.device_id ? deviceArea.get(entry.device_id) : null);
-        if (area) entityArea[entry.entity_id] = area;
-        if (entry.device_id) entityDevice[entry.entity_id] = entry.device_id;
-      }
-      this._registry = {
-        areas: areas
-          .map((area) => ({
-            id: area.area_id,
-            name: area.name,
-            floor: area.floor_id ? floorNames.get(area.floor_id) : undefined,
-            floorId: area.floor_id ?? undefined,
-          }))
-          .sort((a, b) => (a.floor ?? "~").localeCompare(b.floor ?? "~") || a.name.localeCompare(b.name)),
-        entityArea,
-        entityDevice,
-        floors: floors.map((floor) => ({ id: floor.floor_id, name: floor.name })),
-      };
-    } catch {
-      this._registry = "failed";
-    }
-  }
-
-  /** Entities of the room's area the plan can show, unplaced ones first. */
-  private areaEntities(room: Room, registry: Registry) {
-    const used = planEntities(this._plan!);
-    return Object.entries(registry.entityArea)
-      .filter(([, area]) => area === room.area)
-      .map(([entity]) => ({ entity, kind: areaKind(entity, this.hass.states[entity]), used: used.has(entity) }))
-      .filter((row): row is { entity: string; kind: AreaKind; used: boolean } => !!row.kind)
-      .sort((a, b) => Number(a.used) - Number(b.used) || AREA_KINDS.indexOf(a.kind) - AREA_KINDS.indexOf(b.kind) || a.entity.localeCompare(b.entity));
-  }
-
-  /** Doors or windows of the room an entity of the kind may go to: a blind to a window without one, a contact by its class. */
-  private freeOpenings(room: Room, entity: string, kind: AreaKind): Opening[] {
-    const openings = roomOpenings(this.level, room);
-    if (kind === "blind") return openings.filter((o) => o.type === "window" && !o.cover);
-    if (kind === "gate") return openings.filter((o) => o.type === "gate" && !o.cover);
-    if (kind === "lock") return openings.filter((o) => o.type === "door" && !o.lock);
-    const deviceClass = this.hass.states[entity]?.attributes.device_class;
-    const type = deviceClass === "window" ? "window" : deviceClass === "opening" ? undefined : "door";
-    return openings.filter((o) => !o.contact && (!type || o.type === type));
-  }
-
-  /**
-   * Puts one entity of the area on the plan: a light or sensor in the room, a presence sensor in its list, a blind or
-   * contact on a door or window. A temperature sensor takes the humidity and CO2 of its device as secondary values.
-   */
-  private placeEntity(room: Room, entity: string, kind: AreaKind, registry: Registry, at?: Point, opening?: Opening): void {
-    const devices = (this.level.devices ??= []);
-    const spot = at ?? spotsInRoom(room, 1, 0.5)[0];
-    if (kind === "light") devices.push({ id: uid("light"), kind: "light", entity, at: spot, radius: DEFAULT_GLOW });
-    if (kind === "camera")
-      devices.push({ id: uid("camera"), kind: "camera", entity, at: spot, heading: 180, arc: DEFAULT_FIELD_OF_VIEW, radius: DEFAULT_CAMERA_RANGE });
-    if (kind === "alarm") devices.push({ id: uid("sensor"), kind: "sensor", sensorType: "alarm", entity, at: spot });
-    if (kind === "presence") room.occupancy = [...(room.occupancy ?? []), entity];
-    if (kind === "climate") room.climate = entity;
-    if ((kind === "blind" || kind === "gate") && opening) opening.cover = entity;
-    if (kind === "lock" && opening) opening.lock = entity;
-    if (kind === "contact" && opening) opening.contact = entity;
-    if (kind === "sensor") {
-      const used = planEntities(this._plan!);
-      const device = registry.entityDevice[entity];
-      const siblings = Object.keys(registry.entityArea).filter(
-        (other) => other !== entity && device && registry.entityDevice[other] === device && areaKind(other, this.hass.states[other]) === "sensor" && !used.has(other),
-      );
-      const deviceClass = this.hass.states[entity]?.attributes.device_class;
-      devices.push({
-        id: uid("sensor"),
-        kind: "sensor",
-        sensorType: deviceClass === "temperature" ? "temperature" : deviceClass === "humidity" ? "humidity" : "generic",
-        entity,
-        at: spot,
-        ...(siblings.length ? { secondary: siblings.slice(0, MAX_SECONDARY).map((id) => ({ entity: id })) } : {}),
-      });
-    }
-  }
-
-  /**
-   * Place all: lights in a row across the middle of the room, sensors above them, alarms and cameras below, presence
-   * sensors in the room's list, and a blind or contact where only one door or window fits. One step of undo.
-   */
-  private placeAll(room: Room, registry: Registry): void {
-    this.change(() => {
-      const rows = this.areaEntities(room, registry).filter((row) => !row.used);
-      const lights = rows.filter((row) => row.kind === "light");
-      spotsInRoom(room, lights.length, 0.5).forEach((at, i) => this.placeEntity(room, lights[i].entity, "light", registry, at));
-      // A temperature sensor first, so the humidity of its device becomes its secondary value.
-      const sensors = rows
-        .filter((row) => row.kind === "sensor")
-        .sort((a, b) => Number(this.hass.states[b.entity]?.attributes.device_class === "temperature") - Number(this.hass.states[a.entity]?.attributes.device_class === "temperature"));
-      const placed = () => planEntities(this._plan!);
-      const mains = sensors.filter((row) => !placed().has(row.entity));
-      for (const row of mains) {
-        if (placed().has(row.entity)) continue;
-        this.placeEntity(room, row.entity, "sensor", registry, spotsInRoom(room, 1, 0.25)[0]);
-      }
-      const below = rows.filter((row) => row.kind === "alarm" || row.kind === "camera");
-      spotsInRoom(room, below.length, 0.75).forEach((at, i) => this.placeEntity(room, below[i].entity, below[i].kind, registry, at));
-      for (const row of rows.filter((row) => row.kind === "presence")) this.placeEntity(room, row.entity, "presence", registry);
-      // One thermostat per room: the first of the area, when the room has none yet.
-      const thermostat = rows.find((row) => row.kind === "climate");
-      if (thermostat && !room.climate) this.placeEntity(room, thermostat.entity, "climate", registry);
-      for (const row of rows.filter((row) => ON_OPENING.includes(row.kind))) {
-        const free = this.freeOpenings(room, row.entity, row.kind);
-        if (free.length === 1) this.placeEntity(room, row.entity, row.kind, registry, undefined, free[0]);
-      }
-    });
-  }
-
-  /** The room's Home Assistant area and the entities of it, to place one by one or all at once. */
-  private areaSection(room: Room) {
-    const registry = this._registry;
-    if (registry === undefined) {
-      queueMicrotask(() => this.loadRegistry());
-      return nothing;
-    }
-    if (registry === "loading") return html`<p class="muted">${t("Reading the areas of Home Assistant…")}</p>`;
-    if (registry === "failed") return html`<p class="muted">${t("The areas of Home Assistant could not be read.")}</p>`;
-    const normal = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    const match = room.area === undefined ? registry.areas.find((area) => normal(area.name) === normal(room.name)) : undefined;
-    const own = registry.floors.find((floor) => floor.id === this.level.floor)?.name;
-    const floors = [...new Set(registry.areas.map((area) => area.floor))].sort((a, b) => Number(b === own) - Number(a === own));
-    const rows = room.area ? this.areaEntities(room, registry) : [];
-    // Place all leaves a blind or contact that fits more than one door or window for the list.
-    const free = rows.filter(
-      (row) => !row.used && (!ON_OPENING.includes(row.kind) || this.freeOpenings(room, row.entity, row.kind).length === 1),
-    );
-    return html`
-      <label class="field wide">
-        <span>${t("Area")}</span>
-        <select @change=${(e: Event) => this.change(() => (room.area = (e.target as HTMLSelectElement).value || null))}>
-          <option value="" ?selected=${!room.area}>${t("None")}</option>
-          ${floors.map((floor) => {
-            const options = registry.areas
-              .filter((area) => area.floor === floor)
-              .map((area) => html`<option value=${area.id} ?selected=${room.area === area.id}>${area.name}</option>`);
-            return floor ? html`<optgroup label=${floor}>${options}</optgroup>` : options;
-          })}
-        </select>
-      </label>
-      ${match
-        ? html`<div class="row">
-            <button @click=${() => this.change(() => (room.area = match.id))}>${t("Use the area {name}", { name: match.name })}</button>
-          </div>`
-        : nothing}
-      ${room.area
-        ? html`${rows.length
-              ? html`<div class="area-list">
-                  ${rows.map((row) => {
-                    const name = this.hass.states[row.entity]?.attributes.friendly_name ?? row.entity;
-                    const openings = ON_OPENING.includes(row.kind) ? this.freeOpenings(room, row.entity, row.kind) : [];
-                    const action = row.used
-                      ? html`<span class="muted">${t("placed")}</span>`
-                      : ON_OPENING.includes(row.kind)
-                        ? openings.length
-                          ? html`<select
-                              @change=${(e: Event) => {
-                                const opening = openings[Number((e.target as HTMLSelectElement).value)];
-                                if (opening) this.change(() => this.placeEntity(room, row.entity, row.kind, registry, undefined, opening));
-                              }}
-                            >
-                              <option value="">${t("Put on…")}</option>
-                              ${openings.map((o, i) => html`<option value=${i}>${openingName(this.level, room, o)}</option>`)}
-                            </select>`
-                          : html`<span class="muted"
-                              >${row.kind === "blind"
-                                ? t("no free window")
-                                : row.kind === "gate"
-                                  ? t("no free gate")
-                                  : row.kind === "lock"
-                                    ? t("no free door")
-                                    : t("no free door or window")}</span
-                            >`
-                        : html`<button @click=${() => this.change(() => this.placeEntity(room, row.entity, row.kind, registry))}>${t("Place")}</button>`;
-                    return html`<div class="area-row">
-                      <span class="area-name" title=${row.entity}>${name}</span>
-                      <span class="muted">${t(AREA_KIND_NAMES[row.kind])}</span>
-                      ${action}
-                    </div>`;
-                  })}
-                </div>`
-              : html`<p class="muted">${t("The area has no lights, sensors, blinds or cameras the plan can show.")}</p>`}
-            ${free.length
-              ? html`<div class="row"><button @click=${() => this.placeAll(room, registry)}>${t("Place all ({count})", { count: free.length })}</button></div>
-                  <p class="muted">
-                    ${t("Place all puts lights across the middle of the room, sensors above them and alarms and cameras below; drag them where they are. A blind or contact goes on its own only where one door or window fits.")}
-                  </p>`
-              : nothing}`
-        : nothing}
-    `;
-  }
-
-  private roomProperties(room?: Room) {
-    if (!room) return nothing;
-    const lights = roomLights(this.level, room);
-    const thermometers = roomThermometers(this.level, room);
-    const sensors = room.occupancy ?? [];
-    return html`
-      <h3>${t("Room")}</h3>
-      ${this.text(t("Name"), room.name, (v) => (room.name = v))}
-      ${this.areaSection(room)}
-      <label class="check"
-        ><input type="checkbox" .checked=${!!room.hideName} @change=${(e: Event) => this.change(() => (room.hideName = (e.target as HTMLInputElement).checked))} />
-        ${t("Hide the name on the card")}</label
-      >
-      <label class="check"
-        ><input type="checkbox" .checked=${!!room.stairs} @change=${(e: Event) => this.change(() => (room.stairs = (e.target as HTMLInputElement).checked))} />
-        ${t("Stairs")}</label
-      >
-      <label class="check"
-        ><input type="checkbox" .checked=${!!room.outdoor} @change=${(e: Event) => this.change(() => (room.outdoor = (e.target as HTMLInputElement).checked))} />
-        ${t("Outdoor zone (no floor)")}</label
-      >
-      <label class="check"
-        ><input type="checkbox" .checked=${!!room.garden} @change=${(e: Event) => this.change(() => (room.garden = (e.target as HTMLInputElement).checked))} />
-        ${t("Part of the garden (hidden with it)")}</label
-      >
-      <p class="muted">
-        ${t("Lights: {lights}. Thermometers: {thermometers}. Place both in Devices; the room takes what stands in it. People are counted by the radars and cameras that see the room.", {
-          lights: lights.length ? lights.join(", ") : t("none"),
-          thermometers: thermometers.length ? thermometers.map((thermometer) => thermometer.entity).join(", ") : t("none"),
-        })}
-      </p>
-      <div class="pick">
-        <span>${t("Thermostat")}</span>
-        <floorcast-entity-picker
-          .hass=${this.hass}
-          .domains=${["climate"]}
-          .value=${room.climate ?? null}
-          optional
-          @value-changed=${(e: CustomEvent) => this.change(() => (room.climate = e.detail))}
-        ></floorcast-entity-picker>
-      </div>
-      ${this.stateLine(room.climate)}
-      ${room.climate
-        ? html`<p class="muted">
-            ${t("The card shows its target temperature under the room name, and its temperature when no sensor in the room shows one. The room glows orange while it heats and blue while it cools; holding the room opens the thermostat.")}
-          </p>`
-        : nothing}
-      <h4>${t("Presence sensors")}</h4>
-      ${sensors.map(
-        (entity, i) => html`<div class="pick">
-            <span>${t("Sensor {number}", { number: i + 1 })}</span>
-            <floorcast-entity-picker
-              .hass=${this.hass}
-              .domains=${["binary_sensor"]}
-              .deviceClass=${["motion", "occupancy", "presence"]}
-              .value=${entity || null}
-              optional
-              @value-changed=${(e: CustomEvent) =>
-                this.change(() => {
-                  const next = [...sensors];
-                  next[i] = e.detail ?? "";
-                  room.occupancy = next.filter(Boolean);
-                })}
-            ></floorcast-entity-picker>
-          </div>
-          ${this.stateLine(entity)}`,
-      )}
-      <div class="row">
-        <button @click=${() => this.change(() => (room.occupancy = [...sensors, ""]))}>${t("Add a presence sensor")}</button>
-      </div>
-      <p class="muted">
-        ${t("A motion, occupancy or presence sensor keeps the room occupied while it is on: the room's occupancy entity and the card follow it. It does not count people.")}
-      </p>
-      ${this.hasRadar || sensors.length
-        ? this.number(t("Occupancy hold"), room.hold ?? DEFAULT_ROOM_HOLD, (v) => (room.hold = Math.max(0, v)), 5, "s")
-        : nothing}
-      ${this.deleteButton()}
-    `;
-  }
+  _registry?: Registry | "loading" | "failed";
 
   /** A radar or a calibrated camera on the level, so its people are tracked and its rooms counted. */
-  private get hasRadar(): boolean {
+  get hasRadar(): boolean {
     return (this.level.devices ?? []).some(
       (device) => device.kind === "radar" || (device.kind === "camera" && !!device.frigate && (device.calibration?.length ?? 0) >= 4),
     );
-  }
-
-  /** Settings of the people tracking of radars or of cameras, shared by all levels; zones and rooms are common to both. */
-  private trackingProperties(kind: "radar" | "camera") {
-    type Key = Exclude<keyof TrackingSettings, "camera">;
-    const values: Omit<TrackingSettings, "camera"> = (kind === "radar" ? this._plan!.tracking : this._plan!.tracking?.camera) ?? {};
-    const set = (key: Key, v: number) =>
-      (this._plan!.tracking =
-        kind === "radar"
-          ? { ...this._plan!.tracking, [key]: v }
-          : { ...this._plan!.tracking, camera: { ...this._plan!.tracking?.camera, [key]: v } });
-    // Label, key, radar default, camera default, step, unit, limits.
-    const rows: [string, Key, number, number, number, string, number, number][] = [
-      [N_("Snap into rooms within"), "snap_distance", 1, 1, 0.1, "m", 0, 3],
-      [N_("Merge closer than"), "merge_distance", 0.8, 0.8, 0.1, "m", 0.1, 3],
-      [N_("Smoothing (1 = none)"), "smoothing", 0.5, 0.6, 0.1, "", 0.1, 1],
-      [N_("Count a new person after"), "confirm_delay", 1, 0.5, 0.5, "s", 0, 30],
-      [N_("Longest step"), "jump_base", 1.5, 1.5, 0.1, "m", 0.5, 10],
-      [N_("Walking speed"), "jump_speed", 2.5, 2.5, 0.1, "m/s", 0.5, 10],
-      [N_("Keep a missed person"), "lost_hold", 5, 10, 1, "s", 0, 120],
-      [N_("Resting place hold"), "stationary_hold", DEFAULT_STATIONARY_HOLD, DEFAULT_STATIONARY_HOLD, 30, "s", 0, 3600],
-      [N_("Remember a lost person"), "sleep_hours", 12, 12, 1, "h", 0, 48],
-    ];
-    // Folded: set once, then rarely touched; the lists of radars, cameras and zones stay in view.
-    return html`<details class="settings">
-      <summary>${kind === "radar" ? t("Radar tracking settings") : t("Camera tracking settings")}</summary>
-      ${rows.map(([label, key, radarDefault, cameraDefault, step, unit, min, max]) =>
-        this.number(t(label), values[key] ?? (kind === "radar" ? radarDefault : cameraDefault), (v) => set(key, Math.min(max, Math.max(min, v))), step, unit),
-      )}
-      <p class="muted">
-        ${kind === "radar"
-          ? t("A detection just outside the rooms its radar sees is moved inside, up to the snap distance; a radar target farther out is dropped. A missed person stays where they were for a while; seen again within walking distance, it is the same person.")
-          : t("A detection just outside the rooms its camera sees is moved inside, up to the snap distance; a camera keeps people farther out, in the garden. A missed person stays where they were for a while; seen again within walking distance, it is the same person. A camera person next to a radar person counts once.")}
-      </p>
-    </details>`;
-  }
-
-  private zoneProperties(zone?: Zone) {
-    if (!zone) return nothing;
-    const defaultHold = zone.kind === "stationary" ? (this._plan!.tracking?.stationary_hold ?? DEFAULT_STATIONARY_HOLD) : DEFAULT_ROOM_HOLD;
-    return html`
-      <h3>${t("Zone")}</h3>
-      ${this.text(t("Name"), zone.name, (v) => (zone.name = v))}
-      <label class="field wide">
-        <span>${t("Use")}</span>
-        <select @change=${(e: Event) => this.change(() => (zone.kind = (e.target as HTMLSelectElement).value as Zone["kind"]))}>
-          ${(Object.keys(ZONE_LABELS) as Zone["kind"][]).map(
-            (kind) => html`<option value=${kind} ?selected=${kind === zone.kind}>${t(ZONE_LABELS[kind])}</option>`,
-          )}
-        </select>
-      </label>
-      ${zone.kind === "count" || zone.kind === "stationary"
-        ? this.number(zone.kind === "count" ? t("Occupancy hold") : t("Keeps a still person"), zone.hold ?? defaultHold, (v) => (zone.hold = Math.max(0, v)), 5, "s")
-        : nothing}
-      <p class="muted">${t(ZONE_HINTS[zone.kind])}</p>
-      ${this.deleteButton()}
-    `;
-  }
-
-  private itemProperties(item?: Item) {
-    if (!item) return nothing;
-    return html`
-      <h3>${t("Object")}</h3>
-      <label class="field wide">
-        <span>${t("Type")}</span>
-        <select @change=${(e: Event) => this.change(() => this.retype(item, (e.target as HTMLSelectElement).value as ItemType))}>
-          ${(Object.keys(ITEM_LABELS) as ItemType[]).map(
-            (type) => html`<option value=${type} ?selected=${type === item.type}>${t(ITEM_LABELS[type])}</option>`,
-          )}
-        </select>
-      </label>
-      ${this.text(t("Name"), item.name ?? "", (v) => (item.name = v || undefined))}
-      ${item.center
-        ? nothing
-        : html`<label class="field wide">
-            <span>${t("Corners")}</span>
-            <select
-              @change=${(e: Event) =>
-                this.change(() => {
-                  const value = (e.target as HTMLSelectElement).value;
-                  if (value === "round" || value === "square") item.corners = value;
-                  else delete item.corners;
-                })}
-            >
-              <option value="" ?selected=${!item.corners}>${t("As the plan")}</option>
-              <option value="round" ?selected=${item.corners === "round"}>${t("Rounded")}</option>
-              <option value="square" ?selected=${item.corners === "square"}>${t("Square")}</option>
-            </select>
-          </label>`}
-      ${item.rect
-        ? html`${this.number("X", item.rect[0], (v) => (item.rect![0] = v))} ${this.number("Y", item.rect[1], (v) => (item.rect![1] = v))}
-          ${this.number(t("Width"), item.rect[2], (v) => (item.rect![2] = Math.max(0.1, v)))}
-          ${this.number(t("Length"), item.rect[3], (v) => (item.rect![3] = Math.max(0.1, v)))}
-          ${this.number(t("Rotation"), item.rotation ?? 0, (v) => (item.rotation = v), 5, "°")}`
-        : nothing}
-      ${item.center
-        ? html`${this.number("X", item.center[0], (v) => (item.center![0] = v))} ${this.number("Y", item.center[1], (v) => (item.center![1] = v))}
-          ${this.number(t("Diameter"), item.diameter ?? 1, (v) => (item.diameter = Math.max(0.1, v)))}`
-        : nothing}
-      ${item.points ? html`<p class="muted">${t("Drag corners; drag the middle of an edge to add a corner.")}</p>` : nothing}
-      <div class="row">
-        ${item.points
-          ? html`<button
-              title=${t("Turns the shape back into a rectangle around it")}
-              @click=${() =>
-                this.change(() => {
-                  const box = levelBoundsOf(item);
-                  item.rect = [fix(box.x), fix(box.y), fix(box.w), fix(box.h)];
-                  item.rotation = 0;
-                  delete item.points;
-                })}
-            >
-              ${t("Rectangle")}
-            </button>`
-          : nothing}
-        ${item.rect
-          ? html`<button
-              title=${t("Turns the rectangle into a shape with free corners")}
-              @click=${() =>
-                this.change(() => {
-                  item.points = rectCorners(item).map((p) => [fix(p[0]), fix(p[1])] as Point);
-                  delete item.rect;
-                  delete item.rotation;
-                })}
-            >
-              ${t("Free shape")}
-            </button>`
-          : nothing}
-        ${this.deleteButton()}
-      </div>
-    `;
-  }
-
-  /** Changing the type keeps the place and size, converting between circle and rectangle. */
-  private retype(item: Item, type: ItemType): void {
-    const circle = CIRCLE_TYPES.includes(type);
-    if (circle && !item.center) {
-      const box = levelBoundsOf(item);
-      item.center = [fix(box.x + box.w / 2), fix(box.y + box.h / 2)];
-      item.diameter = fix(Math.max(0.2, Math.min(box.w, box.h)));
-      delete item.rect;
-      delete item.points;
-      delete item.rotation;
-    } else if (!circle && item.center) {
-      const d = item.diameter ?? 1;
-      item.rect = [fix(item.center[0] - d / 2), fix(item.center[1] - d / 2), d, d];
-      item.rotation = 0;
-      delete item.center;
-      delete item.diameter;
-    }
-    item.type = type;
   }
 
   static styles = [planStyles, panelStyles];
