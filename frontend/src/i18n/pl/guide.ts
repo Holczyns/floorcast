@@ -427,6 +427,11 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   zajętość
         osoby, najdłuższy krok, prędkość chodu, jak długo zachowywana jest osoba chwilowo niewidoczna i jak długo pamiętana
         jest osoba zgubiona.
       </p>
+      <p>
+        Nowa osoba jest liczona tylko wtedy, gdy była widoczna przez większość tego opóźnienia, więc migający cel się nie
+        liczy. Osoba, która pojawia się tuż obok kogoś już policzonego, czeka trzy razy dłużej, a osoba widziana krócej niż
+        trzy sekundy nie jest zachowywana, gdy chwilowo zniknie.
+      </p>
       <p>Przykładowa automatyzacja: światło w kuchni podąża za strefą blatu.</p>
       <pre>
 triggers:

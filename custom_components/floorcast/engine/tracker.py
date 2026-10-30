@@ -13,11 +13,16 @@ Every cycle takes the targets all radars of a level see, already placed on the p
    a confirmed one wins an even pair. A person left without a track starts a new one.
 3. Position is smoothed: little when standing still, as set when walking, not at all
    after a jump, so a person neither trembles nor lags behind.
-4. A new track counts once it lasted the confirm delay, or at once when born in an
-   entrance zone. Born in an excluded zone it never counts, and a confirmed track
-   inside an excluded zone is not reported.
+4. A new track counts once it lasted the confirm delay and was seen in at least
+   MIN_HIT_SHARE of the cycles since its birth, MIN_HITS times or more, so a target the
+   radar sees only now and then never becomes a person. Born within NEAR metres of a
+   counted person it waits NEAR_DELAY times as long (a radar often splits one person
+   into two targets). It counts at once when born in an entrance zone. Born in an
+   excluded zone it never counts, and a confirmed track inside an excluded zone is not
+   reported.
 5. A confirmed track nobody sees any more stays counted where it was for the lost hold
-   (a radar often misses a person for a second or two), and inside a stationary zone
+   (a radar often misses a person for a second or two); one seen for less than
+   MIN_HOLD_AGE is not counted meanwhile, but keeps its id if seen again. Inside a stationary zone
    for that zone's hold time (someone asleep or reading); after that it sleeps,
    uncounted, for the sleep time, ready to wake when someone appears near it. A
    sleeping track next to a live one is dropped. An unconfirmed track lives one second
@@ -26,7 +31,8 @@ Every cycle takes the targets all radars of a level see, already placed on the p
    walking pace, up to MAX_REACH, within RECENT seconds of losing it, so a person walking on while the radar missed them
    keeps their number instead of becoming someone new.
 
-State kept between cycles: the tracks of the last cycle only, with their speeds.
+State kept between cycles: the tracks of the last cycle only, with their speeds, and for
+unconfirmed tracks the cycles they were seen in.
 """
 
 from __future__ import annotations
@@ -50,6 +56,14 @@ UNCONFIRMED_LIFE = 1.0
 UNSURE = 0.5
 MAX_SPEED = 2.0
 PREDICT = 1.0
+# Rule 4: the share of cycles and the cycles a new track must be seen in, and the longer
+# wait of one born next to a counted person.
+MIN_HIT_SHARE = 0.7
+MIN_HITS = 3
+NEAR = 1.5
+NEAR_DELAY = 3.0
+# Rule 5: how long a track must have been seen to stay counted while missed.
+MIN_HOLD_AGE = 3.0
 
 
 @dataclass
@@ -93,6 +107,10 @@ class Track:
     last_seen: float
     sleeping: bool = False
     sources: list[str] = field(default_factory=list)
+    # Rule 4: its confirm delay, and the cycles it was seen in of those it lived while unconfirmed.
+    delay: float = 0.0
+    hits: int = 1
+    cycles: int = 1
     # Rule 2: metres per second, smoothed.
     vx: float = 0.0
     vy: float = 0.0
@@ -164,6 +182,8 @@ class Tracker:
         tracks: dict[int, Track] = {}
         people: list[Person] = []
 
+        # Rule 4: counted people of the last cycle, next to whom a new track waits longer.
+        counted = [t.point for t in old.values() if t.confirmed and not t.sleeping]
         merged = merge(detections, s.merge_distance)
         pairs = self._pair([point for point, _ in merged], old, jump_limit, now)
         for index, (point, sources) in enumerate(merged):
@@ -181,14 +201,19 @@ class Tracker:
                 if woken:
                     track.confirmed = True
                 elif not track.confirmed:
+                    track.hits += 1
+                    track.cycles += 1
                     if in_any(entrance, track.point):
                         track.confirmed = track.valid_birth = True
                     if track.confirmed and in_any(exclude, track.point):
                         track.confirmed = track.valid_birth = False
-                    if not track.confirmed and track.valid_birth and now - track.born >= s.confirm_delay:
+                    if not track.confirmed and track.valid_birth and self._steady(track, now):
                         track.confirmed = True
             else:
                 track = Track(self._new_id(old, tracks), point[0], point[1], False, True, now, now)
+                track.delay = s.confirm_delay
+                if any(_dist(point, p) < NEAR for p in counted):
+                    track.delay = s.confirm_delay * NEAR_DELAY
                 if in_any(entrance, point):
                     track.confirmed = True
                 if in_any(exclude, point):
@@ -208,8 +233,9 @@ class Tracker:
         for track_id in free:
             track = old[track_id]
             unseen = now - track.last_seen
-            if not track.confirmed or now - track.born < s.confirm_delay:
+            if not track.confirmed or now - track.born < track.delay:
                 if unseen <= UNCONFIRMED_LIFE:
+                    track.cycles += 1
                     tracks[track_id] = track
                 continue
             if any(_dist(track.point, p) < WAKE_RADIUS for p in live):
@@ -217,7 +243,8 @@ class Tracker:
             if unseen < s.lost_hold and not in_any(exclude, track.point):
                 track.sleeping = False
                 tracks[track_id] = track
-                people.append(Person(track.id, track.x, track.y, "held", ["lost"]))
+                if track.last_seen - track.born >= MIN_HOLD_AGE:
+                    people.append(Person(track.id, track.x, track.y, "held", ["lost"]))
                 continue
             zone = next((z for z in stationary if z.contains(track.point)), None)
             hold = zone.hold if zone and zone.hold is not None else s.stationary_hold
@@ -231,6 +258,14 @@ class Tracker:
                 people.append(Person(track.id, track.x, track.y, "sleeping", []))
         self.tracks = tracks
         return people
+
+    def _steady(self, track: Track, now: float) -> bool:
+        """Rule 4: an unconfirmed track lasted its delay and was seen often enough meanwhile."""
+        if now - track.born < track.delay:
+            return False
+        if track.delay <= 0:
+            return True
+        return track.hits >= MIN_HITS and track.hits >= MIN_HIT_SHARE * track.cycles
 
     def _pair(
         self, points: Sequence[Point], old: dict[int, Track], jump: float, now: float

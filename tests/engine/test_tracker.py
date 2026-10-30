@@ -116,8 +116,9 @@ def test_in_view_follows_heading_and_reach():
 
 def test_a_person_missed_for_a_moment_stays_counted_where_they_were():
     tracker = Tracker(TrackerSettings(confirm_delay=0, lost_hold=5))
-    first = run(tracker, [(1, 1, "a")], 0.0)[0]
-    missed = run(tracker, [], 2.0)[0]
+    for now in (0.0, 1.5, 3.0):
+        first = run(tracker, [(1, 1, "a")], now)[0]
+    missed = run(tracker, [], 5.0)[0]
     assert missed.status == "held" and missed.counted
     assert (missed.x, missed.y) == (first.x, first.y)
 
@@ -160,3 +161,41 @@ def test_two_people_passing_each_other_keep_their_numbers():
     by_id = {p.id: round(p.x, 1) for p in people}
     assert by_id[1] > 0
     assert by_id[2] < 0
+
+
+def test_a_target_seen_only_now_and_then_never_counts():
+    tracker = Tracker(TrackerSettings(confirm_delay=1.0))
+    # Seen in every other cycle for five seconds: half of them, below the share.
+    for step in range(10):
+        people = run(tracker, [(1, 1, "a")] if step % 2 == 0 else [], step * 0.5)
+    assert all(not p.counted for p in people)
+
+
+def test_a_target_missed_once_still_counts():
+    tracker = Tracker(TrackerSettings(confirm_delay=1.0))
+    for step, seen in enumerate((True, True, False, True, True)):
+        people = run(tracker, [(1, 1, "a")] if seen else [], step * 0.5)
+    assert people[0].status == "seen"
+
+
+def test_a_new_target_next_to_a_person_waits_longer():
+    tracker = Tracker(TrackerSettings(confirm_delay=1.0))
+    for now in (0.0, 0.5, 1.0):
+        run(tracker, [(1, 1, "a")], now)
+    # A second target 1 m away: one second is not enough, three are.
+    for now in (1.5, 2.0, 2.5):
+        people = run(tracker, [(1, 1, "a"), (2, 1, "a")], now)
+    assert [p.status for p in people] == ["seen", "unconfirmed"]
+    for now in (3.0, 3.5, 4.0, 4.5):
+        people = run(tracker, [(1, 1, "a"), (2, 1, "a")], now)
+    assert [p.status for p in people] == ["seen", "seen"]
+
+
+def test_a_person_seen_briefly_is_not_held_but_keeps_the_id():
+    tracker = Tracker(TrackerSettings(confirm_delay=1.0, lost_hold=5))
+    for now in (0.0, 0.5, 1.0):
+        first = run(tracker, [(1, 1, "a")], now)[0]
+    assert first.status == "seen"
+    assert run(tracker, [], 2.0) == []
+    back = run(tracker, [(1.5, 1, "a")], 3.0)[0]
+    assert back.id == first.id and back.status == "seen"

@@ -428,6 +428,11 @@ binary_sensor.floorcast_&lt;level id&gt;_&lt;room id&gt;_occupancy   occupied, w
         rooms, merge distance, smoothing, the delay before a new person counts, the longest step, walking speed, how long a
         missed person is kept and how long a lost one is remembered.
       </p>
+      <p>
+        A new person counts only when seen in most moments of that delay, so a target that flickers in and out does not.
+        One appearing right next to someone already counted waits three times as long, and a person seen for less than
+        three seconds is not kept while missed.
+      </p>
       <p>Example automation: the kitchen light follows the counter zone.</p>
       <pre>
 triggers:
