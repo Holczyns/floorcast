@@ -130,6 +130,9 @@
             });
       // Person sensors of the cameras: the front one sees someone with ?detect; the garden one offers itself in the editor.
       set("binary_sensor.front_person", params.has("detect") ? "on" : "off", { device_class: "occupancy" });
+      // The sun for the pixel look: ?sun=azimuth,elevation (degrees).
+      const [sunAzimuth, sunElevation] = (params.get("sun") ?? "200,20").split(",").map(Number);
+      set("sun.sun", sunElevation > 0 ? "above_horizon" : "below_horizon", { azimuth: sunAzimuth, elevation: sunElevation });
       set("binary_sensor.garden_person", "off", { device_class: "occupancy" });
       // Indicators: a power sensor draws a few hundred watts, a switch is off.
       for (const level of plan.levels)
@@ -519,7 +522,7 @@
           const holder = document.createElement("div");
           holder.style.width = width + "px";
           const card = document.createElement("floorcast-card");
-          card.setConfig({ type: "custom:floorcast-card" });
+          card.setConfig({ type: "custom:floorcast-card", ...(params.get("look") ? { look: params.get("look") } : {}) });
           card.hass = hass;
           elements.push(card);
           holder.appendChild(card);

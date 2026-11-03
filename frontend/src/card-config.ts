@@ -23,6 +23,8 @@ export interface CardConfig {
   history?: boolean;
   /** Rooms coloured by the temperature, humidity or CO2 of the sensors in them, with a switch on the card; none by default. */
   heatmap?: "none" | "temperature" | "humidity" | "co2";
+  /** How the plan is drawn: as a plan (default) or in the pixel look, a little house seen from above. */
+  look?: "plan" | "pixel";
   /** Dark or light plan for this card, or auto as Home Assistant is; the plan's setting without it. */
   theme?: "auto" | "dark" | "light";
   /** Zoom and pan on the dashboard with two fingers, the mouse and buttons; off by default. */

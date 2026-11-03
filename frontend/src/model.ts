@@ -663,6 +663,8 @@ export interface Plan {
   roundCorners?: boolean;
   /** Radius of those corners in metres. */
   cornerRadius?: number;
+  /** Compass bearing the top of the plan faces, in degrees clockwise from north; 0 without it. The sun of the pixel look follows it. */
+  north?: number;
 }
 
 /** Surroundings of the house that the card can hide; the terrace stays with the house. */

@@ -3,6 +3,7 @@ import { defineElement } from "./define";
 import "./card-editor";
 import { type CardConfig } from "./card-config";
 import { GroundFeed } from "./ground";
+import { PixelView, type PixelTarget } from "./pixel/view";
 import { N_, pickLanguage, t, useDictionary } from "./i18n";
 import { CARD_LANGUAGES } from "./i18n/card-languages";
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
@@ -226,6 +227,12 @@ class FloorCastCard extends LitElement {
   private _shownGround = new Set<string>();
   private _groundFeeds = new Map<string, GroundFeed>();
   private _stillFeeds = new Map<string, { unsubscribe: Promise<() => void>; image?: StillImage; failed: boolean }>();
+  // Pixel look: the drawing under the plan, the levels the last render showed in it, and a count of plans
+  // received so a saved plan draws its levels anew.
+  private _pixel?: PixelView;
+  private _pixelTargets: Omit<PixelTarget, "canvas">[] = [];
+  private _planStamp = 0;
+  private _gardenShown = false;
 
   setConfig(config: CardConfig): void {
     this._config = { layout: "auto", ...config };
@@ -274,6 +281,8 @@ class FloorCastCard extends LitElement {
     window.clearInterval(this._walksTimer);
     this._groundFeeds.forEach((feed) => feed.stop());
     this._groundFeeds.clear();
+    this._pixel?.stop();
+    this._pixel = undefined;
     this._stillFeeds.forEach((feed) => feed.unsubscribe.then((unsubscribe) => unsubscribe()).catch(() => undefined));
     this._stillFeeds.clear();
   }
@@ -293,6 +302,28 @@ class FloorCastCard extends LitElement {
     if (changed.has("hass") && !this._unsubscribe && this.isConnected) this._subscribe();
     if (this.isConnected) this.followStills();
     if (this.isConnected) this.followGround();
+    if (this.isConnected) this.followPixel();
+  }
+
+  /** Pixel look: hands the canvases of the last render to the drawing, or stops it when the card draws the plan. */
+  private followPixel(): void {
+    if (this._config?.look !== "pixel") {
+      this._pixel?.stop();
+      this._pixel = undefined;
+      return;
+    }
+    this._pixel ??= new PixelView({
+      hass: () => this.hass,
+      plan: () => this._plan,
+      people: (level) => (this._people ? (this._people[level.id] ?? []) : this.levelPeople(level)),
+      robot: (id) => this._robots.get(id)?.place,
+    });
+    const targets: PixelTarget[] = [];
+    for (const target of this._pixelTargets) {
+      const element = this.renderRoot.querySelector<HTMLCanvasElement>(`canvas.pixel[data-level="${CSS.escape(target.level.id)}"]`);
+      if (element) targets.push({ ...target, canvas: element });
+    }
+    this._pixel.sync(targets);
   }
 
   /** EXPERIMENTAL: subscribes to the ground images of the previews the last render showed, drops the others. */
@@ -350,6 +381,7 @@ class FloorCastCard extends LitElement {
         // A plan saved before sensors were unified still draws its thermometers and second readings.
         message.plan.levels.forEach(normalizeSensors);
         this._plan = message.plan;
+        this._planStamp++;
         this.followPlan();
       },
       { type: "floorcast/plan/subscribe" },
@@ -829,6 +861,8 @@ class FloorCastCard extends LitElement {
     // Filled again by renderCameras and renderMowerStills; read by followStills and followGround after the render.
     this._shownStills = new Set();
     this._shownGround = new Set();
+    this._pixelTargets = [];
+    this._gardenShown = showGarden;
     return html`
       <ha-card .header=${this._config.title} @pointerdown=${this.notePointer}>
         ${(side || levels.length < 2) && !gardenToggle && !this._config.history && !heatConfigured
@@ -909,6 +943,19 @@ class FloorCastCard extends LitElement {
     const zoomed = !!this._config.zoom && !!this._views[level.id] && !inGroup;
     // In a group the levels zoom together; their own gestures and buttons rest.
     const own = !!this._config.zoom && !inGroup;
+    // Pixel look: the drawing is a canvas under the plan; the plan keeps its taps, labels and previews.
+    const pixel = this._config.look === "pixel";
+    if (pixel) this._pixelTargets.push({ level, key: `${this._planStamp}|${level.id}|${this._gardenShown ? 1 : 0}`, bounds: b });
+    const plan = svg`
+          ${PLAN_DEFS}
+          ${pixel
+            ? svg`${this.renderMowers(level)} ${this.renderVacuums(level)}`
+            : svg`${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}`}
+          ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
+          ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)} ${this.renderLocks(level, pxPerMetre)}
+          ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)} ${this.renderIndicators(level, pxPerMetre)}
+          ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}`;
+    const svgClass = `${this._config.crop?.[level.id] || zoomed ? "cropped" : ""} ${pixel ? "pixel" : ""}`;
     return html`
       <div
         class="level ${own ? "zoomable" : ""}"
@@ -926,13 +973,12 @@ class FloorCastCard extends LitElement {
         }}
       >
         ${scale ? html`<div class="name">${level.name}</div>` : nothing}
-        <svg class=${this._config.crop?.[level.id] || zoomed ? "cropped" : ""} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">
-          ${PLAN_DEFS} ${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}
-          ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
-          ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)} ${this.renderLocks(level, pxPerMetre)}
-          ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)} ${this.renderIndicators(level, pxPerMetre)}
-          ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}
-        </svg>
+        ${pixel
+          ? html`<div class="pixel-box">
+              <canvas class="pixel" data-level=${level.id}></canvas>
+              <svg class=${svgClass} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">${plan}</svg>
+            </div>`
+          : html`<svg class=${svgClass} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">${plan}</svg>`}
         ${own ? this.renderZoomButtons(level) : nothing}
       </div>
     `;
@@ -1888,6 +1934,43 @@ class FloorCastCard extends LitElement {
       /* A cropped or zoomed plan ends at its frame. */
       .level svg.cropped {
         overflow: hidden;
+      }
+      /* Pixel look: the canvas lies under the plan, which keeps its taps and labels but draws no shapes. */
+      .pixel-box {
+        position: relative;
+      }
+      .pixel-box canvas.pixel {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+      .pixel-box svg {
+        position: relative;
+      }
+      /* The drawing shows lights, people, robots and water itself; their shapes on the plan only keep the taps. */
+      svg.pixel .room {
+        fill: transparent !important;
+        stroke: none !important;
+      }
+      svg.pixel .person,
+      svg.pixel .fc-person,
+      svg.pixel .fc-track,
+      svg.pixel .lamp-ring,
+      svg.pixel .lamp-core,
+      svg.pixel .lamp-line,
+      svg.pixel .nozzle circle:not(.lamp-hit),
+      svg.pixel .fc-mower,
+      svg.pixel .fc-vacuum,
+      svg.pixel .fc-screen {
+        opacity: 0 !important;
+      }
+      svg.pixel .room-text {
+        paint-order: stroke;
+        stroke: rgba(0, 0, 0, 0.6);
+        stroke-width: 0.05px;
       }
       /* One finger scrolls the page; two fingers are the card's to zoom and move the plan. */
       .level.zoomable svg,

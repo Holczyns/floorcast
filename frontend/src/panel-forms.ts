@@ -321,6 +321,15 @@ export function levelProperties(p: FloorCastPanel) {
           "cm",
         )
       : nothing}
+    ${number(
+      p,
+      t("Top of the plan faces (°)"),
+      p._plan!.north ?? 0,
+      (v) => (p._plan!.north = ((Math.round(v) % 360) + 360) % 360),
+      1,
+      "°",
+    )}
+    <p class="muted">${t("Compass bearing of the top of the plan: 0 north, 90 east. The sun of the pixel look follows it.")}</p>
     ${appearanceProperties(p)}
     <h3>${t("Language")}</h3>
     <label class="field wide">
