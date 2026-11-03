@@ -5,6 +5,8 @@ import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
 import {
   CIRCLE_TYPES,
   FURNITURE_KINDS,
+  FLOOR_FINISHES,
+  type FloorFinish,
   PET_COATS,
   type PetSpecies,
   OBSTACLE_TYPES,
@@ -59,6 +61,7 @@ import {
   Drag,
   ITEM_LABELS,
   FURNITURE_LABELS,
+  FLOOR_LABELS,
   COAT_LABELS,
   ZONE_LABELS,
   isNumberedLevel,
@@ -818,10 +821,49 @@ export function roomProperties(p: FloorCastPanel, room?: Room) {
       ><input type="checkbox" .checked=${!!room.hideName} @change=${(e: Event) => p.change(() => (room.hideName = (e.target as HTMLInputElement).checked))} />
       ${t("Hide the name on the card")}</label
     >
+    ${room.stairs || room.outdoor
+      ? nothing
+      : html`<label class="field wide">
+          <span>${t("Floor")}</span>
+          <select
+            @change=${(e: Event) =>
+              p.change(() => {
+                const value = (e.target as HTMLSelectElement).value;
+                if (value) room.floor = value as FloorFinish;
+                else delete room.floor;
+              })}
+          >
+            <option value="" ?selected=${!room.floor}>${t("Automatic (by the kind of room)")}</option>
+            ${FLOOR_FINISHES.map((finish) => html`<option value=${finish} ?selected=${room.floor === finish}>${t(FLOOR_LABELS[finish])}</option>`)}
+          </select>
+        </label>`}
     <label class="check"
       ><input type="checkbox" .checked=${!!room.stairs} @change=${(e: Event) => p.change(() => (room.stairs = (e.target as HTMLInputElement).checked))} />
       ${t("Stairs")}</label
     >
+    ${room.stairs
+      ? html`<label class="field wide">
+          <span>${t("Bottom of the stairs")}</span>
+          <select
+            @change=${(e: Event) =>
+              p.change(() => {
+                const value = (e.target as HTMLSelectElement).value;
+                if (value) room.stairsFrom = value as NonNullable<typeof room.stairsFrom>;
+                else delete room.stairsFrom;
+              })}
+          >
+            ${(
+              [
+                ["", t("Automatic")],
+                ["left", t("Left")],
+                ["right", t("Right")],
+                ["top", t("Top")],
+                ["bottom", t("Bottom")],
+              ] as [string, string][]
+            ).map(([value, label]) => html`<option value=${value} ?selected=${(room.stairsFrom ?? "") === value}>${label}</option>`)}
+          </select>
+        </label>`
+      : nothing}
     <label class="check"
       ><input type="checkbox" .checked=${!!room.outdoor} @change=${(e: Event) => p.change(() => (room.outdoor = (e.target as HTMLInputElement).checked))} />
       ${t("Outdoor zone (no floor)")}</label

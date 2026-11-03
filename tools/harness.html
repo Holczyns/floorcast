@@ -52,6 +52,13 @@
         throw new Error("no plan");
       };
       let plan = await loadPlan();
+      // ?trees: three trees in the garden of the first level, to see them drawn.
+      if (params.has("trees"))
+        plan.levels[0].items.push(
+          { id: "tree_a", type: "tree", center: [-6.5, 23], diameter: 3.2 },
+          { id: "tree_b", type: "tree", center: [-2, 25], diameter: 2.4 },
+          { id: "tree_c", type: "tree", center: [-6, 9], diameter: 2 },
+        );
       // ?pets: a cat and a dog for the pixel look, when the plan has none.
       if (params.has("pets") && !plan.pets?.length)
         plan.pets = [

@@ -9,8 +9,9 @@ import type { HomeAssistant } from "../ha";
 import { type Level, type Plan, type Point, type TrackedPerson, deviceCentre, isPowered } from "../model";
 import { PPM, canvas, rect } from "./art";
 import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
+import { Grid } from "./grid";
 import { PetLife } from "./pets";
-import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, vacuum } from "./sprites";
+import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
 
 export interface PixelBounds {
   x: number;
@@ -53,8 +54,13 @@ interface Walker {
    */
   anchor: Point;
   still: number;
+  /** The way still to walk to where the tracking puts the person, round walls through doors, and its end. */
+  route: Point[];
+  goal: Point;
 }
 
+// Seconds a touched pet plays where it was touched before it goes back to its day.
+const PLAY = 25;
 const SEATS = new Set(["sofa", "chair", "bench", "garden_sofa"]);
 const SETTLE = 1.5;
 // Radar points of a still person wander: within STAY metres of where they stopped they count as still.
@@ -118,8 +124,11 @@ class LevelPicture {
   // Pets: their life on this level, how far each steps aside from people, when it was last stroked, and
   // where it was drawn last, for taps.
   private readonly pets: PetLife[];
+  // Ways for people round the walls, when the tracking moves them past one.
+  private readonly ways: Grid;
   private readonly aside = new Map<string, Point>();
-  private readonly stroked = new Map<string, number>();
+  // When and where each pet was last touched; it plays there for PLAY seconds.
+  private readonly touched = new Map<string, { time: number; at: Point }>();
   private drawnPets: { id: string; at: Point }[] = [];
 
   constructor(level: Level, plan: Plan | undefined) {
@@ -137,6 +146,7 @@ class LevelPicture {
     this.wetColumns = Math.ceil(s.width / PPM / WET_CELL);
     this.wet = new Float32Array(this.wetColumns * Math.ceil(s.height / PPM / WET_CELL));
     const first = plan?.levels[0]?.id;
+    this.ways = new Grid(this.scene, () => true);
     this.pets = (plan?.pets ?? []).filter((pet) => (pet.level ?? first) === level.id).map((pet) => new PetLife(this.scene, pet));
   }
 
@@ -197,20 +207,40 @@ class LevelPicture {
       seen.add(id);
       let w = this.walkers.get(id);
       if (!w) {
-        w = { x: p.x, y: p.y, facing: "down", moving: false, outfit: OUTFITS[this.dressed++ % OUTFITS.length], anchor: [p.x, p.y], still: 0 };
+        w = { x: p.x, y: p.y, facing: "down", moving: false, outfit: OUTFITS[this.dressed++ % OUTFITS.length], anchor: [p.x, p.y], still: 0, route: [], goal: [p.x, p.y] };
         this.walkers.set(id, w);
       }
-      const dx = p.x - w.x;
-      const dy = p.y - w.y;
-      const d = Math.hypot(dx, dy);
+      const target: Point = [p.x, p.y];
+      const d = Math.hypot(target[0] - w.x, target[1] - w.y);
       if (d > JUMP) {
-        w.x = p.x;
-        w.y = p.y;
+        w.x = target[0];
+        w.y = target[1];
+        w.route = [];
       } else if (d > 0.04) {
-        const step = Math.min(d, Math.max(0.6, Math.min(WALK, d * 3)) * dt);
-        w.x += (dx / d) * step;
-        w.y += (dy / d) * step;
-        w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+        // A new place: straight to it, or round the walls between, through a door.
+        if (!w.route.length || Math.hypot(w.goal[0] - target[0], w.goal[1] - target[1]) > 0.3) {
+          const way = s.wallBetween([w.x, w.y], target) ? this.ways.path([w.x, w.y], target) : [[w.x, w.y] as Point, target];
+          if (way.length < 2) [w.x, w.y] = target;
+          w.route = way.slice(1);
+        } else w.route[w.route.length - 1] = target;
+        w.goal = target;
+        let budget = Math.max(0.6, Math.min(WALK, d * 3)) * dt;
+        while (budget > 0 && w.route.length) {
+          const [tx, ty] = w.route[0];
+          const dx = tx - w.x;
+          const dy = ty - w.y;
+          const left = Math.hypot(dx, dy);
+          if (left > 0.01) w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+          if (left <= budget) {
+            [w.x, w.y] = [tx, ty];
+            budget -= left;
+            w.route.shift();
+          } else {
+            w.x += (dx / left) * budget;
+            w.y += (dy / left) * budget;
+            budget = 0;
+          }
+        }
       }
       w.moving = d > 0.06;
       if (Math.hypot(p.x - w.anchor[0], p.y - w.anchor[1]) > STAY) {
@@ -348,7 +378,9 @@ class LevelPicture {
     this.drawnPets = [];
     for (const life of this.pets) {
       const pet = life.pet;
-      const place = life.placeAt(now);
+      const touch = this.touched.get(pet.id);
+      const since = touch ? now - touch.time : 99;
+      const place = touch && since < PLAY ? life.playHere(touch.at, since) : life.placeAt(now);
       // Step aside from the nearest person closer than a metre, less when the pet lies on furniture.
       let push: Point = [0, 0];
       for (const w of this.walkers.values()) {
@@ -363,10 +395,9 @@ class LevelPicture {
       this.aside.set(pet.id, aside);
       const at: Point = [place.x + aside[0], place.y + aside[1]];
       this.drawnPets.push({ id: pet.id, at });
-      const since = now - (this.stroked.get(pet.id) ?? -99);
       const fond = since < 2.5;
-      const pose = fond && place.state === "sleep" ? "sit" : place.state;
-      const hop = fond ? Math.round(Math.max(0, Math.sin(since * 9)) * 3) : 0;
+      const pose = place.state;
+      const hop = Math.round(place.hop * PPM) + (fond ? Math.round(Math.max(0, Math.sin(since * 9)) * 3) : 0);
       const seat = place.on ? Math.round((place.on.kind === "bed" ? 0.18 : 0.22) * PPM) : 0;
       const [x, y] = s.px(at);
       const top = place.on ? s.px([0, place.on.box[3]])[1] + 0.7 : y + 0.4;
@@ -375,8 +406,13 @@ class LevelPicture {
       items.push({
         y: top,
         draw: () =>
-          pet.species === "dog" ? dog(c, x, y - seat - hop, pose, place.facing, step, coat, time, fond) : cat(c, x, y - seat - hop, pose, place.facing, step, coat, time),
+          pet.species === "dog" ? dog(c, x, y - seat - hop, pose, place.facing, step, coat, time, since < PLAY) : cat(c, x, y - seat - hop, pose, place.facing, step, coat, time),
       });
+      const plaything = place.toy;
+      if (plaything) {
+        const [tx, ty] = s.px(plaything.at);
+        items.push({ y: ty + 0.3, draw: () => toy(c, plaything.kind, tx, ty, Math.round(plaything.height * PPM), time, plaything.fade ?? 1) });
+      }
       if (pose === "sleep")
         overhead.push(() => {
           for (let k = 0; k < 2; k++) {
@@ -403,7 +439,10 @@ class LevelPicture {
       const d = Math.hypot(pet.at[0] - p[0], pet.at[1] - 0.2 - p[1]);
       if (d < reach && (!best || d < best.d)) best = { id: pet.id, d };
     }
-    if (best) this.stroked.set(best.id, Date.now() / 1000);
+    if (best) {
+      const at = this.drawnPets.find((pet) => pet.id === best!.id)!.at;
+      this.touched.set(best.id, { time: Date.now() / 1000, at });
+    }
     return !!best;
   }
 
@@ -440,8 +479,9 @@ class LevelPicture {
       const n = s.lightWidth * s.lightHeight;
       const ambient = new Float32Array(n);
       const added = new Float32Array(n * 3);
-      // Rooms without a window still get some daylight from the rest of the house.
-      for (let k = 0; k < n; k++) ambient[k] = s.region[k] === -1 ? 1 : s.region[k] === -2 ? 0.85 : 0.18 + 0.2 * day;
+      // Rooms get a little daylight from the rest of the house; most comes through their own windows, so a
+      // closed blind darkens its room.
+      for (let k = 0; k < n; k++) ambient[k] = s.region[k] === -1 ? 1 : s.region[k] === -2 ? 0.85 : 0.1 + 0.12 * day;
       s.windows.forEach((w, i) => {
         const weight = 0.9 * (1 - shutters[i]) * (w.terrace ? 1.3 : 1);
         if (weight <= 0 || !w.daylight) return;

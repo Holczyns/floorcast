@@ -152,7 +152,7 @@ const COATS: Record<string, [string, string, string]> = {
   spotted: ["#f2f2f2", "#2e2e35", "#ffffff"],
 };
 
-export type PetPose = "walk" | "run" | "sleep" | "sit" | "wash";
+export type PetPose = "walk" | "run" | "stalk" | "sleep" | "sit" | "wash" | "crouch" | "pounce" | "play" | "carry";
 
 /** A cat with its feet at x, y; step counts its steps while it walks. */
 export function cat(c: CanvasRenderingContext2D, x: number, y: number, pose: PetPose, facing: "left" | "right", step: number, coat: string, time: number): void {
@@ -172,7 +172,41 @@ export function cat(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
     return;
   }
   rect(c, x - 5, y - 1, 10, 2, "rgba(0,0,0,.2)");
-  if (pose === "sit" || pose === "wash") {
+  const striped = coat === "tabby" || coat === "calico";
+  if (pose === "crouch" || pose === "stalk") {
+    // Low to the ground: creeping up on prey, or ready to jump with the tail twitching.
+    const f = step % 4;
+    const twitch = pose === "crouch" ? Math.floor(time * 8) % 2 : 0;
+    rect(c, X(-5, 9), y - 5, 9, 3, b);
+    rect(c, X(-4, 6), y - 3, 6, 1, l);
+    if (striped) for (const dx of [-3, -1, 1]) rect(c, X(dx, 1), y - 5, 1, 2, d);
+    for (const [dx, k] of [[-5, 0], [-3, 1], [1, 1], [3, 0]] as [number, number][]) {
+      const lift = pose === "stalk" ? (f + k) % 2 : 0;
+      rect(c, X(dx, 1), y - 2 + lift, 1, 2 - lift, d);
+    }
+    rect(c, X(3, 5), y - 8, 5, 4, b);
+    rect(c, X(3, 1), y - 9, 1, 1, b);
+    rect(c, X(6, 1), y - 9, 1, 1, b);
+    rect(c, X(5, 1), y - 7, 1, 1, "#2f8a3a");
+    rect(c, X(-8, 3), y - 4 - twitch, 3, 1, d);
+    return;
+  }
+  if (pose === "pounce") {
+    // Stretched out in the air, front paws reaching.
+    rect(c, X(-6, 12), y - 8, 12, 3, b);
+    rect(c, X(-5, 9), y - 6, 9, 1, l);
+    if (striped) for (const dx of [-4, -2, 0]) rect(c, X(dx, 1), y - 8, 1, 2, d);
+    rect(c, X(6, 2), y - 7, 2, 1, d);
+    rect(c, X(6, 2), y - 5, 2, 1, d);
+    rect(c, X(-7, 2), y - 5, 2, 2, d);
+    rect(c, X(5, 5), y - 11, 5, 4, b);
+    rect(c, X(5, 1), y - 12, 1, 1, b);
+    rect(c, X(8, 1), y - 12, 1, 1, b);
+    rect(c, X(7, 1), y - 10, 1, 1, "#2f8a3a");
+    rect(c, X(-9, 3), y - 10, 3, 1, d);
+    return;
+  }
+  if (pose === "sit" || pose === "wash" || pose === "play") {
     rect(c, x - 3, y - 7, 6, 6, b);
     rect(c, x - 2, y - 6, 4, 3, l);
     const lick = pose === "wash" && Math.floor(time * 3) % 2 === 0;
@@ -183,6 +217,8 @@ export function cat(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
     rect(c, x - 2, hy + 2, 1, 1, "#2f8a3a");
     rect(c, x + 1, hy + 2, 1, 1, "#2f8a3a");
     if (pose === "wash") rect(c, X(2, 2), hy + 4, 2, 3, l);
+    // Playing: a front paw batting up and down.
+    if (pose === "play") rect(c, X(3, 2), y - 7 - (Math.floor(time * 6) % 2) * 2, 2, 3, l);
     const tail = Math.floor(time * 2) % 2;
     rect(c, X(3, 4), y - 2 - tail, 4, 1, d);
     rect(c, X(6, 1), y - 4 - tail, 1, 2, d);
@@ -213,6 +249,28 @@ export function dog(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
   const s = facing === "left" ? -1 : 1;
   const X = (dx: number, w: number) => (s > 0 ? x + dx : x - dx - w);
   const tail = Math.floor(time * (wag ? 14 : 3)) % 2;
+  // A dog has no creeping or washing: those show as sitting, a pounce or carrying the ball as running.
+  if (pose === "crouch" || pose === "wash") pose = "sit";
+  if (pose === "stalk") pose = "walk";
+  if (pose === "pounce" || pose === "carry") pose = "run";
+  if (pose === "play") {
+    // Bowing to play: front down, rear up, tail wagging.
+    rect(c, x - 7, y - 1, 14, 2, "rgba(0,0,0,.2)");
+    rect(c, X(-6, 6), y - 10, 6, 5, b);
+    rect(c, X(-6, 1), y - 5, 1, 5, d);
+    rect(c, X(-3, 1), y - 5, 1, 5, d);
+    rect(c, X(0, 6), y - 6, 6, 3, b);
+    rect(c, X(2, 6), y - 3, 6, 1, d);
+    rect(c, X(5, 6), y - 9, 6, 5, b);
+    rect(c, X(10, 3), y - 7, 3, 3, l);
+    rect(c, X(12, 1), y - 7, 1, 1, "#1a1a1a");
+    rect(c, X(8, 1), y - 8, 1, 1, "#1a1a1a");
+    rect(c, X(5, 2), y - 9, 2, 4, d);
+    rect(c, X(-8, 2), y - 12 - tail, 2, 1, d);
+    rect(c, X(-9, 1), y - 14 - tail, 1, 2, d);
+    if (coat === "spotted") rect(c, X(-5, 3), y - 9, 3, 2, d);
+    return;
+  }
   if (pose === "sleep") {
     rect(c, x - 8, y - 1, 16, 2, "rgba(0,0,0,.2)");
     rect(c, x - 7, y - 6, 13, 5, b);
@@ -226,7 +284,7 @@ export function dog(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
     return;
   }
   rect(c, x - 7, y - 1, 14, 2, "rgba(0,0,0,.2)");
-  if (pose === "sit" || pose === "wash") {
+  if (pose === "sit") {
     rect(c, X(-3, 7), y - 9, 7, 8, b);
     rect(c, X(-1, 4), y - 6, 4, 4, l);
     rect(c, X(1, 2), y - 3, 2, 3, b);
@@ -274,4 +332,35 @@ export function snore(c: CanvasRenderingContext2D, x: number, y: number, alpha: 
   rect(c, x, y, 3, 1, colour);
   rect(c, x + 1, y + 1, 1, 1, colour);
   rect(c, x, y + 2, 3, 1, colour);
+}
+
+/** A ball of yarn, a ball, a fly or a butterfly with its foot at x, y and lifted by height pixels. */
+export function toy(c: CanvasRenderingContext2D, kind: "yarn" | "ball" | "fly" | "butterfly", x: number, y: number, height: number, time: number, alpha = 1): void {
+  c.save();
+  c.globalAlpha = alpha;
+  if (kind === "yarn" || kind === "ball") {
+    if (height > 1) rect(c, x - 2, y, 4, 1, "rgba(0,0,0,.2)");
+    const top = y - height - 2;
+    disc(c, x, top, 2, kind === "yarn" ? "#d6455a" : "#c8e04a");
+    rect(c, x - 1, top - 1, 1, 1, kind === "yarn" ? "#f08090" : "#f4f8d0");
+    if (kind === "yarn") rect(c, x + 2, top + 1, 3, 1, "#d6455a");
+    else rect(c, x - 2, top, 5, 1, "#ffffff");
+  } else if (kind === "fly") {
+    const top = y - height;
+    rect(c, x, top, 1, 1, "#1a1a1a");
+    const flap = Math.floor(time * 20) % 2;
+    rect(c, x - 1, top - flap, 1, 1, "rgba(220,230,255,.85)");
+    rect(c, x + 1, top - flap, 1, 1, "rgba(220,230,255,.85)");
+  } else {
+    const top = y - height;
+    const open = Math.floor(time * 6) % 2 === 0;
+    rect(c, x, top, 1, 2, "#3a2a20");
+    if (open) {
+      rect(c, x - 2, top - 1, 2, 2, "#f2a33a");
+      rect(c, x + 1, top - 1, 2, 2, "#f2a33a");
+      rect(c, x - 2, top - 1, 1, 1, "#2a2a2e");
+      rect(c, x + 2, top - 1, 1, 1, "#2a2a2e");
+    } else rect(c, x - 1, top - 1, 3, 1, "#f2a33a");
+  }
+  c.restore();
 }

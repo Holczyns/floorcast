@@ -3,7 +3,8 @@
 // each light, window and screen can reach past the walls.
 import { type Device, type FurnitureKind, type Item, type Level, type Opening, type Plan, type Point, type Room, deviceCentre, drawnBounds, itemPoints, pointInPolygon } from "../model";
 import { furnitureOf } from "./furniture";
-import { LOOKS, PPM, type RoomKind, type RoomLook, canvas, disc, hash, plants, rect, roomKind, texture } from "./art";
+import { LOOKS, PPM, type RoomKind, type RoomLook, type Texture, canvas, crops, disc, flowers, hash, rect, roomKind, texture } from "./art";
+import { drawStairs } from "./stairs";
 
 /** Pixels of the light buffer cell. */
 export const LIGHT_CELL = 4;
@@ -74,7 +75,6 @@ export interface SceneLight {
 }
 
 const DOOR_LIKE = new Set(["door", "gate"]);
-const SOLID_GARDEN = new Set(["hedge", "greenhouse", "garden_house", "trampoline"]);
 
 function boxOf(points: Point[]): Box {
   const xs = points.map((p) => p[0]);
@@ -168,6 +168,18 @@ export class Scene {
         this.wallParts.push({ x, y: top, w, h: part, order: Math.min(top + part + face, y + h) });
       }
     }
+  }
+
+  /** Whether a point lies within the walls of the house, in a room or not. */
+  insideHouse(p: Point): boolean {
+    const boxes = this.pieces.map((piece) => piece.box);
+    if (!boxes.length) return false;
+    return p[0] > Math.min(...boxes.map((b) => b[0])) && p[0] < Math.max(...boxes.map((b) => b[2])) && p[1] > Math.min(...boxes.map((b) => b[1])) && p[1] < Math.max(...boxes.map((b) => b[3]));
+  }
+
+  /** The floor of a room: the one chosen in the editor, or the one of its kind. */
+  floorOf(r: SceneRoom): Texture {
+    return r.room.floor ?? r.look.floor;
   }
 
   /** Pixel position of a point of the plan. */
@@ -273,15 +285,18 @@ export class Scene {
   }
 
   /** Sides of a box that stand against a wall. */
-  wallSides(box: Box): ("top" | "bottom" | "left" | "right")[] {
-    const near = (x: number, y: number) => this.pieces.some((p) => x >= p.box[0] - 0.06 && x <= p.box[2] + 0.06 && y >= p.box[1] - 0.06 && y <= p.box[3] + 0.06);
+  wallSides(box: Box, reach = 0.1): ("top" | "bottom" | "left" | "right")[] {
+    const wall = (x: number, y: number) => this.pieces.some((p) => p.kind !== "door" && x >= p.box[0] - 0.06 && x <= p.box[2] + 0.06 && y >= p.box[1] - 0.06 && y <= p.box[3] + 0.06);
+    // A wall up to reach metres off the side counts, so a piece standing a little away from it still backs onto it.
+    const offsets = [0.05, reach / 2, reach].filter((d, i, all) => all.indexOf(d) === i);
+    const near = (x: number, y: number, dx: number, dy: number) => offsets.some((d) => wall(x + dx * d, y + dy * d));
     const cx = (box[0] + box[2]) / 2;
     const cy = (box[1] + box[3]) / 2;
     const sides: ("top" | "bottom" | "left" | "right")[] = [];
-    if (near(cx, box[1] - 0.1)) sides.push("top");
-    if (near(box[0] - 0.1, cy)) sides.push("left");
-    if (near(box[2] + 0.1, cy)) sides.push("right");
-    if (near(cx, box[3] + 0.1)) sides.push("bottom");
+    if (near(cx, box[1], 0, -1)) sides.push("top");
+    if (near(box[0], cy, -1, 0)) sides.push("left");
+    if (near(box[2], cy, 1, 0)) sides.push("right");
+    if (near(cx, box[3], 0, 1)) sides.push("bottom");
     return sides;
   }
 
@@ -306,13 +321,6 @@ export class Scene {
     ];
   }
 
-  /** Cells a walker cannot stand on: walls, furniture and solid garden objects. */
-  blocked(p: Point): boolean {
-    if (this.pieces.some((piece) => piece.kind !== "door" && !piece.terrace && p[0] > piece.box[0] && p[0] < piece.box[2] && p[1] > piece.box[1] && p[1] < piece.box[3])) return true;
-    if (this.furniture.some((f) => p[0] >= f.box[0] && p[0] <= f.box[2] && p[1] >= f.box[1] && p[1] <= f.box[3] && pointInPolygon(p, f.points))) return true;
-    return this.garden.some((g) => SOLID_GARDEN.has(g.item.type) && p[0] >= g.box[0] && p[0] <= g.box[2] && p[1] >= g.box[1] && p[1] <= g.box[3]);
-  }
-
   // ---------------------------------------------------------------- light
   private fillRegions(): void {
     const cell = LIGHT_CELL / PPM;
@@ -328,7 +336,9 @@ export class Scene {
   }
 
   /** Whether a wall stands between two points. */
-  private shaded(ax: number, ay: number, bx: number, by: number): boolean {
+  wallBetween(a: Point, b: Point): boolean {
+    const [ax, ay] = a;
+    const [bx, by] = b;
     const dx = bx - ax;
     const dy = by - ay;
     for (const [x0, y0, x1, y1] of this.blockers) {
@@ -367,7 +377,7 @@ export class Scene {
         const d = Math.hypot(x - at[0], y - at[1]);
         if (d >= radius) continue;
         if (ahead && (x - at[0]) * ahead[0] + (y - at[1]) * ahead[1] < -0.05) continue;
-        if (this.shaded(at[0], at[1], x, y)) continue;
+        if (this.wallBetween(at, [x, y])) continue;
         const k = 1 - d / radius;
         cells.push(j * this.lightWidth + i);
         values.push(k * k);
@@ -446,19 +456,40 @@ export class Scene {
         c.fill();
         if (type === "bed" || type === "vegetable") {
           const [x, y, w, h] = this.pxBox(g.box);
-          plants(c, x, y, w, h, type === "vegetable");
+          const seed = [...g.item.id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+          c.save();
+          this.path(c, g.points);
+          c.clip();
+          if (type === "vegetable") crops(c, x, y, w, h, seed);
+          else flowers(c, x, y, w, h, seed);
+          c.restore();
+          // A border: stones round a flower bed, boards round a vegetable patch.
+          c.save();
+          c.translate(0.5, 0.5);
+          this.path(c, g.points);
+          c.lineWidth = 2;
+          c.strokeStyle = type === "vegetable" ? "#7a5232" : "#b8b0a2";
+          c.stroke();
+          c.lineWidth = 1;
+          c.strokeStyle = type === "vegetable" ? "#a8774f" : "#d8d2c6";
+          c.stroke();
+          c.restore();
         }
       }
     for (const r of this.rooms) {
       if (r.kind === "driveway" || (!r.indoor && r.kind !== "terrace")) continue;
+      if (r.kind === "stairs") {
+        drawStairs(c, this, r.room);
+        continue;
+      }
       this.path(c, r.room.points);
-      c.fillStyle = texture(c, r.look.floor);
+      c.fillStyle = texture(c, this.floorOf(r));
       c.fill();
     }
     for (const d of this.doors) {
       const room = d.room ?? d.other;
       const [x, y, w, h] = this.pxBox(d.box);
-      c.fillStyle = texture(c, room ? room.look.floor : "paving");
+      c.fillStyle = texture(c, room ? this.floorOf(room) : "paving");
       c.fillRect(x, y, w, h);
     }
   }
@@ -499,6 +530,11 @@ export class Scene {
           rect(c, xx, bottom, ww, 2, "rgba(0,0,0,.25)");
           rect(c, xx, bottom + face - 4, ww, 1, "#8a6446");
           rect(c, xx, bottom + face - 3, ww, 3, "#6b4a33");
+        } else if (this.insideHouse([this.x0 + (xx + 2) / PPM, this.y0 + (y + h + 4) / PPM])) {
+          // A space inside the house that is no room (under the stairs, a shaft): plain plaster.
+          rect(c, xx, bottom, ww, face, "#cfc4b0");
+          rect(c, xx, bottom, ww, 2, "rgba(0,0,0,.25)");
+          rect(c, xx, bottom + face - 3, ww, 3, "#8a7c66");
         } else {
           rect(c, xx, bottom, ww, face, "#b56a4e");
           for (let r = 0; r < face; r += 4) {
@@ -653,43 +689,9 @@ export class Scene {
         }
         break;
       }
-      case "sofa": {
-        const h = lift(0.22);
-        const fabric = ["#c0564b", "#a8473d", "#cf6f62", "#96403a"];
-        this.box(c, f.points, h, fabric[0], fabric[1], { edge: fabric[2], base: fabric[3] });
-        const k = lift(0.2);
-        if (rectangle) {
-          // Backrest on the wall side, armrests on the two ends across it, cushions between.
-          const y0 = by - h;
-          const across = back === "top";
-          if (back === "top") rect(c, bx, y0, bw, k, fabric[3]);
-          if (back === "left") rect(c, bx, y0, k, bh, fabric[3]);
-          if (back === "right") rect(c, bx + bw - k, y0, k, bh, fabric[3]);
-          const arm = lift(0.12);
-          if (across) {
-            rect(c, bx, y0, arm, bh, fabric[3]);
-            rect(c, bx + bw - arm, y0, arm, bh, fabric[3]);
-            for (let x = bx + module; x < bx + bw - arm - 4; x += module) rect(c, x, y0 + (back === "top" ? k : 1), 1, bh - k - 2, fabric[1]);
-          } else {
-            rect(c, bx, y0, bw, arm, fabric[3]);
-            rect(c, bx, y0 + bh - arm, bw, arm, fabric[3]);
-            for (let y = y0 + module; y < y0 + bh - arm - 4; y += module) rect(c, bx + (back === "left" ? k : 1), y, bw - k - 2, 1, fabric[1]);
-          }
-        } else
-          for (let i = 0; i < f.points.length; i++) {
-            // A corner sofa: its backrest along every edge that touches a wall.
-            const a = f.points[i];
-            const b = f.points[(i + 1) % f.points.length];
-            const middle: Point = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-            const touches = this.pieces.some((p) => middle[0] >= p.box[0] - 0.1 && middle[0] <= p.box[2] + 0.1 && middle[1] >= p.box[1] - 0.1 && middle[1] <= p.box[3] + 0.1);
-            if (!touches) continue;
-            const [xa, ya] = this.px(a);
-            const [xb, yb] = this.px(b);
-            if (Math.abs(ya - yb) < 1) rect(c, Math.min(xa, xb), (ya < by + bh / 2 ? ya : ya - k) - h, Math.abs(xb - xa), k, fabric[3]);
-            else rect(c, xa < bx + bw / 2 ? xa : xa - k, Math.min(ya, yb) - h, k, Math.abs(yb - ya), fabric[3]);
-          }
+      case "sofa":
+        this.drawSofa(c, f);
         break;
-      }
       case "bed": {
         const h = lift(0.18);
         this.box(c, f.points, h, "#efe9df", "#cfc6b6", { edge: "#ffffff" });
@@ -881,6 +883,102 @@ export class Scene {
     disc(c, cx - 2, cy - h - 2, Math.max(1, r - 5), light);
   }
 
+  /**
+   * A sofa, an armchair or a corner sofa built of blocks: the seat, a backrest along its back and armrests
+   * on its free ends. The back is the side against a wall (the longest one when several are), otherwise
+   * the long side farther from the middle of the room. A corner sofa is cut into its two arms; their
+   * backrests run along the outer sides of the corner and the armrests close their free ends.
+   */
+  private drawSofa(c: CanvasRenderingContext2D, f: Furniture): void {
+    const P = PPM;
+    const fabric = { seat: "#c0564b", side: "#a8473d", light: "#cf6f62", dark: "#8c3b35", base: "#7a332e" };
+    const [x0, y0, x1, y1] = f.box;
+    const armchair = x1 - x0 < 1.2 && y1 - y0 < 1.2;
+    const backDepth = Math.min(0.22, (Math.min(x1 - x0, y1 - y0)) * 0.3);
+    const armDepth = armchair ? Math.min(0.2, (Math.max(x1 - x0, y1 - y0)) * 0.22) : 0.15;
+    const seatLift = Math.round(0.2 * P);
+    const backLift = Math.round(0.42 * P);
+    const armLift = Math.round(0.3 * P);
+    type Side = "top" | "bottom" | "left" | "right";
+    type Block = { box: Box; lift: number; top: string; front: string };
+    const blocks: Block[] = [];
+    const band = (b: Box, side: Side, depth: number): Box =>
+      side === "top" ? [b[0], b[1], b[2], b[1] + depth] : side === "bottom" ? [b[0], b[3] - depth, b[2], b[3]] : side === "left" ? [b[0], b[1], b[0] + depth, b[3]] : [b[2] - depth, b[1], b[2], b[3]];
+    const across = (side: Side): [Side, Side] => (side === "top" || side === "bottom" ? ["left", "right"] : ["top", "bottom"]);
+    const length = (b: Box, side: Side) => (side === "top" || side === "bottom" ? b[2] - b[0] : b[3] - b[1]);
+    // Seams between the cushions, across the seat every 0.6 m, between the armrests.
+    const seams: [Box, Side][] = [];
+    const notch = this.notchOf(f);
+    if (notch) {
+      // Corner sofa: the corner of the box missing from the shape, and the two arms beside it.
+      const { corner, inner } = notch;
+      const backs: [Side, Side] = [corner[1] === "top" ? "bottom" : "top", corner[0] === "left" ? "right" : "left"];
+      const armA: Box = backs[0] === "top" ? [x0, y0, x1, inner[1]] : [x0, inner[1], x1, y1];
+      const armB: Box = backs[1] === "left" ? [x0, y0, inner[0], y1] : [inner[0], y0, x1, y1];
+      blocks.push({ box: band(armA, backs[0], backDepth), lift: backLift, top: fabric.dark, front: fabric.base });
+      blocks.push({ box: band(armB, backs[1], backDepth), lift: backLift, top: fabric.dark, front: fabric.base });
+      // Free ends: the side of each arm away from the other arm's back.
+      const endA: Side = backs[1] === "left" ? "right" : "left";
+      const endB: Side = backs[0] === "top" ? "bottom" : "top";
+      blocks.push({ box: band(armA, endA, armDepth), lift: armLift, top: fabric.side, front: fabric.dark });
+      blocks.push({ box: band(armB, endB, armDepth), lift: armLift, top: fabric.side, front: fabric.dark });
+      seams.push([armA, backs[0]], [armB, backs[1]]);
+    } else {
+      const walls = this.wallSides(f.box, 0.25);
+      const room = f.room?.room.points;
+      const middle: Point = room ? [room.reduce((s, p) => s + p[0], 0) / room.length, room.reduce((s, p) => s + p[1], 0) / room.length] : [(x0 + x1) / 2, (y0 + y1) / 2];
+      const longSides: Side[] = x1 - x0 >= y1 - y0 ? ["top", "bottom"] : ["left", "right"];
+      const distance = (side: Side) => {
+        const b = band(f.box, side, 0);
+        return Math.hypot((b[0] + b[2]) / 2 - middle[0], (b[1] + b[3]) / 2 - middle[1]);
+      };
+      const back: Side = walls.length
+        ? walls.reduce((best, side) => (length(f.box, side) > length(f.box, best) ? side : best))
+        : longSides.reduce((best, side) => (distance(side) > distance(best) ? side : best));
+      blocks.push({ box: band(f.box, back, backDepth), lift: backLift, top: fabric.dark, front: fabric.base });
+      for (const end of across(back)) blocks.push({ box: band(f.box, end, armDepth), lift: armLift, top: fabric.side, front: fabric.dark });
+      seams.push([f.box, back]);
+    }
+    this.box(c, f.points, seatLift, fabric.seat, fabric.side, { edge: fabric.light, base: fabric.base });
+    for (const [b, back] of seams) {
+      const [bx, by, bw, bh] = this.pxBox(b);
+      const step = Math.round(0.6 * P);
+      if (back === "top" || back === "bottom") for (let x = bx + step; x < bx + bw - step / 2; x += step) rect(c, x, by - seatLift + 2, 1, bh - 4, fabric.side);
+      else for (let y = by + step; y < by + bh - step / 2; y += step) rect(c, bx + 2, y - seatLift, bw - 4, 1, fabric.side);
+    }
+    // Blocks further back first, so the nearer ones cover them.
+    blocks.sort((a, b) => a.box[3] - b.box[3]);
+    for (const block of blocks) {
+      const [bx0, by0, bx1, by1] = block.box;
+      this.box(c, [[bx0, by0], [bx1, by0], [bx1, by1], [bx0, by1]], block.lift, block.top, block.front, { edge: fabric.light });
+    }
+  }
+
+  /**
+   * An L-shaped piece: which corner of its box is cut away (as left or right, top or bottom) and the point
+   * of the inner corner of the L. Undefined for any other shape.
+   */
+  private notchOf(f: Furniture): { corner: ["left" | "right", "top" | "bottom"]; inner: Point } | undefined {
+    if (f.item.rotation) return undefined;
+    // Corners only: a point on a straight edge between two others is dropped.
+    const points = f.points.filter((p, i) => {
+      const a = f.points[(i + f.points.length - 1) % f.points.length];
+      const b = f.points[(i + 1) % f.points.length];
+      return Math.abs((p[0] - a[0]) * (b[1] - a[1]) - (p[1] - a[1]) * (b[0] - a[0])) > 1e-4;
+    });
+    if (points.length !== 6) return undefined;
+    const [x0, y0, x1, y1] = f.box;
+    const pad = 0.03;
+    for (const [h, v] of [["left", "top"], ["right", "top"], ["left", "bottom"], ["right", "bottom"]] as ["left" | "right", "top" | "bottom"][]) {
+      const probe: Point = [h === "left" ? x0 + pad : x1 - pad, v === "top" ? y0 + pad : y1 - pad];
+      if (pointInPolygon(probe, f.points)) continue;
+      // The inner corner is the point of the shape strictly inside its box.
+      const inner = points.find((p) => p[0] > x0 + pad && p[0] < x1 - pad && p[1] > y0 + pad && p[1] < y1 - pad);
+      return inner ? { corner: [h, v], inner } : undefined;
+    }
+    return undefined;
+  }
+
   drawGardenObject(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
     const [bx, by, bw, bh] = this.pxBox(g.box);
     const P = PPM;
@@ -891,20 +989,15 @@ export class Scene {
         for (let x = bx + 2; x < bx + bw - 2; x += 5) for (let y = by - h + 2; y < by + bh - h - 1; y += 5) if (hash(x, y, 2) < 0.5) rect(c, x, y, 2, 1, "#5aa850");
         break;
       }
-      case "greenhouse": {
-        const h = Math.round(0.9 * P);
-        this.box(c, g.points, h, "rgba(205,240,245,.75)", "rgba(170,215,225,.8)", { edge: "#ffffff" });
-        for (let x = bx; x <= bx + bw; x += 8) rect(c, x, by - h, 1, bh + h, "rgba(255,255,255,.7)");
-        for (let i = 0; i < 6; i++) disc(c, bx + 5 + hash(i, 1, 3) * (bw - 10), by - 2 + hash(i, 2, 3) * (bh - 6), 2, "#4f9a3f");
+      case "greenhouse":
+        this.drawGreenhouse(c, g);
         break;
-      }
-      case "garden_house": {
-        const h = Math.round(1.0 * P);
-        this.box(c, g.points, h, "#7a4a3a", "#9a6a44", { edge: "#9a5e48", base: "#6b4a33" });
-        for (let y = by - h + 3; y < by + bh - h; y += 4) rect(c, bx, y, bw, 1, "#663c2f");
-        rect(c, bx + bw / 2 - 5, by + bh - 14, 10, 14, "#6b4529");
+      case "garden_house":
+        this.drawShed(c, g);
         break;
-      }
+      case "tree":
+        this.drawTree(c, g);
+        break;
       case "trampoline": {
         const [cx, cy] = this.px(g.item.center ?? [(g.box[0] + g.box[2]) / 2, (g.box[1] + g.box[3]) / 2]);
         const r = Math.round(((g.item.diameter ?? 3) / 2) * P);
@@ -922,7 +1015,100 @@ export class Scene {
       }
     }
   }
+  /**
+   * A pitched roof over a box: the ridge along its longer side, the slope facing the viewer lighter, the
+   * far one darker, rows of shingles or glazing bars, eaves standing out a little.
+   */
+  private roof(c: CanvasRenderingContext2D, x: number, top: number, w: number, depth: number, rise: number, colours: { near: string; far: string; line: string; ridge: string }, glass: boolean): void {
+    const ridge = top - rise + Math.round(depth / 2);
+    rect(c, x - 2, top - rise, w + 4, ridge - (top - rise), colours.far);
+    rect(c, x - 2, ridge, w + 4, top + depth - ridge, colours.near);
+    for (let y = top - rise + 3; y < top + depth; y += 3) {
+      if (Math.abs(y - ridge) < 2) continue;
+      rect(c, x - 2, y, w + 4, 1, colours.line);
+      if (!glass) for (let xx = x + ((y / 3) % 2) * 3; xx < x + w + 2; xx += 6) rect(c, xx, y - 2, 1, 2, colours.line);
+    }
+    if (glass) for (let xx = x; xx <= x + w; xx += 8) rect(c, xx, top - rise, 1, depth + rise, "rgba(255,255,255,.75)");
+    rect(c, x - 2, ridge - 1, w + 4, 2, colours.ridge);
+    rect(c, x - 2, top + depth - 1, w + 4, 2, "rgba(0,0,0,.35)");
+  }
+
+  /** A greenhouse: plants on its floor seen through glass walls and a glass roof. */
+  private drawGreenhouse(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
+    const [bx, by, bw, bh] = this.pxBox(g.box);
+    const wall = Math.round(0.6 * PPM);
+    const rise = Math.round(0.35 * PPM);
+    rect(c, bx + 2, by + 1, bw, bh, "rgba(0,0,0,.25)");
+    // Inside: a path down the middle and plants either side, seen through the glass.
+    rect(c, bx, by - wall, bw, bh, "#6e4c33");
+    rect(c, bx + Math.round(bw / 2) - 2, by - wall, 4, bh, "#a59a86");
+    for (let y = by - wall + 4; y < by + bh - wall - 2; y += 6)
+      for (const x of [bx + 5, bx + Math.round(bw / 4) + 2, bx + bw - Math.round(bw / 4) - 2, bx + bw - 6]) {
+        if (Math.abs(x - (bx + bw / 2)) < 4) continue;
+        rect(c, x, y - 4, 1, 6, "#8a6446");
+        disc(c, x, y - 1, 3, "#3f8a3e");
+        disc(c, x - 1, y - 2, 1, "#5fae4a");
+        if (hash(x, y, 4) < 0.6) rect(c, x + 1, y, 2, 2, "#e0392f");
+        else rect(c, x - 2, y, 2, 1, "#f5d34a");
+      }
+    // Front glass wall with its frame.
+    rect(c, bx, by + bh - wall, bw, wall, "rgba(190,230,235,.55)");
+    for (let x = bx; x <= bx + bw; x += 8) rect(c, x, by + bh - wall, 1, wall, "rgba(255,255,255,.85)");
+    rect(c, bx, by + bh - wall, bw, 1, "#ffffff");
+    rect(c, bx, by + bh - 1, bw, 1, "#9aa1a8");
+    rect(c, bx + Math.round(bw / 2) - 3, by + bh - wall + 2, 6, wall - 2, "rgba(255,255,255,.35)");
+    this.roof(c, bx, by - wall - 2, bw, bh - 4, rise, { near: "rgba(215,242,246,.3)", far: "rgba(180,220,228,.35)", line: "rgba(255,255,255,.4)", ridge: "#ffffff" }, true);
+  }
+
+  /** A garden shed: plank walls with a door and a window, a pitched roof of shingles. */
+  private drawShed(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
+    const [bx, by, bw, bh] = this.pxBox(g.box);
+    const wall = Math.round(0.7 * PPM);
+    const rise = Math.round(0.45 * PPM);
+    rect(c, bx + 3, by + 2, bw, bh, "rgba(0,0,0,.28)");
+    const front = by + bh - wall;
+    rect(c, bx, front, bw, wall, "#9a6a44");
+    for (let x = bx + 3; x < bx + bw; x += 4) rect(c, x, front, 1, wall, "#7a5232");
+    rect(c, bx, by + bh - 1, bw, 1, "#5a3c28");
+    const door = Math.min(12, Math.round(bw / 3));
+    rect(c, bx + Math.round(bw / 2) - door / 2, front + 4, door, wall - 4, "#6b4529");
+    rect(c, bx + Math.round(bw / 2) + door / 2 - 3, front + Math.round(wall / 2), 1, 2, "#e0c35f");
+    if (bw > 40) {
+      rect(c, bx + 5, front + 5, 9, 7, "#f2efe6");
+      rect(c, bx + 6, front + 6, 7, 5, "#7fb3d0");
+      rect(c, bx + 9, front + 6, 1, 5, "#f2efe6");
+    }
+    this.roof(c, bx, front - (bh - 6), bw, bh - 6, rise, { near: "#a84a38", far: "#7e3528", line: "#6e2c22", ridge: "#5a2219" }, false);
+  }
+
+  /** A tree: a trunk and a round crown of leaves high above its shadow. */
+  private drawTree(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
+    const centre = g.item.center ?? ([(g.box[0] + g.box[2]) / 2, (g.box[1] + g.box[3]) / 2] as Point);
+    const [cx, cy] = this.px(centre);
+    const r = Math.max(6, Math.round(((g.item.diameter ?? 3) / 2) * PPM));
+    const trunk = Math.round(0.9 * PPM);
+    const seed = [...g.item.id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+    c.save();
+    c.globalAlpha = 0.22;
+    disc(c, cx + 3, cy + 2, r, "#000");
+    c.restore();
+    rect(c, cx - 2, cy - trunk, 5, trunk, "#6b4a2f");
+    rect(c, cx - 2, cy - trunk, 1, trunk, "#86603e");
+    rect(c, cx - 4, cy - 1, 9, 2, "#5a3c28");
+    const crown = cy - trunk - Math.round(r * 0.6);
+    disc(c, cx, crown, r, "#2c6431");
+    disc(c, cx - Math.round(r * 0.15), crown - Math.round(r * 0.1), Math.round(r * 0.85), "#3a823d");
+    disc(c, cx - Math.round(r * 0.3), crown - Math.round(r * 0.35), Math.round(r * 0.45), "#4f9e4a");
+    for (let i = 0; i < r * 2; i++) {
+      const a = hash(i, seed, 1) * Math.PI * 2;
+      const d = Math.sqrt(hash(i, seed, 2)) * r * 0.9;
+      rect(c, cx + Math.round(Math.cos(a) * d), crown + Math.round(Math.sin(a) * d), 1, 1, hash(i, seed, 3) < 0.5 ? "#6cc060" : "#24552a");
+    }
+    // Some trees bear fruit.
+    if (hash(seed, 7, 1) < 0.4) for (let i = 0; i < 6; i++) rect(c, cx + Math.round((hash(i, seed, 5) - 0.5) * r * 1.4), crown + Math.round((hash(i, seed, 6) - 0.5) * r), 2, 2, "#e0392f");
+  }
 }
 
+
 /** Garden objects that stand up and take part in the drawing order; the rest is flat ground. */
-export const STANDING_GARDEN = new Set(["hedge", "greenhouse", "garden_house", "trampoline"]);
+export const STANDING_GARDEN = new Set(["hedge", "greenhouse", "garden_house", "trampoline", "tree"]);

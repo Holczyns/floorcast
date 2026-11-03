@@ -55,6 +55,10 @@ export interface Room {
   name: string;
   points: Point[];
   stairs?: boolean;
+  /** Stairs: the side of the room where they start at the bottom, for the pixel look; the end of the longer flight without it. */
+  stairsFrom?: "left" | "right" | "top" | "bottom";
+  /** Floor of the room in the pixel look; chosen by the kind of room without it. */
+  floor?: FloorFinish;
   /** A zone outside the house, such as a terrace: no floor is drawn under it. */
   outdoor?: boolean;
   /** Part of the surroundings, hidden together with the garden (a driveway, a lawn zone). */
@@ -138,7 +142,8 @@ export type ItemType =
   | "trampoline"
   | "manhole"
   | "obstacle"
-  | "round_obstacle";
+  | "round_obstacle"
+  | "tree";
 
 export interface Item {
   id: string;
@@ -722,6 +727,11 @@ export interface Plan {
   pets?: Pet[];
 }
 
+/** Floors of the pixel look. */
+export type FloorFinish = "wood" | "lightwood" | "darkwood" | "herringbone" | "checker" | "bathtile" | "tiles" | "concrete" | "carpet" | "carpet2";
+
+export const FLOOR_FINISHES: FloorFinish[] = ["wood", "lightwood", "darkwood", "herringbone", "checker", "bathtile", "tiles", "concrete", "carpet", "carpet2"];
+
 export type PetSpecies = "cat" | "dog";
 
 export interface Pet {
@@ -751,6 +761,7 @@ export const GARDEN_TYPES: ItemType[] = [
   "garden_house",
   "trampoline",
   "manhole",
+  "tree",
 ];
 
 /** Devices of the garden, hidden with it. */
@@ -773,7 +784,7 @@ export function withoutGarden(level: Level): Level {
   };
 }
 
-export const CIRCLE_TYPES: ItemType[] = ["trampoline", "manhole", "round_obstacle"];
+export const CIRCLE_TYPES: ItemType[] = ["trampoline", "manhole", "round_obstacle", "tree"];
 /** Furniture: grey shapes drawn over the floor, square or round, sharing one outline where they touch. */
 export const OBSTACLE_TYPES: ItemType[] = ["obstacle", "round_obstacle"];
 /** Types that can turn from a rectangle into a free shape with any corners. */
@@ -794,6 +805,7 @@ export const ITEM_ORDER: ItemType[] = [
   "trampoline",
   "obstacle",
   "round_obstacle",
+  "tree",
 ];
 
 export function uid(prefix: string): string {

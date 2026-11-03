@@ -628,6 +628,11 @@ class FloorCastCard extends LitElement {
 
   private groupMove(event: PointerEvent, maxScale: number): void {
     if (!this._pointers.has(event.pointerId)) return;
+    // A mouse button let go outside the card never reached it: the drag ends at the first move without it.
+    if (event.pointerType === "mouse" && event.buttons === 0) {
+      this.zoomUp(event);
+      return;
+    }
     this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     const gesture = this._gesture;
     const start = this._groupStart;
@@ -645,6 +650,9 @@ class FloorCastCard extends LitElement {
     if (!this._dragged && Math.hypot(to.x - from.x, to.y - from.y) < DRAG_PX && Math.abs(spread(now) - spread(gesture.points)) < DRAG_PX) return;
     this._dragged = true;
     window.clearTimeout(this._holdTimer);
+    // Once it drags, the plan gets the moves and the end of the drag wherever the pointer goes.
+    const frame = event.currentTarget as HTMLElement;
+    if (!frame.hasPointerCapture(event.pointerId)) frame.setPointerCapture(event.pointerId);
     const s = (start.s * spread(now)) / spread(gesture.points);
     // The drawing point under the first middle of the fingers stays under their middle now.
     const moved = { s: start.s, tx: start.tx + (to.x - from.x), ty: start.ty + (to.y - from.y) };
@@ -695,6 +703,11 @@ class FloorCastCard extends LitElement {
 
   private zoomMove(level: Level, event: PointerEvent): void {
     if (!this._pointers.has(event.pointerId)) return;
+    // A mouse button let go outside the card never reached it: the drag ends at the first move without it.
+    if (event.pointerType === "mouse" && event.buttons === 0) {
+      this.zoomUp(event);
+      return;
+    }
     this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     const gesture = this._gesture;
     if (!gesture || gesture.level !== level.id) return;
@@ -711,6 +724,9 @@ class FloorCastCard extends LitElement {
     if (!this._dragged && Math.hypot(to.x - from.x, to.y - from.y) < DRAG_PX && Math.abs(spread(now) - spread(gesture.points)) < DRAG_PX) return;
     this._dragged = true;
     window.clearTimeout(this._holdTimer);
+    // Once it drags, the plan gets the moves and the end of the drag wherever the pointer goes.
+    const frame = event.currentTarget as HTMLElement;
+    if (!frame.hasPointerCapture(event.pointerId)) frame.setPointerCapture(event.pointerId);
     const factor = spread(now) / spread(gesture.points);
     const start = gesture.start;
     // The plan point under the first middle of the fingers stays under their middle now.
@@ -1970,12 +1986,27 @@ class FloorCastCard extends LitElement {
       svg.pixel .fc-person,
       svg.pixel .fc-track,
       svg.pixel .lamp-ring,
-      svg.pixel .lamp-core,
-      svg.pixel .lamp-line,
       svg.pixel .nozzle circle:not(.lamp-hit),
       svg.pixel .fc-mower,
       svg.pixel .fc-vacuum,
       svg.pixel .fc-screen {
+        opacity: 0 !important;
+      }
+      /* Lamps: a small symbol to tap, grey while off and warm while on; a line light shows only while off. */
+      svg.pixel .lamp .lamp-core {
+        fill: #9a9a9a !important;
+        stroke: #2a2a2e !important;
+        stroke-width: 0.03px !important;
+        opacity: 1 !important;
+      }
+      svg.pixel .lamp.on .lamp-core {
+        fill: var(--lamp, #ffd36a) !important;
+      }
+      svg.pixel .lamp .lamp-line {
+        stroke: #9a9a9a !important;
+        opacity: 0.8 !important;
+      }
+      svg.pixel .lamp.on .lamp-line {
         opacity: 0 !important;
       }
       svg.pixel .room-text {

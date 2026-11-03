@@ -1527,7 +1527,7 @@ export class FloorCastPanel extends LitElement {
     let item: Item;
     if (CIRCLE_TYPES.includes(type)) {
       const d = dist(start, end) * 2;
-      item = { id: uid("item"), type, center: start, diameter: fix(d >= 0.2 ? d : type === "trampoline" ? 3.66 : type === "round_obstacle" ? 0.9 : 0.6) };
+      item = { id: uid("item"), type, center: start, diameter: fix(d >= 0.2 ? d : type === "trampoline" ? 3.66 : type === "tree" ? 3 : type === "round_obstacle" ? 0.9 : 0.6) };
     } else {
       let x = Math.min(start[0], end[0]);
       let y = Math.min(start[1], end[1]);

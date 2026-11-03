@@ -48,7 +48,10 @@ export type Texture =
   | "paving"
   | "deck"
   | "soil"
-  | "stairs";
+  | "stairs"
+  | "herringbone"
+  | "tiles"
+  | "concrete";
 
 export type RoomKind =
   | "kitchen"
@@ -190,6 +193,27 @@ function textureBlock(c: CanvasRenderingContext2D, type: Texture, X: number, Y: 
   } else if (type === "soil") {
     rect(c, X, Y, T, T, "#6e4c33");
     for (let i = 0; i < 18; i++) rect(c, X + Math.floor(hash(bx, by, i) * 16), Y + Math.floor(hash(by, bx, i + 9) * 16), 1, 1, "#5c3e29");
+  } else if (type === "herringbone") {
+    // Short boards laid at right angles in a zig-zag.
+    rect(c, X, Y, T, T, "#b4804b");
+    for (let k = 0; k < 4; k++) {
+      const flip = (bx + by + k) % 2 === 0;
+      for (let i = 0; i < 8; i++) {
+        const x = flip ? X + i + k * 4 : X + 8 - i + k * 2;
+        const y = Y + i * 2;
+        rect(c, (x - X) % 16 + X, y, 1, 1, flip ? "#9c6a3b" : "#c48f58");
+      }
+    }
+    for (let i = 0; i < 16; i += 4) rect(c, X, Y + i, T, 1, "rgba(80,50,25,.35)");
+  } else if (type === "tiles") {
+    rect(c, X, Y, T, T, "#d8d6d0");
+    rect(c, X, Y, T, 1, "#b8b5ae");
+    rect(c, X, Y, 1, T, "#b8b5ae");
+    rect(c, X + 1, Y + 1, 14, 1, "#e8e6e0");
+    for (let i = 0; i < 5; i++) rect(c, X + 2 + Math.floor(hash(bx, by, i) * 12), Y + 2 + Math.floor(hash(by, bx, i) * 12), 1, 1, "#cfccc5");
+  } else if (type === "concrete") {
+    rect(c, X, Y, T, T, "#9e9e9a");
+    for (let i = 0; i < 30; i++) rect(c, X + Math.floor(hash(bx, by, i) * 16), Y + Math.floor(hash(by, bx, i + 7) * 16), 1, 1, hash(i, bx, by) < 0.5 ? "#929290" : "#aaaaa6");
   } else if (type === "stairs") {
     rect(c, X, Y, T, T, "#8d6442");
     for (let i = 0; i < 4; i++) {
@@ -213,18 +237,86 @@ export function texture(c: CanvasRenderingContext2D, type: Texture): CanvasPatte
   return c.createPattern(tile, "repeat")!;
 }
 
-/** Flowers of a garden bed or rows of a vegetable patch over a block of soil. */
-export function plants(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, vegetable: boolean): void {
-  for (let yy = y + 3; yy < y + h - 3; yy += 6)
-    for (let xx = x + 3; xx < x + w - 3; xx += 6) {
-      if (vegetable) {
-        rect(c, xx, yy, 3, 3, "#4f9a3f");
-        rect(c, xx + 1, yy - 1, 1, 1, "#7cc060");
+/** Flowers of a garden bed: a mix of tulips, daisies, lavender, roses, grasses and hostas. */
+export function flowers(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, seed: number): void {
+  for (let yy = y + 3; yy < y + h - 2; yy += 5)
+    for (let xx = x + 2 + ((yy / 5) % 2) * 2; xx < x + w - 2; xx += 5) {
+      const pick = hash(xx, yy, seed);
+      const jx = xx + Math.floor(hash(xx, yy, seed + 1) * 2);
+      if (pick < 0.2) {
+        // Tulip: stem and a cup of colour.
+        const colour = ["#e8505b", "#f5d34a", "#f28ac0", "#ff8c42"][Math.floor(hash(xx, yy, seed + 2) * 4)];
+        rect(c, jx, yy, 1, 3, "#3f8236");
+        rect(c, jx - 1, yy - 2, 3, 2, colour);
+      } else if (pick < 0.38) {
+        // Daisy.
+        rect(c, jx - 1, yy, 3, 1, "#f4f4f4");
+        rect(c, jx, yy - 1, 1, 3, "#f4f4f4");
+        rect(c, jx, yy, 1, 1, "#f5c84a");
+      } else if (pick < 0.55) {
+        // Lavender.
+        rect(c, jx, yy - 2, 1, 4, "#4f8a4a");
+        rect(c, jx - 1, yy - 3, 1, 2, "#9d6be0");
+        rect(c, jx + 1, yy - 2, 1, 2, "#b58cf0");
+      } else if (pick < 0.7) {
+        // A rose bush.
+        disc(c, jx, yy, 2, "#2f6b33");
+        rect(c, jx - 1, yy - 1, 1, 1, "#d6455a");
+        rect(c, jx + 1, yy + 1, 1, 1, "#d6455a");
+      } else if (pick < 0.85) {
+        // Ornamental grass.
+        rect(c, jx - 1, yy - 2, 1, 3, "#8fb85a");
+        rect(c, jx, yy - 3, 1, 4, "#a3c86a");
+        rect(c, jx + 1, yy - 2, 1, 3, "#7fa84e");
       } else {
-        const colour = ["#e8505b", "#f5d34a", "#f4f4f4", "#9d6be0", "#ff8c42"][Math.floor(hash(xx, yy, 3) * 5)];
-        rect(c, xx + 1, yy + 1, 1, 3, "#3f8236");
-        rect(c, xx, yy, 3, 1, colour);
-        rect(c, xx + 1, yy - 1, 1, 3, colour);
+        // Hosta: broad leaves.
+        rect(c, jx - 2, yy - 1, 5, 2, "#5f9a6a");
+        rect(c, jx - 1, yy - 2, 3, 1, "#7dbb84");
       }
     }
+}
+
+/** Rows of crops across a vegetable patch, one crop to a row. */
+export function crops(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, seed: number): void {
+  const across = w >= h;
+  const span = across ? h : w;
+  const rows = Math.max(1, Math.floor((span - 4) / 6));
+  for (let r = 0; r < rows; r++) {
+    const kind = Math.floor(hash(r, seed, 3) * 6);
+    const offset = 4 + r * 6;
+    const length = across ? w : h;
+    for (let a = 3; a < length - 3; a += kind === 3 ? 6 : 4) {
+      const px = across ? x + a : x + offset;
+      const py = across ? y + offset : y + a;
+      if (kind === 0) {
+        // Lettuce.
+        disc(c, px, py, 1, "#9ad46a");
+        rect(c, px, py, 1, 1, "#c4ec8a");
+      } else if (kind === 1) {
+        // Cabbage.
+        disc(c, px, py, 2, "#6f9f8a");
+        rect(c, px - 1, py - 1, 2, 1, "#9cc6b2");
+      } else if (kind === 2) {
+        // Carrot tops.
+        rect(c, px, py - 2, 1, 3, "#5fae3f");
+        rect(c, px - 1, py - 1, 1, 1, "#7cc458");
+        rect(c, px + 1, py - 1, 1, 1, "#7cc458");
+      } else if (kind === 3) {
+        // Tomatoes on stakes.
+        rect(c, px, py - 5, 1, 6, "#8a6446");
+        disc(c, px, py - 2, 2, "#3f8236");
+        rect(c, px - 1, py - 1, 1, 1, "#e0392f");
+        rect(c, px + 1, py - 3, 1, 1, "#e0392f");
+      } else if (kind === 4) {
+        // Onions.
+        rect(c, px, py - 3, 1, 3, "#7cb85a");
+        rect(c, px - 1, py, 3, 1, "#d8c49a");
+      } else {
+        // Strawberries.
+        rect(c, px - 1, py, 3, 1, "#3f8236");
+        rect(c, px, py - 1, 1, 1, "#4f9a3f");
+        if (hash(px, py, seed) < 0.5) rect(c, px + 1, py + 1, 1, 1, "#e0392f");
+      }
+    }
+  }
 }

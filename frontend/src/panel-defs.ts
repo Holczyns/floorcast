@@ -1,7 +1,7 @@
 // Types, tables and helpers of the editor: its tools and tabs, the names and hints it shows, and small
 // functions of geometry and storage it shares between its parts.
 import { N_, t } from "./i18n";
-import { levelBounds, type AreaKind, type Device, type FurnitureKind, type Item, type ItemType, type Point, type Zone } from "./model";
+import { levelBounds, type AreaKind, type Device, type FloorFinish, type FurnitureKind, type Item, type ItemType, type Point, type Zone } from "./model";
 
 export type Tool = "select" | "wall" | "door" | "window" | "gate" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "indicator" | "mark" | "calibrate";
 export type Selection =
@@ -204,6 +204,7 @@ export const ITEM_LABELS: Record<ItemType, string> = {
   manhole: N_("Manhole"),
   obstacle: N_("Obstacle (furniture)"),
   round_obstacle: N_("Round obstacle (table, pouf)"),
+  tree: N_("Tree"),
 };
 
 /** Names of the pieces of furniture an obstacle can be, for the pixel look. */
@@ -229,6 +230,20 @@ export const FURNITURE_LABELS: Record<FurnitureKind, string> = {
   garden_sofa: N_("Garden sofa"),
   garden_table: N_("Garden table"),
   bench: N_("Bench"),
+};
+
+/** Names of the floors of the pixel look. */
+export const FLOOR_LABELS: Record<FloorFinish, string> = {
+  wood: N_("Oak boards"),
+  lightwood: N_("Light boards"),
+  darkwood: N_("Dark boards"),
+  herringbone: N_("Herringbone parquet"),
+  checker: N_("Chequered tiles"),
+  bathtile: N_("Small tiles"),
+  tiles: N_("Large tiles"),
+  concrete: N_("Concrete"),
+  carpet: N_("Violet carpet"),
+  carpet2: N_("Beige carpet"),
 };
 
 /** Names of the coats of pets. */

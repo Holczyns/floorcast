@@ -63,6 +63,12 @@ export function renderItem(item: Item, variant = "", radius = 0): SVGTemplateRes
   if (CIRCLE_TYPES.includes(item.type) && item.center) {
     const [cx, cy] = item.center;
     const r = (item.diameter ?? 1) / 2;
+    if (item.type === "tree") {
+      return svg`<g data-item=${item.id}>
+        <circle class="fc-tree" cx=${n(cx)} cy=${n(cy)} r=${n(r)}></circle>
+        <circle class="fc-tree-trunk" cx=${n(cx)} cy=${n(cy)} r=${n(Math.min(0.15, r * 0.15))}></circle>
+      </g>`;
+    }
     if (item.type === "trampoline") {
       return svg`<g data-item=${item.id}>
         <circle class="fc-trampoline-ring" cx=${n(cx)} cy=${n(cy)} r=${n(r)}></circle>
@@ -1054,6 +1060,15 @@ export const planStyles = css`
   .fc-heat {
     opacity: 0.3;
     pointer-events: none;
+  }
+  .fc-tree {
+    fill: var(--fc-hedge);
+    fill-opacity: 0.75;
+    stroke: var(--fc-hedge);
+    stroke-width: 0.05;
+  }
+  .fc-tree-trunk {
+    fill: var(--fc-wood);
   }
   .fc-floor {
     fill: var(--fc-floor);

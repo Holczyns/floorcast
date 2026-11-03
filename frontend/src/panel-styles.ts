@@ -173,14 +173,16 @@ export const panelStyles = css`
       svg.plan.pixel .fc-wall,
       svg.plan.pixel .fc-joint,
       svg.plan.pixel .fc-fillet,
-      svg.plan.pixel .fc-stairs,
       svg.plan.pixel .fc-trampoline-ring,
-      svg.plan.pixel .fc-trampoline-mat {
+      svg.plan.pixel .fc-trampoline-mat,
+      svg.plan.pixel .fc-tree,
+      svg.plan.pixel .fc-tree-trunk {
         fill: transparent !important;
         stroke: rgba(255, 255, 255, 0.28) !important;
         stroke-width: 0.02px !important;
       }
-      svg.plan.pixel .fc-gap {
+      svg.plan.pixel .fc-gap,
+      svg.plan.pixel .fc-stairs {
         stroke: transparent !important;
       }
       .tabs {
