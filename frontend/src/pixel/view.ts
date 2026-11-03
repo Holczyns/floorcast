@@ -510,7 +510,7 @@ class LevelPicture {
           const index = w.room ? s.rooms.indexOf(w.room) : -1;
           const level = roomLevel.get(index) ?? 0;
           if (level <= 0.01 || !w.spill || !w.room) return;
-          const strength = 0.7 * level * (1 - 0.8 * shutters[i]);
+          const strength = 0.7 * level * (1 - shutters[i]);
           const [r, g, b] = w.room.look.light;
           const { cells, values } = w.spill;
           for (let m = 0; m < cells.length; m++) {

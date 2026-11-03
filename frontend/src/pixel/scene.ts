@@ -133,7 +133,8 @@ export class Scene {
       else this.garden.push({ item, points, box: boxOf(points) });
     }
     for (const piece of this.furniture) if (piece.kind === "kitchen") this.placeUnits(piece);
-    this.blockers = this.pieces.filter((piece) => piece.kind === "solid").map((piece) => piece.box);
+    // Lamps light through doors, not through windows: what leaves a room by a window is its glow, as open as its blind.
+    this.blockers = this.pieces.filter((piece) => piece.kind !== "door").map((piece) => piece.box);
     this.lightWidth = Math.ceil(this.width / LIGHT_CELL);
     this.lightHeight = Math.ceil(this.height / LIGHT_CELL);
     this.region = new Int16Array(this.lightWidth * this.lightHeight);
