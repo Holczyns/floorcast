@@ -305,9 +305,16 @@ export class Scene {
 
   /** The sink under the window of the kitchen, the hob about one and a half metres away, a kettle between. */
   private placeUnits(counter: Furniture): void {
-    const spots: Point[] = [];
-    for (let y = counter.box[1] + 0.2; y < counter.box[3]; y += 0.2)
-      for (let x = counter.box[0] + 0.2; x < counter.box[2]; x += 0.2) if (pointInPolygon([x, y], counter.points)) spots.push([x, y]);
+    // Only spots on the visible worktop: it is drawn raised by its height, so a wall behind hides its back strip.
+    const clear = 0.2;
+    const worktop = 0.28;
+    const hidden = (q: Point) =>
+      this.pieces.some((w) => q[0] > w.box[0] - clear && q[0] < w.box[2] + clear && q[1] - worktop > w.box[1] - clear && q[1] - worktop < w.box[3] + clear);
+    const all: Point[] = [];
+    for (let y = counter.box[1] + 0.2; y < counter.box[3]; y += 0.1)
+      for (let x = counter.box[0] + 0.2; x < counter.box[2]; x += 0.1) if (pointInPolygon([x, y], counter.points)) all.push([x, y]);
+    const open = all.filter((q) => !hidden(q));
+    const spots = open.length ? open : all;
     if (!spots.length) return;
     const window = this.windows.find((w) => w.room === counter.room);
     const near = (target: Point, distance: number, avoid?: Point) =>
@@ -683,9 +690,15 @@ export class Scene {
           const [ux, uy] = this.px(spot);
           const y = uy - h;
           if (unit === "sink") {
-            rect(c, ux - 6, y - 4, 12, 8, "#9aa3ad");
-            rect(c, ux - 5, y - 3, 10, 6, "#7d8792");
-            rect(c, ux - 1, y - 7, 2, 4, "#c0c6cc");
+            // Steel rim, a basin lit from the front, a drain and a tap at the back.
+            rect(c, ux - 7, y - 5, 14, 10, "#8d969f");
+            rect(c, ux - 6, y - 4, 12, 8, "#c3cad1");
+            rect(c, ux - 5, y - 3, 10, 6, "#7b8590");
+            rect(c, ux - 5, y - 3, 10, 2, "#5d6670");
+            rect(c, ux - 5, y + 2, 10, 1, "#9aa4ae");
+            rect(c, ux, y, 1, 1, "#3e454d");
+            rect(c, ux - 1, y - 7, 2, 3, "#e2e7eb");
+            rect(c, ux, y - 4, 1, 2, "#e2e7eb");
           } else if (unit === "stove") {
             rect(c, ux - 7, y - 6, 14, 12, "#2a2c31");
             for (const [a, b] of [[-5, -4], [1, -4], [-5, 1], [1, 1]]) rect(c, ux + a, y + b, 4, 3, "#4d4f55");
