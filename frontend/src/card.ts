@@ -622,23 +622,20 @@ class FloorCastCard extends LitElement {
   }
 
   /**
-   * What a level side by side shows: its default view moved and zoomed as the group is, kept within its
-   * drawing. offset is where the level starts in the row, in pixels; pixels is pixels per metre.
+   * What a level side by side shows: its default view moved and zoomed as the whole group is, so the levels
+   * stay anchored to each other; the group as a whole is kept within reach by setGroup. offset is where the
+   * level starts in the row, in pixels; pixels is pixels per metre.
    */
   private groupView(level: Level, offset: number, pixels: number): Bounds {
     const home = this.defaultBounds(level);
     const group = this._group;
     if (!group) return home;
-    const view = {
+    return {
       x: home.x + ((offset - group.tx) / group.s - offset) / pixels,
       y: home.y + -group.ty / group.s / pixels,
       w: home.w / group.s,
       h: home.h / group.s,
     };
-    const limit = this.levelReach(level);
-    const along = (start: number, size: number, low: number, room: number) =>
-      size >= room ? low - (size - room) / 2 : Math.min(Math.max(start, low), low + room - size);
-    return { x: along(view.x, view.w, limit.x, limit.w), y: along(view.y, view.h, limit.y, limit.h), w: view.w, h: view.h };
   }
 
   /** All a level may show when moved: its default view together with everything drawn on it. */
