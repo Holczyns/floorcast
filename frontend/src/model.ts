@@ -718,7 +718,26 @@ export interface Plan {
   cornerRadius?: number;
   /** Compass bearing the top of the plan faces, in degrees clockwise from north; 0 without it. The sun of the pixel look follows it. */
   north?: number;
+  /** Pets of the pixel look: mascots that live their own life on the plan; nothing is measured. */
+  pets?: Pet[];
 }
+
+export type PetSpecies = "cat" | "dog";
+
+export interface Pet {
+  id: string;
+  name: string;
+  species: PetSpecies;
+  /** Coat: one of PET_COATS of its species. */
+  coat?: string;
+  /** Level it lives on; the first level without it. */
+  level?: string;
+}
+
+export const PET_COATS: Record<PetSpecies, string[]> = {
+  cat: ["ginger", "grey", "black", "white", "tabby", "calico"],
+  dog: ["brown", "golden", "black", "white", "spotted"],
+};
 
 /** Surroundings of the house that the card can hide; the terrace stays with the house. */
 export const GARDEN_TYPES: ItemType[] = [

@@ -138,3 +138,140 @@ export function drop(c: CanvasRenderingContext2D, x: number, y: number, z: numbe
     rect(c, x + 1, y - 1, 1, 1, "rgba(210,240,255,.8)");
   } else rect(c, x, y - z, 1, 2, "rgba(190,232,255,.9)");
 }
+
+/** Coats of the pets: main colour, darker, lighter. */
+const COATS: Record<string, [string, string, string]> = {
+  ginger: ["#e08a3c", "#b5652a", "#f6c28b"],
+  grey: ["#8d93a0", "#646a76", "#c3c8d2"],
+  black: ["#2e2e35", "#18181c", "#55555f"],
+  white: ["#f2f2f2", "#c6c8cf", "#ffffff"],
+  tabby: ["#a08060", "#6e5238", "#d2b896"],
+  calico: ["#f2f2f2", "#e08a3c", "#2e2e35"],
+  brown: ["#8a5a34", "#5e3b20", "#b8875a"],
+  golden: ["#d9a75a", "#a8763a", "#f0cf92"],
+  spotted: ["#f2f2f2", "#2e2e35", "#ffffff"],
+};
+
+export type PetPose = "walk" | "run" | "sleep" | "sit" | "wash";
+
+/** A cat with its feet at x, y; step counts its steps while it walks. */
+export function cat(c: CanvasRenderingContext2D, x: number, y: number, pose: PetPose, facing: "left" | "right", step: number, coat: string, time: number): void {
+  const [b, d, l] = COATS[coat] ?? COATS.ginger;
+  const s = facing === "left" ? -1 : 1;
+  const X = (dx: number, w: number) => (s > 0 ? x + dx : x - dx - w);
+  if (pose === "sleep") {
+    rect(c, x - 6, y - 1, 12, 2, "rgba(0,0,0,.2)");
+    rect(c, x - 5, y - 6, 10, 5, b);
+    rect(c, x - 4, y - 7, 8, 1, b);
+    rect(c, x - 3, y - 6, 5, 1, l);
+    rect(c, x - 6, y - 3, 12, 2, d);
+    rect(c, X(2, 3), y - 7, 3, 3, b);
+    rect(c, X(2, 1), y - 8, 1, 1, d);
+    rect(c, X(4, 1), y - 8, 1, 1, d);
+    if (coat === "tabby" || coat === "calico") rect(c, x - 2, y - 5, 2, 2, d);
+    return;
+  }
+  rect(c, x - 5, y - 1, 10, 2, "rgba(0,0,0,.2)");
+  if (pose === "sit" || pose === "wash") {
+    rect(c, x - 3, y - 7, 6, 6, b);
+    rect(c, x - 2, y - 6, 4, 3, l);
+    const lick = pose === "wash" && Math.floor(time * 3) % 2 === 0;
+    const hy = lick ? y - 10 : y - 11;
+    rect(c, x - 3, hy, 6, 5, b);
+    rect(c, x - 3, hy - 1, 1, 1, b);
+    rect(c, x + 2, hy - 1, 1, 1, b);
+    rect(c, x - 2, hy + 2, 1, 1, "#2f8a3a");
+    rect(c, x + 1, hy + 2, 1, 1, "#2f8a3a");
+    if (pose === "wash") rect(c, X(2, 2), hy + 4, 2, 3, l);
+    const tail = Math.floor(time * 2) % 2;
+    rect(c, X(3, 4), y - 2 - tail, 4, 1, d);
+    rect(c, X(6, 1), y - 4 - tail, 1, 2, d);
+    if (coat === "tabby" || coat === "calico") rect(c, x - 1, y - 5, 2, 1, d);
+    return;
+  }
+  const f = step % 4;
+  const leg = (i: number) => (f + i) % 2;
+  rect(c, X(-5, 9), y - 7, 9, 4, b);
+  rect(c, X(-4, 6), y - 4, 6, 1, l);
+  if (coat === "tabby" || coat === "calico") for (const dx of [-3, -1, 1]) rect(c, X(dx, 1), y - 7, 1, 2, d);
+  rect(c, X(-5, 1), y - 3 + leg(0), 1, 3 - leg(0), d);
+  rect(c, X(-3, 1), y - 3 + leg(1), 1, 3 - leg(1), b);
+  rect(c, X(1, 1), y - 3 + leg(1), 1, 3 - leg(1), d);
+  rect(c, X(3, 1), y - 3 + leg(0), 1, 3 - leg(0), b);
+  rect(c, X(3, 5), y - 10, 5, 5, b);
+  rect(c, X(3, 1), y - 11, 1, 1, b);
+  rect(c, X(6, 1), y - 11, 1, 1, b);
+  rect(c, X(5, 1), y - 8, 1, 1, "#2f8a3a");
+  rect(c, X(7, 1), y - 7, 1, 1, "#e98a9a");
+  rect(c, X(-7, 2), y - 8 - (f % 2), 2, 1, d);
+  rect(c, X(-8, 1), y - 11 - (f % 2), 1, 3, d);
+}
+
+/** A dog with its feet at x, y; wag makes its tail go fast. */
+export function dog(c: CanvasRenderingContext2D, x: number, y: number, pose: PetPose, facing: "left" | "right", step: number, coat: string, time: number, wag = false): void {
+  const [b, d, l] = COATS[coat] ?? COATS.brown;
+  const s = facing === "left" ? -1 : 1;
+  const X = (dx: number, w: number) => (s > 0 ? x + dx : x - dx - w);
+  const tail = Math.floor(time * (wag ? 14 : 3)) % 2;
+  if (pose === "sleep") {
+    rect(c, x - 8, y - 1, 16, 2, "rgba(0,0,0,.2)");
+    rect(c, x - 7, y - 6, 13, 5, b);
+    rect(c, x - 6, y - 7, 10, 1, b);
+    rect(c, X(4, 5), y - 5, 5, 4, b);
+    rect(c, X(8, 2), y - 4, 2, 2, l);
+    rect(c, X(9, 1), y - 4, 1, 1, "#1a1a1a");
+    rect(c, X(4, 2), y - 6, 2, 3, d);
+    rect(c, X(-8, 3), y - 3, 3, 1, d);
+    if (coat === "spotted") rect(c, x - 3, y - 6, 3, 2, d);
+    return;
+  }
+  rect(c, x - 7, y - 1, 14, 2, "rgba(0,0,0,.2)");
+  if (pose === "sit" || pose === "wash") {
+    rect(c, X(-3, 7), y - 9, 7, 8, b);
+    rect(c, X(-1, 4), y - 6, 4, 4, l);
+    rect(c, X(1, 2), y - 3, 2, 3, b);
+    rect(c, X(1, 6), y - 15, 6, 6, b);
+    rect(c, X(6, 3), y - 13, 3, 3, l);
+    rect(c, X(8, 1), y - 13, 1, 1, "#1a1a1a");
+    rect(c, X(4, 1), y - 13, 1, 1, "#1a1a1a");
+    rect(c, X(1, 2), y - 15, 2, 5, d);
+    rect(c, X(-5, 2), y - 4 - tail * 2, 2, 1, d);
+    rect(c, X(-6, 1), y - 6 - tail * 2, 1, 2, d);
+    if (coat === "spotted") rect(c, X(-2, 3), y - 8, 3, 2, d);
+    return;
+  }
+  const f = step % 4;
+  const leg = (i: number) => (f + i) % 2;
+  rect(c, X(-6, 12), y - 9, 12, 5, b);
+  rect(c, X(-5, 9), y - 5, 9, 1, l);
+  if (coat === "spotted") {
+    rect(c, X(-4, 3), y - 9, 3, 2, d);
+    rect(c, X(2, 2), y - 8, 2, 2, d);
+  }
+  for (const [dx, k] of [[-6, 0], [-4, 1], [3, 1], [5, 0]] as [number, number][]) rect(c, X(dx, 1), y - 4 + leg(k), 1, 4 - leg(k), d);
+  rect(c, X(5, 6), y - 13, 6, 6, b);
+  rect(c, X(10, 3), y - 11, 3, 3, l);
+  rect(c, X(12, 1), y - 11, 1, 1, "#1a1a1a");
+  rect(c, X(8, 1), y - 12, 1, 1, "#1a1a1a");
+  rect(c, X(5, 2), y - 13, 2, 5, d);
+  rect(c, X(-8, 2), y - 10 - tail, 2, 1, d);
+  rect(c, X(-9, 1), y - 12 - tail, 1, 2, d);
+}
+
+/** A small heart rising over a pet that was stroked. */
+export function heart(c: CanvasRenderingContext2D, x: number, y: number, alpha: number): void {
+  const colour = `rgba(232,80,91,${alpha.toFixed(2)})`;
+  rect(c, x - 2, y, 2, 2, colour);
+  rect(c, x + 1, y, 2, 2, colour);
+  rect(c, x - 2, y + 1, 5, 2, colour);
+  rect(c, x - 1, y + 3, 3, 1, colour);
+  rect(c, x, y + 4, 1, 1, colour);
+}
+
+/** A z rising over a sleeping pet. */
+export function snore(c: CanvasRenderingContext2D, x: number, y: number, alpha: number): void {
+  const colour = `rgba(255,255,255,${alpha.toFixed(2)})`;
+  rect(c, x, y, 3, 1, colour);
+  rect(c, x + 1, y + 1, 1, 1, colour);
+  rect(c, x, y + 2, 3, 1, colour);
+}

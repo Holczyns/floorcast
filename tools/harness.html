@@ -52,6 +52,12 @@
         throw new Error("no plan");
       };
       let plan = await loadPlan();
+      // ?pets: a cat and a dog for the pixel look, when the plan has none.
+      if (params.has("pets") && !plan.pets?.length)
+        plan.pets = [
+          { id: "pet_cat", name: "Cat", species: "cat", coat: "ginger" },
+          { id: "pet_dog", name: "Dog", species: "dog", coat: "golden" },
+        ];
 
       // ---- plan geometry ----
       const centre = (points) => [points.reduce((s, p) => s + p[0], 0) / points.length, points.reduce((s, p) => s + p[1], 0) / points.length];

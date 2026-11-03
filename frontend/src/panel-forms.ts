@@ -5,6 +5,8 @@ import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
 import {
   CIRCLE_TYPES,
   FURNITURE_KINDS,
+  PET_COATS,
+  type PetSpecies,
   OBSTACLE_TYPES,
   type FurnitureKind,
   DEFAULT_CORNER_RADIUS,
@@ -57,6 +59,7 @@ import {
   Drag,
   ITEM_LABELS,
   FURNITURE_LABELS,
+  COAT_LABELS,
   ZONE_LABELS,
   isNumberedLevel,
   inContext,
@@ -335,6 +338,7 @@ export function levelProperties(p: FloorCastPanel) {
       "°",
     )}
     <p class="muted">${t("Compass bearing of the top of the plan: 0 north, 90 east. The sun of the pixel look follows it.")}</p>
+    ${petProperties(p)}
     ${appearanceProperties(p)}
     <h3>${t("Language")}</h3>
     <label class="field wide">
@@ -936,6 +940,59 @@ export function zoneProperties(p: FloorCastPanel, zone?: Zone) {
       : nothing}
     <p class="muted">${t(ZONE_HINTS[zone.kind])}</p>
     ${deleteButton(p)}
+  `;
+}
+
+/** Pets of the pixel look: name, animal, coat and the level each lives on. */
+function petProperties(p: FloorCastPanel) {
+  const plan = p._plan!;
+  const pets = plan.pets ?? [];
+  return html`
+    <h3>${t("Pets")}</h3>
+    <p class="muted">
+      ${t("Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them.")}
+    </p>
+    ${pets.map(
+      (pet) => html`
+        ${text(p, t("Name"), pet.name, (v) => (pet.name = v))}
+        <label class="field">
+          <span>${t("Animal")}</span>
+          <select
+            @change=${(e: Event) =>
+              p.change(() => {
+                pet.species = (e.target as HTMLSelectElement).value as PetSpecies;
+                pet.coat = PET_COATS[pet.species][0];
+              })}
+          >
+            <option value="cat" ?selected=${pet.species === "cat"}>${t("Cat")}</option>
+            <option value="dog" ?selected=${pet.species === "dog"}>${t("Dog")}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>${t("Coat")}</span>
+          <select @change=${(e: Event) => p.change(() => (pet.coat = (e.target as HTMLSelectElement).value))}>
+            ${PET_COATS[pet.species].map((coat) => html`<option value=${coat} ?selected=${(pet.coat ?? PET_COATS[pet.species][0]) === coat}>${t(COAT_LABELS[coat])}</option>`)}
+          </select>
+        </label>
+        <label class="field">
+          <span>${t("Lives on")}</span>
+          <select @change=${(e: Event) => p.change(() => (pet.level = (e.target as HTMLSelectElement).value))}>
+            ${plan.levels.map((level) => html`<option value=${level.id} ?selected=${(pet.level ?? plan.levels[0]?.id) === level.id}>${level.name}</option>`)}
+          </select>
+        </label>
+        <div class="row">
+          <button class="small" @click=${() => p.change(() => (plan.pets = pets.filter((other) => other !== pet)))}>${t("Remove")}</button>
+        </div>
+      `,
+    )}
+    <div class="row">
+      <button @click=${() => p.change(() => (plan.pets = [...pets, { id: uid("pet"), name: t("Cat"), species: "cat", coat: "ginger", level: p.level.id }]))}>
+        ${t("Add cat")}
+      </button>
+      <button @click=${() => p.change(() => (plan.pets = [...pets, { id: uid("pet"), name: t("Dog"), species: "dog", coat: "brown", level: p.level.id }]))}>
+        ${t("Add dog")}
+      </button>
+    </div>
   `;
 }
 

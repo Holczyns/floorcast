@@ -9,7 +9,8 @@ import type { HomeAssistant } from "../ha";
 import { type Level, type Plan, type Point, type TrackedPerson, deviceCentre, isPowered } from "../model";
 import { PPM, canvas, rect } from "./art";
 import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
-import { type Facing, OUTFITS, type Outfit, drop, lying, mower, person, sitting, vacuum } from "./sprites";
+import { PetLife } from "./pets";
+import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, vacuum } from "./sprites";
 
 export interface PixelBounds {
   x: number;
@@ -114,6 +115,12 @@ class LevelPicture {
   private readonly sweep = new Map<string, { angle: number; dir: number; tick: number }>();
   private readonly wet: Float32Array;
   private readonly wetColumns: number;
+  // Pets: their life on this level, how far each steps aside from people, when it was last stroked, and
+  // where it was drawn last, for taps.
+  private readonly pets: PetLife[];
+  private readonly aside = new Map<string, Point>();
+  private readonly stroked = new Map<string, number>();
+  private drawnPets: { id: string; at: Point }[] = [];
 
   constructor(level: Level, plan: Plan | undefined) {
     this.scene = new Scene(level, plan);
@@ -129,6 +136,8 @@ class LevelPicture {
     });
     this.wetColumns = Math.ceil(s.width / PPM / WET_CELL);
     this.wet = new Float32Array(this.wetColumns * Math.ceil(s.height / PPM / WET_CELL));
+    const first = plan?.levels[0]?.id;
+    this.pets = (plan?.pets ?? []).filter((pet) => (pet.level ?? first) === level.id).map((pet) => new PetLife(this.scene, pet));
   }
 
   // ---------------------------------------------------------------- states
@@ -274,26 +283,17 @@ class LevelPicture {
       const [x, y] = s.px([s.x0 + (k % this.wetColumns) * WET_CELL, s.y0 + Math.floor(k / this.wetColumns) * WET_CELL]);
       rect(c, x, y, cell, cell, `rgba(15,45,25,${(this.wet[k] * 0.4).toFixed(3)})`);
     }
-    for (const d of s.doors) this.drawDoor(c, d, this.doorOpen(hass, d));
 
-    // Things standing up stand on the floor as it shows below the wall faces, one face lower than their
-    // place on the plan. Wall tops take part in the order: a thing in front of a wall covers only its face,
-    // one behind it goes under its top.
-    const lower = Math.round(FACE * PPM);
-    const standing = (draw: () => void) => () => {
-      c.save();
-      c.translate(0, lower);
-      draw();
-      c.restore();
-    };
+    // Everything stands where the plan puts its foot. Walls take part in the order: a thing in front of a
+    // wall covers its face, one behind it is hidden by it.
     const items: { y: number; draw: () => void }[] = [];
-    for (const piece of s.pieces) {
-      if (!piece.horizontal || piece.kind === "door") continue;
-      const [x, y, w, h] = s.pxBox(piece.box);
-      items.push({ y: y + h, draw: () => c.drawImage(s.base, x, y, w, h, x, y, w, h) });
+    for (const part of s.wallParts) items.push({ y: part.order, draw: () => c.drawImage(s.walls, part.x, part.y, part.w, part.h, part.x, part.y, part.w, part.h) });
+    for (const d of s.doors) {
+      const open = this.doorOpen(hass, d);
+      items.push({ y: s.px([0, d.box[3]])[1] + 0.1, draw: () => this.drawDoor(c, d, open) });
     }
-    for (const f of s.furniture) items.push({ y: s.px([0, f.box[3]])[1] + 0.5, draw: standing(() => s.drawFurniture(c, f)) });
-    for (const g of s.garden) if (STANDING_GARDEN.has(g.item.type)) items.push({ y: s.px([0, g.box[3]])[1] + 0.5, draw: standing(() => s.drawGardenObject(c, g)) });
+    for (const f of s.furniture) items.push({ y: s.px([0, f.box[3]])[1] + 0.5, draw: () => s.drawFurniture(c, f) });
+    for (const g of s.garden) if (STANDING_GARDEN.has(g.item.type)) items.push({ y: s.px([0, g.box[3]])[1] + 0.5, draw: () => s.drawGardenObject(c, g) });
     for (const device of s.level.devices ?? []) {
       if (device.kind !== "vacuum" && device.kind !== "mower") continue;
       const place = source.robot(device.id);
@@ -301,7 +301,7 @@ class LevelPicture {
       const at = place?.at ?? (device.kind === "vacuum" ? place?.dock : undefined);
       if (!at) continue;
       const [x, y] = s.px(at);
-      items.push({ y: y + 0.5, draw: standing(() => (device.kind === "vacuum" ? vacuum(c, x, y, state, time) : mower(c, x, y, place?.heading, state))) });
+      items.push({ y: y + 0.5, draw: () => (device.kind === "vacuum" ? vacuum(c, x, y, state, time) : mower(c, x, y, place?.heading, state)) });
     }
     for (const w of this.walkers.values()) {
       const [x, y] = s.px([w.x, w.y]);
@@ -312,12 +312,14 @@ class LevelPicture {
         const [sx, sy] = s.px(at);
         const top = s.px([0, furniture.box[3]])[1] + 0.6;
         const seat = Math.round((furniture.kind === "bed" ? 0.18 : 0.22) * PPM);
-        items.push({ y: top, draw: standing(() => (furniture.kind === "bed" ? lying(c, sx, sy - seat, w.outfit) : sitting(c, sx, sy - seat + 4, w.facing, w.outfit))) });
-      } else items.push({ y: y + 0.5, draw: standing(() => person(c, x, y, w.facing, w.moving ? Math.floor(time * 8) : 0, w.outfit)) });
+        items.push({ y: top, draw: () => (furniture.kind === "bed" ? lying(c, sx, sy - seat, w.outfit) : sitting(c, sx, sy - seat + 4, w.facing, w.outfit)) });
+      } else items.push({ y: y + 0.5, draw: () => person(c, x, y, w.facing, w.moving ? Math.floor(time * 8) : 0, w.outfit) });
     }
+    const overhead = this.addPets(items, time);
     items.sort((a, b) => a.y - b.y);
     for (const item of items) item.draw();
-    for (const g of s.garden) if (g.item.type === "shelter") standing(() => s.drawGardenObject(c, g))();
+    for (const g of s.garden) if (g.item.type === "shelter") s.drawGardenObject(c, g);
+    for (const draw of overhead) draw();
     for (const d of this.drops) {
       const [x, y] = s.px([d.x, d.y]);
       drop(c, x, y, Math.round(d.z * PPM * 0.6), d.splash);
@@ -327,28 +329,101 @@ class LevelPicture {
     this.drawLight(hass, sun.day, time);
     if (!s.opaque) {
       c.globalCompositeOperation = "destination-in";
-      c.drawImage(s.base, 0, 0);
+      c.drawImage(s.outline, 0, 0);
       c.globalCompositeOperation = "source-over";
     }
     this.drawSun(hass, sun, source.plan()?.north ?? 0);
     this.drawGlass(hass, sun.day, time);
   }
 
+  /**
+   * Pets at the place their life gives for now, a little aside from people near them. Returns what is
+   * drawn over everything: the z of a sleeping pet and the hearts of a stroked one.
+   */
+  private addPets(items: { y: number; draw: () => void }[], time: number): (() => void)[] {
+    const s = this.scene;
+    const c = this.fc;
+    const now = Date.now() / 1000;
+    const overhead: (() => void)[] = [];
+    this.drawnPets = [];
+    for (const life of this.pets) {
+      const pet = life.pet;
+      const place = life.placeAt(now);
+      // Step aside from the nearest person closer than a metre, less when the pet lies on furniture.
+      let push: Point = [0, 0];
+      for (const w of this.walkers.values()) {
+        const dx = place.x - w.x;
+        const dy = place.y - w.y;
+        const d = Math.hypot(dx, dy);
+        const reach = place.on ? 0.4 : 0.9;
+        if (d < reach && d > 0.01) push = [push[0] + (dx / d) * (reach - d), push[1] + (dy / d) * (reach - d)];
+      }
+      const old = this.aside.get(pet.id) ?? [0, 0];
+      const aside: Point = [old[0] + (push[0] - old[0]) * 0.1, old[1] + (push[1] - old[1]) * 0.1];
+      this.aside.set(pet.id, aside);
+      const at: Point = [place.x + aside[0], place.y + aside[1]];
+      this.drawnPets.push({ id: pet.id, at });
+      const since = now - (this.stroked.get(pet.id) ?? -99);
+      const fond = since < 2.5;
+      const pose = fond && place.state === "sleep" ? "sit" : place.state;
+      const hop = fond ? Math.round(Math.max(0, Math.sin(since * 9)) * 3) : 0;
+      const seat = place.on ? Math.round((place.on.kind === "bed" ? 0.18 : 0.22) * PPM) : 0;
+      const [x, y] = s.px(at);
+      const top = place.on ? s.px([0, place.on.box[3]])[1] + 0.7 : y + 0.4;
+      const step = Math.floor(place.walked * (place.state === "run" ? 5 : 8));
+      const coat = pet.coat ?? (pet.species === "dog" ? "brown" : "ginger");
+      items.push({
+        y: top,
+        draw: () =>
+          pet.species === "dog" ? dog(c, x, y - seat - hop, pose, place.facing, step, coat, time, fond) : cat(c, x, y - seat - hop, pose, place.facing, step, coat, time),
+      });
+      if (pose === "sleep")
+        overhead.push(() => {
+          for (let k = 0; k < 2; k++) {
+            const phase = (time * 0.45 + k * 0.5) % 1;
+            snore(c, x + 3 + Math.round(phase * 4), y - seat - 12 - Math.round(phase * 10), 1 - phase);
+          }
+        });
+      if (fond)
+        overhead.push(() => {
+          for (let k = 0; k < 3; k++) {
+            const rise = since * 8 + k * 4;
+            heart(c, x - 5 + k * 5, y - seat - 16 - Math.round(rise), Math.max(0, 1 - since / 2.5));
+          }
+        });
+    }
+    return overhead;
+  }
+
+  /** The pet drawn nearest to a point of the plan, within reach metres; it is stroked. */
+  stroke(p: Point, reach: number): boolean {
+    let best: { id: string; d: number } | undefined;
+    for (const pet of this.drawnPets) {
+      // Its body stands a little above its feet.
+      const d = Math.hypot(pet.at[0] - p[0], pet.at[1] - 0.2 - p[1]);
+      if (d < reach && (!best || d < best.d)) best = { id: pet.id, d };
+    }
+    if (best) this.stroked.set(best.id, Date.now() / 1000);
+    return !!best;
+  }
+
   private drawDoor(c: CanvasRenderingContext2D, d: Piece, open: boolean): void {
     const [x, y, w, h] = this.scene.pxBox(d.box);
     const face = Math.round(FACE * PPM);
+    // Doors stand up from the foot of their wall like the wall.
+    const top = y - face;
     if (d.horizontal) {
-      if (open) rect(c, x + 2, y, 2, h + face - 1, "#8b5a2b");
+      if (open) rect(c, x + 2, top, 2, h + face - 1, "#8b5a2b");
       else {
-        rect(c, x + 2, y, w - 4, h + face - 1, d.exterior ? "#6e3f22" : "#8b5a2b");
-        rect(c, x + 2, y, w - 4, 1, "#a8703a");
-        rect(c, x + 4, y + h + 2, w - 8, Math.max(2, face / 2 - 3), d.exterior ? "#5c331b" : "#784b23");
-        rect(c, x + w - 6, y + h + face / 2, 1, 2, "#e0c35f");
+        rect(c, x + 2, top, w - 4, h + face - 1, d.exterior ? "#6e3f22" : "#8b5a2b");
+        rect(c, x + 2, top, w - 4, 1, "#a8703a");
+        rect(c, x + 4, top + 3, w - 8, Math.max(2, face / 2 - 3), d.exterior ? "#5c331b" : "#784b23");
+        rect(c, x + w - 6, top + face / 2 + 2, 1, 2, "#e0c35f");
       }
-    } else if (open) rect(c, x, y + 2, w, 2, "#8b5a2b");
+    } else if (open) rect(c, x, top + 2, w, 2, "#8b5a2b");
     else {
-      rect(c, x + Math.round(w / 2) - 2, y + 2, 4, h - 4, "#8b5a2b");
-      rect(c, x + Math.round(w / 2) - 2, y + 2, 1, h - 4, "#a8703a");
+      rect(c, x + Math.round(w / 2) - 2, top + 2, 4, h - 4, "#8b5a2b");
+      rect(c, x + Math.round(w / 2) - 2, top + 2, 1, h - 4, "#a8703a");
     }
   }
 
@@ -586,6 +661,20 @@ export class PixelView {
         }
       }
     this.run();
+  }
+
+  /** A touch on the card: when it lands on a pet the pet is stroked and the touch goes no further. */
+  stroke(event: PointerEvent): boolean {
+    for (const target of this.targets) {
+      const box = target.canvas.getBoundingClientRect();
+      if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) continue;
+      const picture = this.pictures.get(target.key);
+      if (!picture) return false;
+      const b = target.bounds;
+      const p: Point = [b.x + ((event.clientX - box.left) / box.width) * b.w, b.y + ((event.clientY - box.top) / box.height) * b.h];
+      return picture.stroke(p, Math.max(0.45, (b.w / box.width) * 24));
+    }
+    return false;
   }
 
   stop(): void {

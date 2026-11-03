@@ -7,7 +7,10 @@ import { LOOKS, PPM, type RoomKind, type RoomLook, canvas, disc, hash, plants, r
 
 /** Pixels of the light buffer cell. */
 export const LIGHT_CELL = 4;
-/** Height of a wall face on the screen, in metres of the plan. */
+/**
+ * Height of a wall on the screen, in metres of the plan. The plan gives the foot of every wall; its top is
+ * drawn this much higher, with its face between top and foot.
+ */
 export const FACE = 0.5;
 
 export type Box = [number, number, number, number];
@@ -85,7 +88,14 @@ export class Scene {
   readonly y0: number;
   readonly width: number;
   readonly height: number;
+  /** Ground and floors. */
   readonly base: HTMLCanvasElement;
+  /** Walls standing up from their feet: faces, windows in them and tops. */
+  readonly walls: HTMLCanvasElement;
+  /** Everything drawn, ground and walls, as a mask for the space round a house without a garden. */
+  readonly outline: HTMLCanvasElement;
+  /** Strips of the walls in the order of drawing: a wall covers what stands behind it and goes behind what stands in front. */
+  readonly wallParts: { x: number; y: number; w: number; h: number; order: number }[] = [];
   /** Whether the picture covers every pixel; without a garden the space round the house stays clear. */
   readonly opaque: boolean;
   readonly rooms: SceneRoom[] = [];
@@ -132,6 +142,32 @@ export class Scene {
     const [base, bc] = canvas(this.width, this.height);
     this.base = base;
     this.drawBase(bc);
+    const [walls, wc] = canvas(this.width, this.height);
+    this.walls = walls;
+    this.drawFaces(wc);
+    this.drawWallTops(wc);
+    this.drawJambs(wc);
+    const [outline, oc] = canvas(this.width, this.height);
+    oc.drawImage(base, 0, 0);
+    oc.drawImage(walls, 0, 0);
+    this.outline = outline;
+    this.cutWallParts();
+  }
+
+  /** Each wall as strips for the drawing order; walls running down the screen in short strips, so a person beside one is not covered by all of it. */
+  private cutWallParts(): void {
+    const face = Math.round(FACE * PPM);
+    for (const piece of this.pieces) {
+      const [x, y, w, h] = this.pxBox(piece.box);
+      if (piece.horizontal) {
+        this.wallParts.push({ x, y: y - face, w, h: h + face, order: y + h });
+        continue;
+      }
+      for (let top = y - face; top < y + h; top += 8) {
+        const part = Math.min(8, y + h - top);
+        this.wallParts.push({ x, y: top, w, h: part, order: Math.min(top + part + face, y + h) });
+      }
+    }
   }
 
   /** Pixel position of a point of the plan. */
@@ -283,9 +319,11 @@ export class Scene {
     for (let j = 0; j < this.lightHeight; j++)
       for (let i = 0; i < this.lightWidth; i++) {
         const p: Point = [this.x0 + (i + 0.5) * cell, this.y0 + (j + 0.5) * cell];
-        const onWall = this.pieces.some((w) => w.kind !== "door" && p[0] >= w.box[0] && p[0] <= w.box[2] && p[1] >= w.box[1] && p[1] <= w.box[3]);
-        const room = this.roomAt(p);
-        this.region[j * this.lightWidth + i] = onWall ? -2 : room ? this.rooms.indexOf(room) : -1;
+        const standing = this.pieces.filter((w) => w.kind !== "door" && p[0] >= w.box[0] && p[0] <= w.box[2] && p[1] >= w.box[1] - FACE && p[1] <= w.box[3]);
+        const top = standing.some((w) => p[1] < w.box[3] - FACE);
+        const face = standing.find((w) => p[1] >= w.box[3] - FACE);
+        const room = face ? this.roomAt([p[0], face.box[3] + 0.1]) : this.roomAt(p);
+        this.region[j * this.lightWidth + i] = top ? -2 : room ? this.rooms.indexOf(room) : -1;
       }
   }
 
@@ -423,31 +461,37 @@ export class Scene {
       c.fillStyle = texture(c, room ? room.look.floor : "paving");
       c.fillRect(x, y, w, h);
     }
-    this.drawFaces(c);
-    this.drawWallTops(c);
+  }
+
+  /** Frames of the doors, standing up from the foot of the wall like the wall. */
+  private drawJambs(c: CanvasRenderingContext2D): void {
     const face = Math.round(FACE * PPM);
     for (const d of this.doors) {
       const [x, y, w, h] = this.pxBox(d.box);
       if (d.horizontal) {
-        rect(c, x, y, 2, h + face, "#5b3b24");
-        rect(c, x + w - 2, y, 2, h + face, "#5b3b24");
+        rect(c, x, y - face, 2, h + face, "#5b3b24");
+        rect(c, x + w - 2, y - face, 2, h + face, "#5b3b24");
       } else {
-        rect(c, x, y, w, 2, "#5b3b24");
-        rect(c, x, y + h - 2, w, 2, "#5b3b24");
+        rect(c, x, y - face, w, 2, "#5b3b24");
+        rect(c, x, y + h - face - 2, w, 2, "#5b3b24");
       }
     }
   }
 
-  /** Faces of walls running left to right: wallpaper of the room in front, brick outside. Windows sit in them. */
+  /**
+   * Faces of the walls, from the foot of each wall up to its top: wallpaper of the room in front, brick
+   * outside. Windows sit in the faces of walls running left to right.
+   */
   private drawFaces(c: CanvasRenderingContext2D): void {
     const face = Math.round(FACE * PPM);
     for (const piece of this.pieces) {
-      if (!piece.horizontal || piece.kind === "door") continue;
+      if (piece.kind === "door") continue;
       const [x, y, w, h] = this.pxBox(piece.box);
-      const bottom = y + h;
+      const bottom = y + h - face;
       for (let xx = x; xx < x + w; xx += 4) {
         const ww = Math.min(4, x + w - xx);
-        const front = this.roomAt([this.x0 + (xx + 2) / PPM, this.y0 + (bottom + 4) / PPM]);
+        // The room in front of the foot of the wall gives the wallpaper.
+        const front = this.roomAt([this.x0 + (xx + 2) / PPM, this.y0 + (y + h + 4) / PPM]);
         if (front) {
           const [p0, p1] = front.look.paper;
           rect(c, xx, bottom, ww, face, p0);
@@ -480,20 +524,21 @@ export class Scene {
           rect(c, fx, bottom + 1, fw, 1, "#b0a998");
         }
       } else {
-        w.glass = [x + 1, y + 1, ww - 2, h - 2];
-        rect(c, x, y, ww, h, "#f2efe6");
+        w.glass = [x + 1, y - face + 1, ww - 2, h - 2];
+        rect(c, x, y - face, ww, h, "#f2efe6");
       }
     }
   }
 
-  /** Wall tops seen from above, with a light edge where they meet something lower. */
+  /** Wall tops, one face above the feet of the walls, with a light edge where they meet something lower. */
   private drawWallTops(c: CanvasRenderingContext2D): void {
+    const face = Math.round(FACE * PPM);
     const [, mc] = canvas(this.width, this.height);
     mc.fillStyle = "#000";
     for (const piece of this.pieces) {
       if (piece.kind === "door" || (piece.kind === "window" && !piece.horizontal)) continue;
       const [x, y, w, h] = this.pxBox(piece.box);
-      mc.fillRect(x, y, w, h);
+      mc.fillRect(x, y - face, w, h);
     }
     const mask = mc.getImageData(0, 0, this.width, this.height).data;
     const at = (x: number, y: number) => x >= 0 && y >= 0 && x < this.width && y < this.height && mask[(y * this.width + x) * 4 + 3] > 0;

@@ -233,6 +233,17 @@ class FloorCastCard extends LitElement {
   private _pixelTargets: Omit<PixelTarget, "canvas">[] = [];
   private _planStamp = 0;
   private _gardenShown = false;
+  // A touch that landed on a pet strokes it and goes no further: no light, room or hold under it.
+  private _petTouch = false;
+  private readonly _petCatch = {
+    handleEvent: (event: PointerEvent) => {
+      if (event.type === "pointerdown") this._petTouch = !!this._pixel?.stroke(event);
+      if (!this._petTouch) return;
+      event.stopPropagation();
+      if (event.type === "click") this._petTouch = false;
+    },
+    capture: true,
+  };
 
   setConfig(config: CardConfig): void {
     this._config = { layout: "auto", ...config };
@@ -974,7 +985,7 @@ class FloorCastCard extends LitElement {
       >
         ${scale ? html`<div class="name">${level.name}</div>` : nothing}
         ${pixel
-          ? html`<div class="pixel-box">
+          ? html`<div class="pixel-box" @pointerdown=${this._petCatch} @pointerup=${this._petCatch} @click=${this._petCatch}>
               <canvas class="pixel" data-level=${level.id}></canvas>
               <svg class=${svgClass} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">${plan}</svg>
             </div>`

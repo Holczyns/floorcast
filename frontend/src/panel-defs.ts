@@ -231,6 +231,19 @@ export const FURNITURE_LABELS: Record<FurnitureKind, string> = {
   bench: N_("Bench"),
 };
 
+/** Names of the coats of pets. */
+export const COAT_LABELS: Record<string, string> = {
+  ginger: N_("Ginger"),
+  grey: N_("Grey"),
+  black: N_("Black"),
+  white: N_("White"),
+  tabby: N_("Tabby"),
+  calico: N_("Calico"),
+  brown: N_("Brown"),
+  golden: N_("Golden"),
+  spotted: N_("Spotted"),
+};
+
 export const ZONE_LABELS: Record<Zone["kind"], string> = {
   count: N_("Count people here"),
   entrance: N_("Entrance (people count at once)"),
