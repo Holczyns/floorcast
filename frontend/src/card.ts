@@ -74,6 +74,8 @@ const DETAILS_PX_PER_M = 40;
 
 // Narrowest level width in pixels that still reads well side by side.
 const MIN_SIDE_WIDTH = 150;
+// Height of the row with the name of a level over its plan, side by side.
+const NAME_ROW = 20;
 const HOLD_MS = 350;
 // A still covering someone moves away at most this often.
 const STILL_MOVE_MS = 5000;
@@ -188,6 +190,10 @@ class FloorCastCard extends LitElement {
   private _views: Record<string, Bounds> = {};
   // Levels side by side zoom and move together as one drawing: its scale and shift on the screen.
   private _group?: { s: number; tx: number; ty: number };
+  // Levels side by side as one picture: it reaches past their visible parts on its outer sides (the first
+  // level to the left, the last to the right, all up and down) as far as their drawings go. In pixels of the
+  // unzoomed card: where the visible parts start in the picture, and the sizes of the picture and the frame.
+  private _picture = { left: 0, top: 0, width: 1, height: 1, frameWidth: 1, frameHeight: 1 };
   private _pointers = new Map<number, { x: number; y: number }>();
   private _gesture?: { level: string; start: Bounds; points: { x: number; y: number }[]; rect: DOMRect };
   private _dragged = false;
@@ -604,14 +610,27 @@ class FloorCastCard extends LitElement {
    * wide, about a point of the frame that stays where it is, and kept inside the frame.
    */
   private setGroup(s: number, about: { x: number; y: number }, from: { s: number; tx: number; ty: number }, frame: DOMRect, maxScale: number): void {
-    const scale = Math.min(Math.max(s, 1), Math.max(1, maxScale));
+    const picture = this._picture;
+    // Out as far as the whole picture still fills the frame, in as close as maxScale.
+    const least = Math.min(1, Math.max(picture.frameWidth / picture.width, picture.frameHeight / picture.height));
+    const scale = Math.min(Math.max(s, least), Math.max(1, maxScale));
     const cx = (about.x - from.tx) / from.s;
     const cy = (about.y - from.ty) / from.s;
-    const clamp = (shift: number, size: number) => Math.min(0, Math.max(size - size * scale, shift));
-    const tx = clamp(about.x - cx * scale, frame.width);
-    const ty = clamp(about.y - cy * scale, frame.height);
-    this._group = scale === 1 ? undefined : { s: scale, tx, ty };
+    // The picture keeps filling the frame: moved no farther than its edges past the visible parts.
+    const clamp = (shift: number, size: number, start: number, length: number) => Math.min(start * scale, Math.max(size - (length - start) * scale, shift));
+    const tx = clamp(about.x - cx * scale, frame.width, picture.left, picture.width);
+    const ty = clamp(about.y - cy * scale, frame.height, picture.top, picture.height);
+    this._group = scale === 1 && Math.abs(tx) < 0.5 && Math.abs(ty) < 0.5 ? undefined : { s: scale, tx, ty };
     this.restartZoomReset();
+  }
+
+  /** All a level may show: its visible part together with everything drawn on it. */
+  private levelReach(level: Level): Bounds {
+    const home = this.defaultBounds(level);
+    const drawn = drawnBounds(level);
+    const x = Math.min(home.x, drawn.x);
+    const y = Math.min(home.y, drawn.y);
+    return { x, y, w: Math.max(home.x + home.w, drawn.x + drawn.w) - x, h: Math.max(home.y + home.h, drawn.y + drawn.h) - y };
   }
 
   private groupDown(event: PointerEvent): void {
@@ -936,8 +955,31 @@ class FloorCastCard extends LitElement {
     // As close as MIN_ZOOM_WIDTH metres across the card.
     const maxScale = metres.reduce((sum, w) => sum + w, 0) / MIN_ZOOM_WIDTH;
     const group = this._group;
+    // Each level drawn past its visible part on the outer sides of the row and below it; not above it, where
+    // the names of the levels stand, so the visible parts stay side by side as configured.
+    const homes = levels.map((level) => this.defaultBounds(level));
+    const reaches = levels.map((level) => this.levelReach(level));
+    const views = homes.map((home, i) => {
+      const reach = reaches[i];
+      const left = i === 0 ? home.x - reach.x : 0;
+      const right = i === levels.length - 1 ? reach.x + reach.w - home.x - home.w : 0;
+      const bottom = Math.max(0, reach.y + reach.h - home.y - home.h);
+      return { x: home.x - left, y: home.y, w: home.w + left + right, h: home.h + bottom };
+    });
+    const k = sideScale;
+    this._picture = {
+      left: (homes[0].x - views[0].x) * k,
+      top: 0,
+      width: views.reduce((sum, view) => sum + view.w, 0) * k,
+      height: Math.max(...views.map((view) => view.h)) * k + NAME_ROW,
+      frameWidth: homes.reduce((sum, home) => sum + home.w, 0) * k,
+      frameHeight: Math.max(...homes.map((home) => home.h)) * k + NAME_ROW,
+    };
+    const picture = this._picture;
+    const shift = `translate(${(-picture.left).toFixed(1)}px,${(-picture.top).toFixed(1)}px)`;
     return html`<div
       class="levels side zoomable"
+      style="height:${picture.frameHeight.toFixed(0)}px"
       @pointerdown=${(e: PointerEvent) => this.groupDown(e)}
       @pointermove=${(e: PointerEvent) => this.groupMove(e, maxScale)}
       @pointerup=${(e: PointerEvent) => this.zoomUp(e)}
@@ -950,8 +992,8 @@ class FloorCastCard extends LitElement {
         capture: true,
       }}
     >
-      <div class="group" style=${group ? `transform:translate(${group.tx}px,${group.ty}px) scale(${group.s})` : ""}>
-        ${levels.map((level) => this.renderLevel(level, width, sideScale, true))}
+      <div class="group" style="transform:${group ? `translate(${group.tx}px,${group.ty}px) scale(${group.s}) ` : ""}${shift}">
+        ${levels.map((level, i) => this.renderLevel(level, width, sideScale, true, views[i]))}
       </div>
       <div class="zoom">
         ${group ? html`<button title=${t("Default view")} @click=${() => (this._group = undefined)}>⌂</button>` : nothing}
@@ -961,12 +1003,13 @@ class FloorCastCard extends LitElement {
     </div>`;
   }
 
-  private renderLevel(level: Level, width: number, scale?: number, inGroup = false) {
-    const b = inGroup ? this.defaultBounds(level) : this.viewBounds(level);
+  private renderLevel(level: Level, width: number, scale?: number, inGroup = false, view?: Bounds) {
+    const b = view ?? (inGroup ? this.defaultBounds(level) : this.viewBounds(level));
     const home = this.defaultBounds(level);
     // Side by side every level uses the same scale, so a metre is equally long on each; zoom enlarges it.
-    const style = scale ? `width:${(home.w * scale).toFixed(0)}px` : "width:100%";
-    const pxPerMetre = (scale ?? width / home.w) * (home.w / b.w);
+    // A level of a group picture is as wide as the part of it drawn there.
+    const style = scale ? `width:${((view ?? home).w * scale).toFixed(0)}px` : "width:100%";
+    const pxPerMetre = view && scale ? scale : (scale ?? width / home.w) * (home.w / b.w);
     const zoomed = !!this._config.zoom && !!this._views[level.id] && !inGroup;
     // In a group the levels zoom together; their own gestures and buttons rest.
     const own = !!this._config.zoom && !inGroup;
@@ -999,7 +1042,9 @@ class FloorCastCard extends LitElement {
           capture: true,
         }}
       >
-        ${scale ? html`<div class="name">${level.name}</div>` : nothing}
+        ${scale
+          ? html`<div class="name" style=${view ? `margin-left:${((home.x - view.x) * scale + 4).toFixed(0)}px` : ""}>${level.name}</div>`
+          : nothing}
         ${pixel
           ? html`<div class="pixel-box" @pointerdown=${this._petCatch} @pointerup=${this._petCatch} @click=${this._petCatch}>
               <canvas class="pixel" data-level=${level.id}></canvas>
@@ -2052,6 +2097,7 @@ class FloorCastCard extends LitElement {
       .name {
         color: var(--secondary-text-color);
         font-size: 13px;
+        line-height: 18px;
         margin: 0 0 2px 4px;
       }
       .room {
