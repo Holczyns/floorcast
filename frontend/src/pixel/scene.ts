@@ -2,8 +2,8 @@
 // the base picture (ground, floors, wall faces, wall tops), furniture guessed from the obstacles and what
 // each light, window and screen can reach past the walls.
 import { type Device, type FurnitureKind, type Item, type Level, type Opening, type Plan, type Point, type Room, deviceCentre, drawnBounds, itemPoints, pointInPolygon } from "../model";
-import { furnitureOf } from "./furniture";
-import { LOOKS, PPM, type RoomKind, type RoomLook, type Texture, canvas, crops, disc, flowers, hash, rect, roomKind, texture } from "./art";
+import { FURNITURE_COLOURS, furnitureOf } from "./furniture";
+import { LOOKS, PPM, type RoomKind, type RoomLook, type Texture, canvas, crops, disc, flowers, hash, rect, roomKind, texture, tone } from "./art";
 import { drawStairs } from "./stairs";
 
 /** Pixels of the light buffer cell. */
@@ -662,17 +662,21 @@ export class Scene {
     const P = PPM;
     const [bx, by, bw, bh] = this.pxBox(f.box);
     const lift = (m: number) => Math.round(m * P);
-    const rectangle = f.points.length === 4 && !f.item.rotation;
     const round = !!f.item.center;
     const sides = this.wallSides(f.box);
     // The side a back, a headboard or a shelf front is on: against a wall, otherwise at the back of the room.
     // Never the front side: a back or headboard there would face away from the viewer.
     const back = sides.find((side) => side !== "bottom") ?? "top";
     const module = lift(0.6);
+    // The main colour and its tones: the colour chosen for the piece, or its own.
+    const main = f.item.colour ?? FURNITURE_COLOURS[f.kind];
+    const shade = { base: main, light: tone(main, 0.18), lighter: tone(main, 0.35), dark: tone(main, -0.18), darker: tone(main, -0.35) };
+    const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+    const time = performance.now() / 1000;
     switch (f.kind) {
       case "kitchen": {
         const h = lift(0.28);
-        this.box(c, f.points, h, "#dcd6c8", "#6f87a3", { edge: "#f0ebe0", base: "#4f6580", modules: module, seam: "#58708c", handles: "#c9d3de" });
+        this.box(c, f.points, h, "#dcd6c8", shade.base, { edge: "#f0ebe0", base: shade.darker, modules: module, seam: shade.dark, handles: shade.lighter });
         for (const [spot, unit] of f.units) {
           const [ux, uy] = this.px(spot);
           const y = uy - h;
@@ -691,14 +695,13 @@ export class Scene {
         break;
       }
       case "sofa":
-        this.drawSofa(c, f);
+        this.drawSofa(c, f, { seat: shade.base, side: shade.dark, light: shade.light, dark: tone(main, -0.27), base: shade.darker });
         break;
       case "bed": {
         const h = lift(0.18);
         this.box(c, f.points, h, "#efe9df", "#cfc6b6", { edge: "#ffffff" });
         const y0 = by - h;
-        const head = back;
-        const across = head === "top";
+        const across = back === "top";
         const width = across ? bw : bh;
         const double = width > 1.2 * P;
         const pillow = (x: number, y: number, w: number, hh: number) => {
@@ -706,39 +709,36 @@ export class Scene {
           rect(c, x, y + hh - 1, w, 1, "#d8d2c6");
         };
         if (across) {
-          const hy = head === "top" ? y0 : y0 + bh - 5;
-          rect(c, bx, hy - (head === "top" ? 5 : 0), bw, 6, "#6b4a33");
-          const py = head === "top" ? y0 + 3 : y0 + bh - 12;
+          rect(c, bx, y0 - 5, bw, 6, "#6b4a33");
           const pw = double ? Math.floor(bw / 2) - 5 : bw - 8;
-          pillow(bx + 4, py, pw, 7);
-          if (double) pillow(bx + bw / 2 + 1, py, pw, 7);
-          const blanketY = head === "top" ? y0 + Math.round(bh * 0.32) : y0 + 1;
-          const blanketH = Math.round(bh * 0.68) - 2;
-          rect(c, bx + 1, blanketY, bw - 2, blanketH, "#5b7fbf");
-          rect(c, bx + 1, head === "top" ? blanketY : blanketY + blanketH - 2, bw - 2, 2, "#7d9bd2");
+          pillow(bx + 4, y0 + 3, pw, 7);
+          if (double) pillow(bx + bw / 2 + 1, y0 + 3, pw, 7);
+          const blanketY = y0 + Math.round(bh * 0.32);
+          rect(c, bx + 1, blanketY, bw - 2, Math.round(bh * 0.68) - 2, shade.base);
+          rect(c, bx + 1, blanketY, bw - 2, 2, shade.light);
         } else {
-          const hx = head === "left" ? bx - 4 : bx + bw - 2;
+          const hx = back === "left" ? bx - 4 : bx + bw - 2;
           rect(c, hx, y0, 6, bh, "#6b4a33");
-          const px = head === "left" ? bx + 3 : bx + bw - 11;
+          const px = back === "left" ? bx + 3 : bx + bw - 11;
           const ph = double ? Math.floor(bh / 2) - 5 : bh - 8;
           pillow(px, y0 + 4, 8, ph);
           if (double) pillow(px, y0 + bh / 2 + 1, 8, ph);
-          const blanketX = head === "left" ? bx + Math.round(bw * 0.32) : bx + 1;
+          const blanketX = back === "left" ? bx + Math.round(bw * 0.32) : bx + 1;
           const blanketW = Math.round(bw * 0.68) - 2;
-          rect(c, blanketX, y0 + 1, blanketW, bh - 2, "#5b7fbf");
-          rect(c, head === "left" ? blanketX : blanketX + blanketW - 2, y0 + 1, 2, bh - 2, "#7d9bd2");
+          rect(c, blanketX, y0 + 1, blanketW, bh - 2, shade.base);
+          rect(c, back === "left" ? blanketX : blanketX + blanketW - 2, y0 + 1, 2, bh - 2, shade.light);
         }
         break;
       }
       case "wardrobe": {
         const h = lift(0.45);
-        this.box(c, f.points, h, "#8a5d3b", "#7a5236", { edge: "#a8774f", base: "#5a3c28", modules: lift(0.5), seam: "#5e3f28", handles: "#e0c890" });
-        if (bh > bw) for (let y = by - h + lift(0.5); y < by + bh - h - 2; y += lift(0.5)) rect(c, bx + 1, y, bw - 2, 1, "#6e4a30");
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light, base: shade.darker, modules: lift(0.5), seam: shade.darker, handles: "#e0c890" });
+        if (bh > bw) for (let y = by - h + lift(0.5); y < by + bh - h - 2; y += lift(0.5)) rect(c, bx + 1, y, bw - 2, 1, shade.dark);
         break;
       }
       case "shelf": {
         const h = lift(0.45);
-        this.box(c, f.points, h, "#6e4a30", "#4e3322", { edge: "#8a5d3b" });
+        this.box(c, f.points, h, shade.base, shade.darker, { edge: shade.light });
         const books = ["#c0564b", "#3f6fd1", "#e0b04a", "#4c9a5b", "#8a5bb5", "#e8e3d6"];
         if (bw >= bh) {
           for (let row = 0; row < 3; row++) {
@@ -754,38 +754,35 @@ export class Scene {
       }
       case "fridge": {
         const h = lift(0.45);
-        this.box(c, f.points, h, "#f2f4f6", "#dfe3e7", { edge: "#ffffff", base: "#b9c0c7" });
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.lighter, base: shade.darker });
         rect(c, bx + bw - 4, by + bh - h + 3, 1, Math.max(3, h - 6), "#9aa1a8");
         rect(c, bx + 3, by - h + 3, 3, 3, "#e8505b");
         break;
       }
       case "table": {
         const h = lift(0.3);
-        if (round) {
-          this.disc3(c, f, h, "#4f301b", "#6e4528", "#86573a");
-        } else this.box(c, f.points, h, "#7c4f2c", "#5c3920", { edge: "#94633b" });
-        const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+        if (round) this.disc3(c, f, h, shade.darker, shade.base, shade.light);
+        else this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
         disc(c, cx, cy - h, 3, "#f2efe6");
         rect(c, cx - 1, cy - h - 2, 2, 2, "#e8505b");
         break;
       }
       case "chair": {
         const h = lift(0.18);
-        this.box(c, f.points, h, "#6a4226", "#4f301b", { edge: "#80522f" });
-        rect(c, bx, by - h - 3, bw, 3, "#4f301b");
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
+        rect(c, bx, by - h - 3, bw, 3, shade.dark);
         break;
       }
       case "desk": {
         const h = lift(0.3);
-        this.box(c, f.points, h, "#b58a5a", "#8f6a42", { edge: "#c99d6b", handles: "#e0c890" });
-        const [cx] = this.px([(f.box[0] + f.box[2]) / 2, 0]);
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light, handles: "#e0c890" });
         rect(c, cx - 6, by - h + 2, 12, 7, "#1d1f25");
         rect(c, cx - 5, by - h + 3, 10, 5, "#4a7bd0");
         break;
       }
       case "tvstand": {
         const h = lift(0.2);
-        this.box(c, f.points, h, "#4a3a30", "#3a2d25", { edge: "#5e4a3d" });
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
         if (bw >= bh) {
           const tv = lift(0.32);
           rect(c, bx + Math.round(bw * 0.1), by - h - tv + 2, Math.round(bw * 0.8), tv, "#15161b");
@@ -796,48 +793,44 @@ export class Scene {
       case "dresser":
       case "nightstand": {
         const h = lift(f.kind === "nightstand" ? 0.25 : 0.3);
-        this.box(c, f.points, h, "#946645", "#7a5236", { edge: "#a8774f", drawers: true });
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light, drawers: true });
         if (f.kind === "nightstand") {
-          const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
           rect(c, cx - 3, cy - h - 7, 6, 5, "#d9c896");
           rect(c, cx - 1, cy - h - 2, 2, 2, "#555");
         }
         break;
       }
       case "bathtub":
-        this.box(c, f.points, lift(0.25), "#f4f6f8", "#dfe5ea", { edge: "#ffffff" });
+        this.box(c, f.points, lift(0.25), shade.base, shade.dark, { edge: shade.lighter });
         rect(c, bx + 3, by - lift(0.25) + 3, bw - 6, bh - 6, "#8fd0ea");
         rect(c, bx + 3, by - lift(0.25) + 3, bw - 6, 1, "#b9e4f3");
         break;
       case "shower":
-        this.box(c, f.points, lift(0.45), "rgba(190,230,245,.55)", "rgba(160,205,225,.6)", { edge: "#e6f6fc" });
+        this.box(c, f.points, lift(0.45), "rgba(190,230,245,.55)", "rgba(160,205,225,.6)", { edge: shade.base });
         break;
       case "toilet":
-        this.box(c, f.points, lift(0.2), "#f4f6f8", "#dfe5ea", { edge: "#ffffff" });
+        this.box(c, f.points, lift(0.2), shade.base, shade.dark, { edge: shade.lighter });
         disc(c, bx + bw / 2, by + bh / 2 - lift(0.2), Math.max(2, Math.round(Math.min(bw, bh) / 2) - 3), "#cfd8de");
         break;
       case "washbasin": {
         const h = lift(0.28);
-        this.box(c, f.points, h, "#f4f6f8", "#8f6a42", { edge: "#ffffff" });
-        const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+        this.box(c, f.points, h, shade.base, "#8f6a42", { edge: shade.lighter });
         rect(c, cx - 5, cy - h - 3, 10, 6, "#cfd8de");
         rect(c, cx - 1, cy - h - 6, 2, 3, "#c0c6cc");
         break;
       }
       case "washer": {
         const h = lift(0.28);
-        this.box(c, f.points, h, "#eef0f2", "#e1e4e8", { edge: "#ffffff" });
-        const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.lighter });
         disc(c, cx, cy - h, Math.max(2, Math.round(Math.min(bw, bh) / 2) - 3), "#7f8a96");
         disc(c, cx, cy - h, Math.max(1, Math.round(Math.min(bw, bh) / 2) - 5), "#b9d7ea");
         break;
       }
       case "plant": {
-        const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
         const r = Math.max(3, Math.round(Math.min(bw, bh) / 2));
         rect(c, cx - r / 2 + 1, cy - 2, r, 4, "rgba(0,0,0,.3)");
-        rect(c, cx - r / 2, cy - 6, r, 6, "#b5653a");
-        rect(c, cx - r / 2, cy - 6, r, 1, "#d07a4a");
+        rect(c, cx - r / 2, cy - 6, r, 6, shade.base);
+        rect(c, cx - r / 2, cy - 6, r, 1, shade.light);
         disc(c, cx, cy - 10, r, "#2f7a3a");
         disc(c, cx - 2, cy - 12, Math.max(2, r - 3), "#4aa04e");
         rect(c, cx - 2, cy - 14, 1, 1, "#7cd06e");
@@ -849,26 +842,196 @@ export class Scene {
         this.path(c, f.points, h);
         c.save();
         c.clip();
-        c.fillStyle = "#e8dcc4";
+        c.fillStyle = shade.base;
         c.fillRect(bx + 3, by - h + 3, bw - 6, bh - 6);
         c.restore();
         break;
       }
       case "garden_table": {
         const h = lift(0.28);
-        if (round) this.disc3(c, f, h, "#6e5e4e", "#a89480", "#bfae98");
-        else this.box(c, f.points, h, "#a89480", "#8c7a66", { edge: "#bfae98" });
+        if (round) this.disc3(c, f, h, shade.dark, shade.base, shade.light);
+        else this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
         break;
       }
       case "bench": {
         const h = lift(0.22);
-        this.box(c, f.points, h, "#9a6a40", "#7a5030", { edge: "#b8844f" });
-        if (bw >= bh) for (let y = by - h + 3; y < by + bh - h - 1; y += 3) rect(c, bx + 1, y, bw - 2, 1, "#7a5030");
-        else for (let x = bx + 3; x < bx + bw - 1; x += 3) rect(c, x, by - h + 1, 1, bh - 2, "#7a5030");
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
+        if (bw >= bh) for (let y = by - h + 3; y < by + bh - h - 1; y += 3) rect(c, bx + 1, y, bw - 2, 1, shade.dark);
+        else for (let x = bx + 3; x < bx + bw - 1; x += 3) rect(c, x, by - h + 1, 1, bh - 2, shade.dark);
         break;
       }
+      case "fireplace": {
+        // Stone, with a fire flickering in its opening.
+        const h = lift(0.5);
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light, base: shade.darker });
+        for (let y = by + bh - h + 2; y < by + bh - 2; y += 4) for (let x = bx + ((y / 4) % 2) * 3; x < bx + bw; x += 6) rect(c, x, y, 1, 3, shade.darker);
+        const w = Math.max(6, Math.round(bw * 0.5));
+        const ox = bx + Math.round((bw - w) / 2);
+        const oy = by + bh - Math.round(h * 0.7);
+        rect(c, ox, oy, w, Math.round(h * 0.7) - 1, "#1a1210");
+        for (let i = 0; i < w - 2; i += 2) {
+          const flame = 2 + Math.round((Math.sin(time * 9 + i * 1.7) * 0.5 + 0.5) * Math.max(2, h * 0.4));
+          rect(c, ox + 1 + i, oy + Math.round(h * 0.7) - 2 - flame, 2, flame, i % 4 ? "#f2a33a" : "#e0392f");
+          rect(c, ox + 1 + i, oy + Math.round(h * 0.7) - 2 - Math.round(flame / 2), 1, Math.round(flame / 2), "#ffe08a");
+        }
+        break;
+      }
+      case "piano": {
+        const h = lift(0.38);
+        this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.lighter });
+        if (bw >= bh) {
+          const ky = by + bh - Math.round(h * 0.55);
+          rect(c, bx + 2, ky, bw - 4, 3, "#f4f4f0");
+          for (let x = bx + 3; x < bx + bw - 3; x += 3) if (x % 7 !== 0) rect(c, x, ky, 1, 2, "#1a1a1a");
+        }
+        break;
+      }
+      case "aquarium": {
+        // A glass tank of water with fish going to and fro.
+        const h = lift(0.4);
+        this.box(c, f.points, h, tone(main, 0.3), shade.base, { edge: "#e6f6fc", base: "#3a3a40" });
+        const front = by + bh - h;
+        for (let i = 0; i < 4; i++) {
+          const k = (Math.sin(time * (0.6 + i * 0.2) + i * 2) + 1) / 2;
+          const fx = bx + 2 + Math.round(k * (bw - 6));
+          const fy = front + 2 + ((i * 5) % Math.max(3, h - 5));
+          rect(c, fx, fy, 3, 2, ["#f2a33a", "#e8505b", "#f5d34a", "#ffffff"][i]);
+        }
+        for (let x = bx + 3; x < bx + bw - 3; x += 7) rect(c, x, by + bh - 4, 2, 3, "#3f8a3e");
+        break;
+      }
+      case "cat_tree": {
+        // A post with platforms at three heights.
+        const post = Math.max(3, Math.round(Math.min(bw, bh) * 0.25));
+        const top = lift(0.75);
+        rect(c, cx - post / 2 + 2, cy + 1, post + 2, 2, "rgba(0,0,0,.3)");
+        rect(c, cx - post / 2, cy - top, post, top, "#b8a07a");
+        for (let y = cy - top; y < cy; y += 3) rect(c, cx - post / 2, y, post, 1, "#9a8460");
+        for (const [k, size] of [[0.15, 1], [0.5, 0.75], [0.9, 0.6]] as [number, number][]) {
+          const w = Math.max(6, Math.round(bw * size));
+          const y = cy - Math.round(top * k);
+          rect(c, cx - w / 2, y - 3, w, 4, shade.base);
+          rect(c, cx - w / 2, y - 3, w, 1, shade.light);
+          rect(c, cx - w / 2, y + 1, w, 1, shade.darker);
+        }
+        break;
+      }
+      case "pet_bed": {
+        const r = Math.max(4, Math.round(Math.min(bw, bh) / 2));
+        disc(c, cx + 1, cy + 1, r, "rgba(0,0,0,.25)");
+        disc(c, cx, cy - 1, r, shade.dark);
+        disc(c, cx, cy - 1, Math.max(2, r - 3), shade.light);
+        break;
+      }
+      case "pouf": {
+        const h = lift(0.15);
+        if (round) this.disc3(c, f, h, shade.darker, shade.base, shade.light);
+        else this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
+        break;
+      }
+      case "barbecue": {
+        const h = lift(0.35);
+        rect(c, bx + 1, by + bh - 2, bw, 2, "rgba(0,0,0,.25)");
+        for (const x of [bx + 2, bx + bw - 3]) rect(c, x, by + bh - h, 1, h, "#3a3a40");
+        disc(c, cx, by + bh - h - 2, Math.max(3, Math.round(Math.min(bw, bh) / 2)), shade.base);
+        disc(c, cx - 1, by + bh - h - 3, Math.max(1, Math.round(Math.min(bw, bh) / 2) - 3), shade.lighter);
+        for (let k = 0; k < 2; k++) {
+          const rise = ((time * 0.6 + k * 0.5) % 1) * 12;
+          rect(c, cx - 1 + Math.round(Math.sin(time * 2 + k) * 2), by + bh - h - 6 - Math.round(rise), 2, 2, `rgba(220,220,220,${(0.6 * (1 - rise / 12)).toFixed(2)})`);
+        }
+        break;
+      }
+      case "swing": {
+        // A frame with two posts and a beam, a seat swinging under it.
+        const h = lift(1.2);
+        const across = bw >= bh;
+        rect(c, bx + 2, by + bh - 1, bw - 2, 2, "rgba(0,0,0,.25)");
+        if (across) {
+          rect(c, bx, by + bh - h, 2, h, shade.base);
+          rect(c, bx + bw - 2, by + bh - h, 2, h, shade.base);
+          rect(c, bx, by + bh - h, bw, 2, shade.light);
+          const sway = Math.round(Math.sin(time * 1.6) * 3);
+          const sx = bx + Math.round(bw / 2) - 5 + sway;
+          rect(c, sx, by + bh - h + 2, 1, h - 8, "#bcbcbc");
+          rect(c, sx + 9, by + bh - h + 2, 1, h - 8, "#bcbcbc");
+          rect(c, sx, by + bh - 7, 10, 2, shade.dark);
+        } else {
+          rect(c, bx + Math.round(bw / 2) - 1, by - h + bh, 2, h, shade.base);
+          rect(c, bx + Math.round(bw / 2) - 1, by + bh - h, 2, bh, shade.light);
+        }
+        break;
+      }
+      case "sandbox": {
+        const h = lift(0.12);
+        this.box(c, f.points, h, "#e8d49a", shade.base, { edge: shade.light });
+        rect(c, bx + 2, by - h + 2, bw - 4, 1, shade.base);
+        rect(c, bx + 2, by + bh - h - 3, bw - 4, 1, shade.base);
+        for (let i = 0; i < 12; i++) rect(c, bx + 3 + Math.floor(hash(i, bx, 2) * (bw - 6)), by - h + 3 + Math.floor(hash(i, by, 3) * (bh - 6)), 1, 1, "#d4be82");
+        rect(c, cx, cy - h - 2, 3, 3, "#e8505b");
+        break;
+      }
+      case "pool": {
+        // Water inside a light rim, with ripples.
+        if (round) {
+          const r = Math.max(4, Math.round(Math.min(bw, bh) / 2));
+          disc(c, cx, cy, r, "#d8d2c6");
+          disc(c, cx, cy, r - 3, shade.base);
+        } else {
+          this.path(c, f.points);
+          c.fillStyle = "#d8d2c6";
+          c.fill();
+          rect(c, bx + 3, by + 3, bw - 6, bh - 6, shade.base);
+        }
+        for (let i = 0; i < 14; i++) {
+          const x = bx + 4 + Math.floor(hash(i, bx, 4) * Math.max(1, bw - 10)) + Math.round(Math.sin(time + i) * 2);
+          const y = by + 4 + Math.floor(hash(i, by, 5) * Math.max(1, bh - 8));
+          rect(c, x, y, 3, 1, shade.lighter);
+        }
+        break;
+      }
+      case "fire_pit": {
+        const r = Math.max(4, Math.round(Math.min(bw, bh) / 2));
+        disc(c, cx, cy, r, shade.base);
+        disc(c, cx, cy, Math.max(2, r - 3), "#2a2220");
+        for (let i = 0; i < 4; i++) {
+          const flame = 3 + Math.round((Math.sin(time * 8 + i * 2) * 0.5 + 0.5) * 5);
+          rect(c, cx - 3 + i * 2, cy - flame, 2, flame, i % 2 ? "#f2a33a" : "#e0392f");
+        }
+        break;
+      }
+      case "rug":
+        // Flat on the floor: drawn with the floor by drawRug.
+        break;
       default:
-        this.box(c, f.points, lift(0.25), "#946645", "#7a5236", { edge: "#a8774f" });
+        this.box(c, f.points, lift(0.25), shade.base, shade.dark, { edge: shade.light });
+    }
+  }
+
+  /** A rug lying flat on the floor, under everything else: a border, a field and a fringe. */
+  drawRug(c: CanvasRenderingContext2D, f: Furniture): void {
+    const main = f.item.colour ?? FURNITURE_COLOURS.rug;
+    const [bx, by, bw, bh] = this.pxBox(f.box);
+    if (f.item.center) {
+      const [cx, cy] = this.px(f.item.center);
+      const r = Math.max(3, Math.round(Math.min(bw, bh) / 2));
+      disc(c, cx, cy, r, tone(main, -0.3));
+      disc(c, cx, cy, Math.max(1, r - 2), main);
+      disc(c, cx, cy, Math.max(1, r - 5), tone(main, 0.2));
+      disc(c, cx, cy, Math.max(1, r - 7), main);
+      return;
+    }
+    c.save();
+    this.path(c, f.points);
+    c.clip();
+    rect(c, bx, by, bw, bh, tone(main, -0.3));
+    rect(c, bx + 2, by + 2, bw - 4, bh - 4, main);
+    rect(c, bx + 4, by + 4, bw - 8, bh - 8, tone(main, 0.25));
+    rect(c, bx + 5, by + 5, bw - 10, bh - 10, main);
+    for (let x = bx + 8; x < bx + bw - 8; x += 6) for (let y = by + 8; y < by + bh - 8; y += 6) rect(c, x, y, 2, 2, tone(main, (x + y) % 12 ? 0.2 : -0.2));
+    c.restore();
+    for (let x = bx + 1; x < bx + bw - 1; x += 2) {
+      rect(c, x, by - 1, 1, 1, tone(main, 0.45));
+      rect(c, x, by + bh, 1, 1, tone(main, 0.45));
     }
   }
 
@@ -890,9 +1053,8 @@ export class Scene {
    * the long side farther from the middle of the room. A corner sofa is cut into its two arms; their
    * backrests run along the outer sides of the corner and the armrests close their free ends.
    */
-  private drawSofa(c: CanvasRenderingContext2D, f: Furniture): void {
+  private drawSofa(c: CanvasRenderingContext2D, f: Furniture, fabric: { seat: string; side: string; light: string; dark: string; base: string }): void {
     const P = PPM;
-    const fabric = { seat: "#c0564b", side: "#a8473d", light: "#cf6f62", dark: "#8c3b35", base: "#7a332e" };
     const [x0, y0, x1, y1] = f.box;
     const armchair = x1 - x0 < 1.2 && y1 - y0 < 1.2;
     const backDepth = Math.min(0.22, (Math.min(x1 - x0, y1 - y0)) * 0.3);

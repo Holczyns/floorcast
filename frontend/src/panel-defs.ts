@@ -230,6 +230,18 @@ export const FURNITURE_LABELS: Record<FurnitureKind, string> = {
   garden_sofa: N_("Garden sofa"),
   garden_table: N_("Garden table"),
   bench: N_("Bench"),
+  rug: N_("Rug"),
+  fireplace: N_("Fireplace"),
+  piano: N_("Piano"),
+  aquarium: N_("Aquarium"),
+  cat_tree: N_("Cat tree"),
+  pet_bed: N_("Pet bed"),
+  pouf: N_("Pouf"),
+  barbecue: N_("Barbecue"),
+  swing: N_("Swing"),
+  sandbox: N_("Sandbox"),
+  pool: N_("Pool"),
+  fire_pit: N_("Fire pit"),
 };
 
 /** Names of the floors of the pixel look. */

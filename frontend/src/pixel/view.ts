@@ -307,6 +307,8 @@ class LevelPicture {
     c.imageSmoothingEnabled = false;
     c.clearRect(0, 0, s.width, s.height);
     c.drawImage(s.base, 0, 0);
+    // Rugs lie flat on the floor, under everything standing on it.
+    for (const f of s.furniture) if (f.kind === "rug") s.drawRug(c, f);
     const cell = Math.ceil(WET_CELL * PPM);
     for (let k = 0; k < this.wet.length; k++) {
       if (this.wet[k] < 0.02) continue;
@@ -322,7 +324,7 @@ class LevelPicture {
       const open = this.doorOpen(hass, d);
       items.push({ y: s.px([0, d.box[3]])[1] + 0.1, draw: () => this.drawDoor(c, d, open) });
     }
-    for (const f of s.furniture) items.push({ y: s.px([0, f.box[3]])[1] + 0.5, draw: () => s.drawFurniture(c, f) });
+    for (const f of s.furniture) if (f.kind !== "rug") items.push({ y: s.px([0, f.box[3]])[1] + 0.5, draw: () => s.drawFurniture(c, f) });
     for (const g of s.garden) if (STANDING_GARDEN.has(g.item.type)) items.push({ y: s.px([0, g.box[3]])[1] + 0.5, draw: () => s.drawGardenObject(c, g) });
     for (const device of s.level.devices ?? []) {
       if (device.kind !== "vacuum" && device.kind !== "mower") continue;

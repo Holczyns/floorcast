@@ -52,6 +52,18 @@
         throw new Error("no plan");
       };
       let plan = await loadPlan();
+      // ?catalog: a few pieces of the furniture catalog on the first level, to see them drawn.
+      if (params.has("catalog"))
+        plan.levels[0].items.push(
+          { id: "cat_rug", type: "obstacle", furniture: "rug", rect: [-4.7, 13.4, 1.5, 1.1], rotation: 0 },
+          { id: "cat_pool", type: "obstacle", furniture: "pool", rect: [-5.6, 23.5, 3, 1.6], rotation: 0 },
+          { id: "cat_swing", type: "obstacle", furniture: "swing", rect: [-7.6, 27, 1.8, 0.6], rotation: 0 },
+          { id: "cat_sand", type: "obstacle", furniture: "sandbox", rect: [-3.6, 27.4, 1.4, 1.4], rotation: 0 },
+          { id: "cat_fire", type: "round_obstacle", furniture: "fire_pit", center: [-6.2, 21.2], diameter: 1 },
+          { id: "cat_bbq", type: "obstacle", furniture: "barbecue", rect: [-1.6, 20.2, 0.6, 0.5], rotation: 0 },
+          { id: "cat_tree", type: "obstacle", furniture: "cat_tree", rect: [-3.1, 11.0, 0.5, 0.5], rotation: 0 },
+          { id: "cat_aqua", type: "obstacle", furniture: "aquarium", rect: [-4.4, 10.95, 1.0, 0.4], rotation: 0, colour: "#2f6fb0" },
+        );
       // ?trees: three trees in the garden of the first level, to see them drawn.
       if (params.has("trees"))
         plan.levels[0].items.push(

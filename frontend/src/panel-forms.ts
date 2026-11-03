@@ -52,7 +52,7 @@ import {
   wallLength,
 } from "./model";
 import { planPalette, DARK_PALETTE, LIGHT_PALETTE, PALETTE_GROUPS } from "./render";
-import { guessFurniture } from "./pixel/furniture";
+import { FURNITURE_COLOURS, furnitureOf, guessFurniture } from "./pixel/furniture";
 import {
   DEVICE_LABELS,
   Registry,
@@ -1067,7 +1067,18 @@ export function itemProperties(p: FloorCastPanel, item?: Item) {
           </label>
           <p class="muted">
             ${t("For the pixel look of the card. A narrow sofa shows as an armchair, an L-shaped one as a corner sofa, kitchen units along two walls as a corner kitchen.")}
-          </p>`
+          </p>
+          <div class="row">
+            <label class="field">
+              <span>${t("Main colour")}</span>
+              <input
+                type="color"
+                .value=${item.colour ?? FURNITURE_COLOURS[furnitureOf(item, p.level)]}
+                @change=${(e: Event) => p.change(() => (item.colour = (e.target as HTMLInputElement).value))}
+              />
+            </label>
+            <button class="small" ?disabled=${!item.colour} @click=${() => p.change(() => delete item.colour)}>${t("Default colour")}</button>
+          </div>`
       : nothing}
     ${text(p, t("Name"), item.name ?? "", (v) => (item.name = v || undefined))}
     ${item.center

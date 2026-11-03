@@ -3,6 +3,43 @@
 import { type FurnitureKind, type Item, type Level, itemPoints, pointInPolygon } from "../model";
 import { roomKind } from "./art";
 
+/** The colour each piece of furniture has unless one is chosen for it. */
+export const FURNITURE_COLOURS: Record<FurnitureKind, string> = {
+  sofa: "#c0564b",
+  bed: "#5b7fbf",
+  wardrobe: "#8a5d3b",
+  shelf: "#6e4a30",
+  kitchen: "#6f87a3",
+  fridge: "#f2f4f6",
+  table: "#7c4f2c",
+  chair: "#6a4226",
+  desk: "#b58a5a",
+  tvstand: "#4a3a30",
+  dresser: "#946645",
+  nightstand: "#946645",
+  bathtub: "#f4f6f8",
+  shower: "#e6f6fc",
+  toilet: "#f4f6f8",
+  washbasin: "#f4f6f8",
+  washer: "#eef0f2",
+  plant: "#b5653a",
+  garden_sofa: "#e8dcc4",
+  garden_table: "#a89480",
+  bench: "#9a6a40",
+  rug: "#b8463e",
+  fireplace: "#9a8f86",
+  piano: "#26262c",
+  aquarium: "#3f8fc4",
+  cat_tree: "#d8c4a0",
+  pet_bed: "#7d5aa6",
+  pouf: "#c49a5a",
+  barbecue: "#2a2c31",
+  swing: "#9a6a40",
+  sandbox: "#9a6a40",
+  pool: "#4aa3d8",
+  fire_pit: "#7a7570",
+};
+
 export function furnitureOf(item: Item, level: Level): FurnitureKind {
   return item.furniture ?? guessFurniture(item, level);
 }

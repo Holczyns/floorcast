@@ -12,6 +12,16 @@ export function hash(x: number, y: number, s = 0): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
+/** A colour made lighter (amount above 0) or darker (below 0), as a share of the way to white or black. */
+export function tone(hex: string, amount: number): string {
+  const value = parseInt(hex.replace("#", "").padEnd(6, "0").slice(0, 6), 16);
+  const channel = (shift: number) => {
+    const v = (value >> shift) & 255;
+    return Math.round(amount >= 0 ? v + (255 - v) * amount : v * (1 + amount));
+  };
+  return `rgb(${channel(16)},${channel(8)},${channel(0)})`;
+}
+
 export function rect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, colour: string): void {
   c.fillStyle = colour;
   c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));

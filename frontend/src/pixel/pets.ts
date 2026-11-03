@@ -11,8 +11,10 @@ import { Grid } from "./grid";
 import type { Furniture, Scene } from "./scene";
 
 const SLOT = 40;
-// Pets climb onto these; the rest of the furniture they walk round.
-const CLIMB = new Set<FurnitureKind>(["sofa", "bed", "chair", "bench", "garden_sofa"]);
+// Pets climb onto these or lie on them; the rest of the furniture they walk round.
+const CLIMB = new Set<FurnitureKind>(["sofa", "bed", "chair", "bench", "garden_sofa", "rug", "cat_tree", "pet_bed", "pouf"]);
+// A dog lies on these themselves, not on the floor in front of them.
+const DOG_BEDS = new Set<FurnitureKind>(["rug", "pet_bed"]);
 const LOW_GARDEN = new Set(["lawn", "paving", "terrace", "bed", "vegetable", "manhole"]);
 
 export type PetState = "walk" | "run" | "stalk" | "sleep" | "sit" | "wash" | "crouch" | "pounce" | "play" | "carry";
@@ -107,7 +109,7 @@ export class PetLife {
       for (let d = 0.35; d < length - 0.2; d += 0.6) {
         const at: Point = wide ? [x0 + d, (y0 + y1) / 2] : [(x0 + x1) / 2, y0 + d];
         if (!pointInPolygon(at, f.points)) continue;
-        if (dog) {
+        if (dog && !DOG_BEDS.has(f.kind)) {
           // A dog lies on the floor in front of the sofa or the bed.
           const front: Point = wide ? [at[0], y1 + 0.35] : [x1 + 0.35, at[1]];
           if (this.grid.isOpen(front)) this.rest.push({ at: front, kind: "rest" });

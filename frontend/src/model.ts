@@ -161,6 +161,8 @@ export interface Item {
   corners?: "round" | "square";
   /** Obstacle: the piece of furniture it is, for the pixel look; guessed from its room and size without it. */
   furniture?: FurnitureKind;
+  /** Obstacle: the main colour of the piece in the pixel look (fabric, fronts, wood); its own colour without it. */
+  colour?: string;
 }
 
 /**
@@ -188,7 +190,19 @@ export type FurnitureKind =
   | "plant"
   | "garden_sofa"
   | "garden_table"
-  | "bench";
+  | "bench"
+  | "rug"
+  | "fireplace"
+  | "piano"
+  | "aquarium"
+  | "cat_tree"
+  | "pet_bed"
+  | "pouf"
+  | "barbecue"
+  | "swing"
+  | "sandbox"
+  | "pool"
+  | "fire_pit";
 
 export const FURNITURE_KINDS: FurnitureKind[] = [
   "sofa",
@@ -212,6 +226,18 @@ export const FURNITURE_KINDS: FurnitureKind[] = [
   "garden_sofa",
   "garden_table",
   "bench",
+  "rug",
+  "fireplace",
+  "piano",
+  "aquarium",
+  "cat_tree",
+  "pet_bed",
+  "pouf",
+  "barbecue",
+  "swing",
+  "sandbox",
+  "pool",
+  "fire_pit",
 ];
 
 /**
