@@ -59,7 +59,8 @@ interface Drop {
   splash: boolean;
 }
 
-const NIGHT: [number, number, number] = [0.13, 0.15, 0.31];
+// Night with every light off: dim and blue, but the house still reads.
+const NIGHT: [number, number, number] = [0.34, 0.36, 0.52];
 const DUSK: [number, number, number] = [1, 0.8, 0.62];
 const FRAME_MS = 33;
 const GRAVITY = 9.8;

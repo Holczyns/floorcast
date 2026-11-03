@@ -534,9 +534,17 @@ export class Scene {
    * A box seen at three quarters: its top lifted by lift pixels and a front on the edges facing the viewer.
    */
   box(c: CanvasRenderingContext2D, points: Point[], lift: number, top: string, front: string, extra: { edge?: string; handles?: string; base?: string } = {}): void {
+    // A shadow round its foot and a dark outline keep it apart from a floor of the same colour.
+    c.save();
+    c.translate(2, 1);
+    this.path(c, points, 0);
+    c.fillStyle = "rgba(0,0,0,.3)";
+    c.fill();
+    c.restore();
     this.path(c, points, lift);
     c.fillStyle = top;
     c.fill();
+    const fronts: [number, number, number, number][] = [];
     for (let i = 0; i < points.length; i++) {
       const a = points[i];
       const b = points[(i + 1) % points.length];
@@ -550,7 +558,16 @@ export class Scene {
       if (extra.edge) rect(c, x, y - lift, w, 1, extra.edge);
       if (extra.handles) for (let hx = x + 6; hx < x + w - 3; hx += Math.max(8, Math.round(0.6 * PPM))) rect(c, hx, y - Math.ceil(lift * 0.6), 2, 1, extra.handles);
       if (extra.base) rect(c, x, y - 1, w, 1, extra.base);
+      fronts.push([x, y - lift, w, lift]);
     }
+    c.save();
+    c.translate(0.5, 0.5);
+    c.lineWidth = 1;
+    c.strokeStyle = "rgba(30,20,14,.6)";
+    this.path(c, points, lift);
+    c.stroke();
+    for (const [x, y, w, h] of fronts) if (h > 1) c.strokeRect(x, y, w - 1, h - 1);
+    c.restore();
   }
 
   drawFurniture(c: CanvasRenderingContext2D, f: Furniture): void {
@@ -632,23 +649,25 @@ export class Scene {
         break;
       case "table": {
         const h = lift(0.3);
-        this.box(c, f.points, h, "#a8784a", "#80592f", { edge: "#c08d5c" });
+        this.box(c, f.points, h, "#7c4f2c", "#5c3920", { edge: "#94633b" });
         const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
         disc(c, cx, cy - h, 3, "#f2efe6");
         rect(c, cx - 1, cy - h - 2, 2, 2, "#e8505b");
         break;
       }
       case "chair":
-        this.box(c, f.points, lift(0.18), "#9a6a40", "#7a5030", { edge: "#b4824f" });
+        this.box(c, f.points, lift(0.18), "#6a4226", "#4f301b", { edge: "#80522f" });
         break;
       case "roundtable": {
         const centre = f.item.center ?? ([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2] as Point);
         const [cx, cy] = this.px(centre);
         const r = Math.round(((f.item.diameter ?? f.box[2] - f.box[0]) / 2) * P);
         const h = lift(0.2);
-        disc(c, cx, cy, r, "#6b4529");
-        disc(c, cx, cy - h, r, "#8b5e3c");
-        disc(c, cx - 2, cy - h - 2, Math.max(1, r - 5), "#a5744d");
+        disc(c, cx + 2, cy + 1, r, "rgba(0,0,0,.3)");
+        disc(c, cx, cy, r, "#4f301b");
+        disc(c, cx, cy - h, r + 1, "#2e1d12");
+        disc(c, cx, cy - h, r, "#6e4528");
+        disc(c, cx - 2, cy - h - 2, Math.max(1, r - 5), "#86573a");
         break;
       }
       case "bathtub":
