@@ -258,9 +258,24 @@ class LevelPicture {
     }
     for (const d of s.doors) this.drawDoor(c, d, this.doorOpen(hass, d));
 
+    // Things standing up stand on the floor as it shows below the wall faces, one face lower than their
+    // place on the plan. Wall tops take part in the order: a thing in front of a wall covers only its face,
+    // one behind it goes under its top.
+    const lower = Math.round(FACE * PPM);
+    const standing = (draw: () => void) => () => {
+      c.save();
+      c.translate(0, lower);
+      draw();
+      c.restore();
+    };
     const items: { y: number; draw: () => void }[] = [];
-    for (const f of s.furniture) items.push({ y: s.px([0, f.box[3]])[1], draw: () => s.drawFurniture(c, f) });
-    for (const g of s.garden) if (STANDING_GARDEN.has(g.item.type)) items.push({ y: s.px([0, g.box[3]])[1], draw: () => s.drawGardenObject(c, g) });
+    for (const piece of s.pieces) {
+      if (!piece.horizontal || piece.kind === "door") continue;
+      const [x, y, w, h] = s.pxBox(piece.box);
+      items.push({ y: y + h, draw: () => c.drawImage(s.base, x, y, w, h, x, y, w, h) });
+    }
+    for (const f of s.furniture) items.push({ y: s.px([0, f.box[3]])[1] + 0.5, draw: standing(() => s.drawFurniture(c, f)) });
+    for (const g of s.garden) if (STANDING_GARDEN.has(g.item.type)) items.push({ y: s.px([0, g.box[3]])[1] + 0.5, draw: standing(() => s.drawGardenObject(c, g)) });
     for (const device of s.level.devices ?? []) {
       if (device.kind !== "vacuum" && device.kind !== "mower") continue;
       const place = source.robot(device.id);
@@ -268,15 +283,15 @@ class LevelPicture {
       const at = place?.at ?? (device.kind === "vacuum" ? place?.dock : undefined);
       if (!at) continue;
       const [x, y] = s.px(at);
-      items.push({ y, draw: () => (device.kind === "vacuum" ? vacuum(c, x, y, state, time) : mower(c, x, y, place?.heading, state)) });
+      items.push({ y: y + 0.5, draw: standing(() => (device.kind === "vacuum" ? vacuum(c, x, y, state, time) : mower(c, x, y, place?.heading, state))) });
     }
     for (const w of this.walkers.values()) {
       const [x, y] = s.px([w.x, w.y]);
-      items.push({ y, draw: () => person(c, x, y, w.facing, w.moving ? Math.floor(time * 8) : 0, w.outfit) });
+      items.push({ y: y + 0.5, draw: standing(() => person(c, x, y, w.facing, w.moving ? Math.floor(time * 8) : 0, w.outfit)) });
     }
     items.sort((a, b) => a.y - b.y);
     for (const item of items) item.draw();
-    for (const g of s.garden) if (g.item.type === "shelter") s.drawGardenObject(c, g);
+    for (const g of s.garden) if (g.item.type === "shelter") standing(() => s.drawGardenObject(c, g))();
     for (const d of this.drops) {
       const [x, y] = s.px([d.x, d.y]);
       drop(c, x, y, Math.round(d.z * PPM * 0.6), d.splash);

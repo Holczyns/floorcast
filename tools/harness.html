@@ -505,6 +505,8 @@
         plan = await loadPlan();
         listeners.forEach((callback) => callback({ plan: structuredClone(plan) }));
       });
+      // ?pixels: the editor starts with its pixel look on.
+      if (params.has("pixels")) localStorage.setItem("floorcast-editor-pixels", "1");
       const mode = params.get("mode") ?? "card";
       const root = document.getElementById("root");
       if (mode === "panel") {

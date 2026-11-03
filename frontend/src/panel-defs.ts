@@ -19,6 +19,7 @@ export type Mode = "plan" | "devices" | "people" | "settings";
 /** How far the pointer moves before a press is a drag and not a click, in pixels. */
 export const DRAG_PX = 8;
 export const LOCK_KEY = "floorcast-editor-lock";
+export const PIXEL_KEY = "floorcast-editor-pixels";
 export const LAYERS_KEY = "floorcast-editor-hidden";
 export type Layer = "devices" | "zones" | "names";
 /** Tools that draw the layout, off while it is locked. */

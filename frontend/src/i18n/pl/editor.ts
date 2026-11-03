@@ -170,6 +170,8 @@ const editor: Dictionary = {
   "New wall": "Nowa ściana",
   "Add wall type": "Dodaj typ ściany",
   "Rounded corners": "Zaokrąglone narożniki",
+  "Pixels": "Piksele",
+  "Show the plan in the pixel look of the card": "Pokaż plan w wyglądzie pikselowym karty",
   "Top of the plan faces (°)": "Góra planu skierowana na (°)",
   "Compass bearing of the top of the plan: 0 north, 90 east. The sun of the pixel look follows it.": "Kierunek góry planu według kompasu: 0 to północ, 90 wschód. Według niego świeci słońce w widoku pikselowym.",
   "Plan file": "Plik planu",

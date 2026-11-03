@@ -514,11 +514,12 @@ export class Scene {
     for (let y = 0; y < this.height; y++)
       for (let x = 0; x < this.width; x++) {
         if (!at(x, y)) continue;
-        let colour: [number, number, number] = [59, 51, 66];
-        if (!at(x, y - 1)) colour = [90, 80, 100];
-        else if (!at(x - 1, y)) colour = [77, 69, 86];
-        else if (!at(x + 1, y) || !at(x, y + 1)) colour = [44, 38, 50];
-        else if (hash(x, y, 5) < 0.04) colour = [68, 59, 76];
+        // Light enough to stand out on a dark card, with a bright upper rim so the back wall reads too.
+        let colour: [number, number, number] = [104, 94, 112];
+        if (!at(x, y - 1) || !at(x, y - 2)) colour = [196, 186, 204];
+        else if (!at(x - 1, y)) colour = [150, 140, 158];
+        else if (!at(x + 1, y) || !at(x, y + 1)) colour = [64, 56, 72];
+        else if (hash(x, y, 5) < 0.05) colour = [118, 108, 126];
         const i = (y * this.width + x) * 4;
         d[i] = colour[0];
         d[i + 1] = colour[1];

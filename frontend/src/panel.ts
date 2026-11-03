@@ -4,6 +4,7 @@ import { LitElement, html, nothing, svg, type PropertyValues } from "lit";
 import "./entity-picker";
 import "./guide";
 import { GroundFeed } from "./ground";
+import { PixelView } from "./pixel/view";
 import { N_, pickLanguage, t, useDictionary } from "./i18n";
 import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
 import examplePlan from "../../tools/example_plan.json";
@@ -96,6 +97,7 @@ import {
   Mode,
   DRAG_PX,
   LOCK_KEY,
+  PIXEL_KEY,
   LAYERS_KEY,
   Layer,
   LAYOUT_TOOLS,
@@ -156,6 +158,7 @@ export class FloorCastPanel extends LitElement {
     _saving: { state: true },
     _garden: { state: true },
     _live: { state: true },
+    _pixels: { state: true },
     _typed: { state: true },
     _lightShape: { state: true },
     _endsAlone: { state: true },
@@ -231,6 +234,14 @@ export class FloorCastPanel extends LitElement {
   private _garden = true;
   /** Live states of the entities drawn in the editor, as on the card. */
   private _live = true;
+  /** The pixel look of the card under the plan while editing. */
+  private _pixels = stored(PIXEL_KEY);
+  private _pixelView?: PixelView;
+  // The level drawn in pixels: taken anew a moment after the last change, not at every step of a drag.
+  private _pixelLevel?: Level;
+  private _pixelText = "";
+  private _pixelStamp = 0;
+  private _pixelTimer?: number;
   /** The Guide is shown in place of the plan; the plan and its unsaved changes stay as they are. */
   private _guide = false;
   private _drag?: Drag;
@@ -285,6 +296,55 @@ export class FloorCastPanel extends LitElement {
       );
       this._unsubscribePeople.catch(() => (this._people = undefined));
     }
+    if (this.isConnected) this.followPixels();
+  }
+
+  /** Pixel look: draws the shown level under the plan, again a moment after it changes. */
+  private followPixels(): void {
+    const element = this.renderRoot.querySelector<HTMLCanvasElement>("canvas.pixel-preview");
+    if (!this._pixels || !this._plan || !element) {
+      this._pixelView?.stop();
+      this._pixelView = undefined;
+      this._pixelLevel = undefined;
+      this._pixelText = "";
+      return;
+    }
+    const shown = this.shown;
+    const text = JSON.stringify(shown);
+    if (text !== this._pixelText) {
+      this._pixelText = text;
+      window.clearTimeout(this._pixelTimer);
+      const take = () => {
+        this._pixelLevel = structuredClone(this.shown);
+        this._pixelStamp++;
+      };
+      if (!this._pixelLevel || this._pixelLevel.id !== shown.id) take();
+      else
+        this._pixelTimer = window.setTimeout(() => {
+          take();
+          this.requestUpdate();
+        }, 400);
+    }
+    if (!this._pixelLevel) return;
+    this._pixelView ??= new PixelView({
+      // Without live states the house shows in daylight with its lights off.
+      hass: () => (this._live ? this.hass : { ...this.hass, states: {} }),
+      plan: () => this._plan,
+      people: (level) => (this._live ? (this._people?.[level.id] ?? []) : []),
+      robot: () => undefined,
+    });
+    this._pixelView.sync([{ canvas: element, level: this._pixelLevel, key: `${this._pixelLevel.id}|${this._pixelStamp}`, bounds: this.pixelBounds(element) }]);
+  }
+
+  /** The part of the plan the canvas shows: the view, widened to the shape of the canvas as the plan is. */
+  private pixelBounds(element: HTMLElement): { x: number; y: number; w: number; h: number } {
+    const v = this._view;
+    const width = Math.max(element.clientWidth, 1);
+    const height = Math.max(element.clientHeight, 1);
+    const scale = Math.min(width / v.w, height / v.h);
+    const w = width / scale;
+    const h = height / scale;
+    return { x: v.x - (w - v.w) / 2, y: v.y - (h - v.h) / 2, w, h };
   }
 
   connectedCallback(): void {
@@ -299,6 +359,8 @@ export class FloorCastPanel extends LitElement {
     this._unsubscribePeople = undefined;
     this._groundFeed.stop();
     this._groundPreview = new Set();
+    this._pixelView?.stop();
+    this._pixelView = undefined;
   }
 
   private async load(): Promise<void> {
@@ -1705,6 +1767,18 @@ export class FloorCastPanel extends LitElement {
             <span class="track"><span class="knob"></span></span>
             ${t("Live")}
           </label>
+          <label class="switch" title=${t("Show the plan in the pixel look of the card")}>
+            <input
+              type="checkbox"
+              .checked=${this._pixels}
+              @change=${() => {
+                this._pixels = !this._pixels;
+                store(PIXEL_KEY, this._pixels);
+              }}
+            />
+            <span class="track"><span class="knob"></span></span>
+            ${t("Pixels")}
+          </label>
           <span class="spacer"></span>
           ${this.renderFind()} ${this.renderLayers()}
           <button
@@ -1730,7 +1804,7 @@ export class FloorCastPanel extends LitElement {
       <div class="main">
         ${this._guide ? html`<floorcast-guide class="guide"></floorcast-guide>` : nothing}
         <div class="canvas" ?hidden=${this._guide}>
-          ${this.renderCanvas()} ${renderBigImage(this)} ${this.renderPlacing()} ${this.renderToast()} ${this.renderStart()}
+          ${this._pixels ? html`<canvas class="pixel-preview"></canvas>` : nothing} ${this.renderCanvas()} ${renderBigImage(this)} ${this.renderPlacing()} ${this.renderToast()} ${this.renderStart()}
           <div class="view-buttons">
             <button title=${t("Zoom in")} @click=${() => this.zoom(1 / 1.3)}>+</button>
             <button title=${t("Zoom out")} @click=${() => this.zoom(1.3)}>−</button>
@@ -1963,7 +2037,7 @@ export class FloorCastPanel extends LitElement {
     const level = this.level;
     const px = this.pixel();
     return html`<svg
-      class="plan mode-${this._mode} ${this._tool !== "select" ? "placing" : ""}"
+      class="plan mode-${this._mode} ${this._tool !== "select" ? "placing" : ""} ${this._pixels ? "pixel" : ""}"
       viewBox="${v.x} ${v.y} ${v.w} ${v.h}"
       @pointerdown=${this.onDown}
       @pointermove=${this.onMove}
@@ -1982,16 +2056,16 @@ export class FloorCastPanel extends LitElement {
           <path d="M1 0H0V1" fill="none" class="grid"></path>
         </pattern>
       </defs>
-      <rect x=${v.x} y=${v.y} width=${v.w} height=${v.h} fill="url(#fc-grid)"></rect>
+      ${this._pixels ? nothing : svg`<rect x=${v.x} y=${v.y} width=${v.w} height=${v.h} fill="url(#fc-grid)"></rect>`}
       ${renderLevel(
         this.shown,
         this._live ? this.hass.states : undefined,
         planRadius(this._plan),
-        this._live ? this.liveSprays() : nothing,
+        this._live && !this._pixels ? this.liveSprays() : nothing,
       )}
       ${this._groundPreview.size ? this._groundFeed.render(this.shown.id, undefined, this._groundPreview) : nothing}
-      ${this._live ? renderGlows(this.shown, this.hass.states, "editor") : nothing}
-      ${this._live ? renderScreenGlows(this.shown, this.hass.states, "editor") : nothing}
+      ${this._live && !this._pixels ? renderGlows(this.shown, this.hass.states, "editor") : nothing}
+      ${this._live && !this._pixels ? renderScreenGlows(this.shown, this.hass.states, "editor") : nothing}
       ${this._live ? renderOpeningLabels(this.shown, this.hass.states, px * 10) : nothing}
       ${this.shown.openings
         .filter((o) => o.lock)

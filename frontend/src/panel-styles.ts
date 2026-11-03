@@ -151,11 +151,37 @@ export const panelStyles = css`
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
       }
       svg.plan {
+        position: relative;
         width: 100%;
         height: 100%;
         display: block;
         touch-action: none;
         user-select: none;
+      }
+      /* Pixel look under the plan: the plan keeps thin outlines of what can be picked and moved. */
+      canvas.pixel-preview {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+      svg.plan.pixel .fc-floor,
+      svg.plan.pixel .fc-zone,
+      svg.plan.pixel .fc-item,
+      svg.plan.pixel .fc-wall,
+      svg.plan.pixel .fc-joint,
+      svg.plan.pixel .fc-fillet,
+      svg.plan.pixel .fc-stairs,
+      svg.plan.pixel .fc-trampoline-ring,
+      svg.plan.pixel .fc-trampoline-mat {
+        fill: transparent !important;
+        stroke: rgba(255, 255, 255, 0.28) !important;
+        stroke-width: 0.02px !important;
+      }
+      svg.plan.pixel .fc-gap {
+        stroke: transparent !important;
       }
       .tabs {
         display: flex;
