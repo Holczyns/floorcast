@@ -67,6 +67,37 @@ export function person(c: CanvasRenderingContext2D, x: number, y: number, facing
   }
 }
 
+/** A person sitting: the upper body over the seat, the legs hidden by it. */
+export function sitting(c: CanvasRenderingContext2D, x: number, y: number, facing: Facing, o: Outfit): void {
+  const by = y - 8;
+  rect(c, x - 4, by, 8, 6, o.shirt);
+  rect(c, x - 4, by + 5, 8, 1, o.shade);
+  rect(c, x - 5, by + 1, 1, 4, o.shirt);
+  rect(c, x + 4, by + 1, 1, 4, o.shirt);
+  const hy = by - 7;
+  rect(c, x - 3, hy + 1, 6, 6, o.skin);
+  if (facing === "up") rect(c, x - 3, hy, 6, 6, o.hair);
+  else {
+    rect(c, x - 3, hy, 6, 2, o.hair);
+    rect(c, x - 4, hy + 1, 1, o.long ? 6 : 3, o.hair);
+    rect(c, x + 3, hy + 1, 1, o.long ? 6 : 3, o.hair);
+    rect(c, x - 2, hy + 4, 1, 1, "#2a2a2e");
+    rect(c, x + 1, hy + 4, 1, 1, "#2a2a2e");
+  }
+}
+
+/** A person lying in bed: the head on the pillow side, a hump under the blanket. */
+export function lying(c: CanvasRenderingContext2D, x: number, y: number, o: Outfit): void {
+  rect(c, x - 3, y - 9, 6, 6, o.skin);
+  rect(c, x - 3, y - 10, 6, 3, o.hair);
+  if (o.long) rect(c, x - 4, y - 9, 1, 5, o.hair);
+  rect(c, x - 2, y - 6, 1, 1, "#2a2a2e");
+  rect(c, x + 1, y - 6, 1, 1, "#2a2a2e");
+  rect(c, x - 5, y - 3, 10, 8, "#5b7fbf");
+  rect(c, x - 5, y - 3, 10, 2, "#7d9bd2");
+  rect(c, x - 4, y + 1, 8, 3, "#4f72b0");
+}
+
 /** A robot vacuum; its light blinks blue while it cleans, green on the dock. */
 export function vacuum(c: CanvasRenderingContext2D, x: number, y: number, state: string | undefined, time: number): void {
   rect(c, x - 5, y + 3, 11, 2, "rgba(0,0,0,.25)");

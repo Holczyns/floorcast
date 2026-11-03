@@ -1,7 +1,8 @@
 // What a level looks like in the pixel look, worked out once from the plan: walls cut by their openings,
 // the base picture (ground, floors, wall faces, wall tops), furniture guessed from the obstacles and what
 // each light, window and screen can reach past the walls.
-import { type Device, type Item, type Level, type Opening, type Plan, type Point, type Room, deviceCentre, drawnBounds, itemPoints, pointInPolygon } from "../model";
+import { type Device, type FurnitureKind, type Item, type Level, type Opening, type Plan, type Point, type Room, deviceCentre, drawnBounds, itemPoints, pointInPolygon } from "../model";
+import { furnitureOf } from "./furniture";
 import { LOOKS, PPM, type RoomKind, type RoomLook, canvas, disc, hash, plants, rect, roomKind, texture } from "./art";
 
 /** Pixels of the light buffer cell. */
@@ -51,25 +52,6 @@ export interface Mask {
   cells: Int32Array;
   values: Float32Array;
 }
-
-export type FurnitureKind =
-  | "counter"
-  | "sofa"
-  | "bed"
-  | "wardrobe"
-  | "tvstand"
-  | "cabinet"
-  | "desk"
-  | "nightstand"
-  | "table"
-  | "chair"
-  | "roundtable"
-  | "bathtub"
-  | "shower"
-  | "toilet"
-  | "lounge"
-  | "gardenbench"
-  | "gardentable";
 
 export interface Furniture {
   item: Item;
@@ -140,7 +122,7 @@ export class Scene {
       if (item.type === "obstacle" || item.type === "round_obstacle") this.furniture.push(this.guess(item, points));
       else this.garden.push({ item, points, box: boxOf(points) });
     }
-    for (const piece of this.furniture) if (piece.kind === "counter") this.placeUnits(piece);
+    for (const piece of this.furniture) if (piece.kind === "kitchen") this.placeUnits(piece);
     this.blockers = this.pieces.filter((piece) => piece.kind === "solid").map((piece) => piece.box);
     this.lightWidth = Math.ceil(this.width / LIGHT_CELL);
     this.lightHeight = Math.ceil(this.height / LIGHT_CELL);
@@ -226,39 +208,45 @@ export class Scene {
   }
 
   // ---------------------------------------------------------------- furniture
-  /** What an obstacle most likely is, from the room it stands in, its size and its shape. */
+  /** An obstacle as the piece of furniture chosen for it in the editor, or the one guessed for it. */
   private guess(item: Item, points: Point[]): Furniture {
     const box = boxOf(points);
-    const centre: Point = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
-    const room = this.roomAt(centre, false);
-    const w = box[2] - box[0];
-    const h = box[3] - box[1];
-    const short = Math.min(w, h);
-    const long = Math.max(w, h);
-    const kind = ((): FurnitureKind => {
-      if (item.type === "round_obstacle") return "roundtable";
-      if (!room || !room.indoor) return points.length > 4 ? "lounge" : long > 1.2 ? "gardenbench" : "gardentable";
-      switch (room.kind) {
-        case "kitchen":
-          return "counter";
-        case "living":
-          return points.length > 4 ? "sofa" : short < 0.5 && long > 1.5 ? "tvstand" : long > 1.6 && short > 0.7 ? "sofa" : "cabinet";
-        case "dining":
-          return long < 0.45 ? "chair" : "table";
-        case "bath":
-          return long < 0.7 ? "toilet" : short < 0.5 && long > 0.9 ? "shower" : "bathtub";
-        case "bedroom":
-        case "kids":
-        case "room":
-          if (short >= 0.7 && w * h >= 1.2) return "bed";
-          if (long <= 0.6) return "nightstand";
-          if (short <= 0.6 && long >= 1) return "wardrobe";
-          return "desk";
-        default:
-          return "wardrobe";
-      }
-    })();
-    return { item, points, box, kind, room, units: [] };
+    const room = this.roomAt([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2], false);
+    return { item, points, box, kind: furnitureOf(item, this.level), room, units: [] };
+  }
+
+  /**
+   * The piece of furniture of the given kinds nearest to a point within reach metres, and the spot on it
+   * nearest to the point, kept a little inside its edges.
+   */
+  restNear(p: Point, reach: number, kinds: (kind: FurnitureKind) => boolean): { furniture: Furniture; at: Point } | undefined {
+    let best: { furniture: Furniture; at: Point; distance: number } | undefined;
+    for (const f of this.furniture) {
+      if (!kinds(f.kind)) continue;
+      const [x0, y0, x1, y1] = f.box;
+      const inset = Math.min(0.15, (x1 - x0) / 3, (y1 - y0) / 3);
+      const at: Point = [Math.min(Math.max(p[0], x0 + inset), x1 - inset), Math.min(Math.max(p[1], y0 + inset), y1 - inset)];
+      // In an L-shaped piece the clamped spot may fall in its notch: take the nearest corner of it then.
+      const spot = pointInPolygon(at, f.points)
+        ? at
+        : f.points.reduce((q, r) => (Math.hypot(r[0] - p[0], r[1] - p[1]) < Math.hypot(q[0] - p[0], q[1] - p[1]) ? r : q));
+      const distance = Math.hypot(spot[0] - p[0], spot[1] - p[1]);
+      if (distance <= reach && (!best || distance < best.distance)) best = { furniture: f, at: spot, distance };
+    }
+    return best && { furniture: best.furniture, at: best.at };
+  }
+
+  /** Sides of a box that stand against a wall. */
+  wallSides(box: Box): ("top" | "bottom" | "left" | "right")[] {
+    const near = (x: number, y: number) => this.pieces.some((p) => x >= p.box[0] - 0.06 && x <= p.box[2] + 0.06 && y >= p.box[1] - 0.06 && y <= p.box[3] + 0.06);
+    const cx = (box[0] + box[2]) / 2;
+    const cy = (box[1] + box[3]) / 2;
+    const sides: ("top" | "bottom" | "left" | "right")[] = [];
+    if (near(cx, box[1] - 0.1)) sides.push("top");
+    if (near(box[0] - 0.1, cy)) sides.push("left");
+    if (near(box[2] + 0.1, cy)) sides.push("right");
+    if (near(cx, box[3] + 0.1)) sides.push("bottom");
+    return sides;
   }
 
   /** The sink under the window of the kitchen, the hob about one and a half metres away, a kettle between. */
@@ -533,7 +521,14 @@ export class Scene {
   /**
    * A box seen at three quarters: its top lifted by lift pixels and a front on the edges facing the viewer.
    */
-  box(c: CanvasRenderingContext2D, points: Point[], lift: number, top: string, front: string, extra: { edge?: string; handles?: string; base?: string } = {}): void {
+  box(
+    c: CanvasRenderingContext2D,
+    points: Point[],
+    lift: number,
+    top: string,
+    front: string,
+    extra: { edge?: string; handles?: string; base?: string; modules?: number; seam?: string; drawers?: boolean } = {},
+  ): void {
     // A shadow round its foot and a dark outline keep it apart from a floor of the same colour.
     c.save();
     c.translate(2, 1);
@@ -556,7 +551,18 @@ export class Scene {
       const w = Math.abs(xb - xa);
       rect(c, x, y - lift, w, lift, front);
       if (extra.edge) rect(c, x, y - lift, w, 1, extra.edge);
-      if (extra.handles) for (let hx = x + 6; hx < x + w - 3; hx += Math.max(8, Math.round(0.6 * PPM))) rect(c, hx, y - Math.ceil(lift * 0.6), 2, 1, extra.handles);
+      if (extra.modules) {
+        // Doors of modules along the front, each with its handle.
+        for (let mx = x; mx < x + w - 3; mx += extra.modules) {
+          if (mx > x && extra.seam) rect(c, mx, y - lift + 1, 1, lift - 1, extra.seam);
+          if (extra.handles) rect(c, mx + Math.min(extra.modules, x + w - mx) / 2 - 1, y - Math.ceil(lift * 0.6), 2, 1, extra.handles);
+        }
+      } else if (extra.handles) for (let hx = x + 6; hx < x + w - 3; hx += Math.max(8, Math.round(0.6 * PPM))) rect(c, hx, y - Math.ceil(lift * 0.6), 2, 1, extra.handles);
+      if (extra.drawers && lift > 4)
+        for (let dy = Math.floor(lift / 2); dy < lift - 1; dy += Math.max(3, Math.floor(lift / 2))) {
+          rect(c, x + 1, y - lift + dy, w - 2, 1, "rgba(40,25,15,.5)");
+          rect(c, x + Math.floor(w / 2) - 1, y - lift + dy - 2, 2, 1, "#e0c890");
+        }
       if (extra.base) rect(c, x, y - 1, w, 1, extra.base);
       fronts.push([x, y - lift, w, lift]);
     }
@@ -574,10 +580,17 @@ export class Scene {
     const P = PPM;
     const [bx, by, bw, bh] = this.pxBox(f.box);
     const lift = (m: number) => Math.round(m * P);
+    const rectangle = f.points.length === 4 && !f.item.rotation;
+    const round = !!f.item.center;
+    const sides = this.wallSides(f.box);
+    // The side a back, a headboard or a shelf front is on: against a wall, otherwise at the back of the room.
+    // Never the front side: a back or headboard there would face away from the viewer.
+    const back = sides.find((side) => side !== "bottom") ?? "top";
+    const module = lift(0.6);
     switch (f.kind) {
-      case "counter": {
+      case "kitchen": {
         const h = lift(0.28);
-        this.box(c, f.points, h, "#dcd6c8", "#6f87a3", { edge: "#f0ebe0", handles: "#c9d3de", base: "#4f6580" });
+        this.box(c, f.points, h, "#dcd6c8", "#6f87a3", { edge: "#f0ebe0", base: "#4f6580", modules: module, seam: "#58708c", handles: "#c9d3de" });
         for (const [spot, unit] of f.units) {
           const [ux, uy] = this.px(spot);
           const y = uy - h;
@@ -597,82 +610,156 @@ export class Scene {
       }
       case "sofa": {
         const h = lift(0.22);
-        this.box(c, f.points, h, "#c0564b", "#a8473d", { edge: "#cf6f62", base: "#96403a" });
-        // Backrest along the sides that touch a wall.
-        for (let i = 0; i < f.points.length; i++) {
-          const a = f.points[i];
-          const b = f.points[(i + 1) % f.points.length];
-          const middle: Point = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-          const touches = this.pieces.some((p) => middle[0] >= p.box[0] - 0.1 && middle[0] <= p.box[2] + 0.1 && middle[1] >= p.box[1] - 0.1 && middle[1] <= p.box[3] + 0.1);
-          if (!touches) continue;
-          const [xa, ya] = this.px(a);
-          const [xb, yb] = this.px(b);
-          const k = lift(0.18);
-          if (Math.abs(ya - yb) < 1) rect(c, Math.min(xa, xb), (ya < by + bh / 2 ? ya : ya - k) - h, Math.abs(xb - xa), k, "#96403a");
-          else rect(c, xa < bx + bw / 2 ? xa : xa - k, Math.min(ya, yb) - h, k, Math.abs(yb - ya), "#96403a");
-        }
+        const fabric = ["#c0564b", "#a8473d", "#cf6f62", "#96403a"];
+        this.box(c, f.points, h, fabric[0], fabric[1], { edge: fabric[2], base: fabric[3] });
+        const k = lift(0.2);
+        if (rectangle) {
+          // Backrest on the wall side, armrests on the two ends across it, cushions between.
+          const y0 = by - h;
+          const across = back === "top";
+          if (back === "top") rect(c, bx, y0, bw, k, fabric[3]);
+          if (back === "left") rect(c, bx, y0, k, bh, fabric[3]);
+          if (back === "right") rect(c, bx + bw - k, y0, k, bh, fabric[3]);
+          const arm = lift(0.12);
+          if (across) {
+            rect(c, bx, y0, arm, bh, fabric[3]);
+            rect(c, bx + bw - arm, y0, arm, bh, fabric[3]);
+            for (let x = bx + module; x < bx + bw - arm - 4; x += module) rect(c, x, y0 + (back === "top" ? k : 1), 1, bh - k - 2, fabric[1]);
+          } else {
+            rect(c, bx, y0, bw, arm, fabric[3]);
+            rect(c, bx, y0 + bh - arm, bw, arm, fabric[3]);
+            for (let y = y0 + module; y < y0 + bh - arm - 4; y += module) rect(c, bx + (back === "left" ? k : 1), y, bw - k - 2, 1, fabric[1]);
+          }
+        } else
+          for (let i = 0; i < f.points.length; i++) {
+            // A corner sofa: its backrest along every edge that touches a wall.
+            const a = f.points[i];
+            const b = f.points[(i + 1) % f.points.length];
+            const middle: Point = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+            const touches = this.pieces.some((p) => middle[0] >= p.box[0] - 0.1 && middle[0] <= p.box[2] + 0.1 && middle[1] >= p.box[1] - 0.1 && middle[1] <= p.box[3] + 0.1);
+            if (!touches) continue;
+            const [xa, ya] = this.px(a);
+            const [xb, yb] = this.px(b);
+            if (Math.abs(ya - yb) < 1) rect(c, Math.min(xa, xb), (ya < by + bh / 2 ? ya : ya - k) - h, Math.abs(xb - xa), k, fabric[3]);
+            else rect(c, xa < bx + bw / 2 ? xa : xa - k, Math.min(ya, yb) - h, k, Math.abs(yb - ya), fabric[3]);
+          }
         break;
       }
       case "bed": {
         const h = lift(0.18);
         this.box(c, f.points, h, "#efe9df", "#cfc6b6", { edge: "#ffffff" });
-        if (bh >= bw) {
-          rect(c, bx + 1, by - h - 5, bw - 2, 6, "#6b4a33");
-          const double = bw > 1.2 * P;
-          const pw = double ? Math.floor(bw / 2) - 4 : bw - 6;
-          rect(c, bx + 3, by - h + 3, pw, 7, "#ffffff");
-          if (double) rect(c, bx + bw / 2 + 1, by - h + 3, pw, 7, "#ffffff");
-          rect(c, bx + 1, by - h + Math.round(bh * 0.3), bw - 2, Math.round(bh * 0.7) - 1, "#5b7fbf");
-          rect(c, bx + 1, by - h + Math.round(bh * 0.3), bw - 2, 2, "#7d9bd2");
+        const y0 = by - h;
+        const head = back;
+        const across = head === "top";
+        const width = across ? bw : bh;
+        const double = width > 1.2 * P;
+        const pillow = (x: number, y: number, w: number, hh: number) => {
+          rect(c, x, y, w, hh, "#ffffff");
+          rect(c, x, y + hh - 1, w, 1, "#d8d2c6");
+        };
+        if (across) {
+          const hy = head === "top" ? y0 : y0 + bh - 5;
+          rect(c, bx, hy - (head === "top" ? 5 : 0), bw, 6, "#6b4a33");
+          const py = head === "top" ? y0 + 3 : y0 + bh - 12;
+          const pw = double ? Math.floor(bw / 2) - 5 : bw - 8;
+          pillow(bx + 4, py, pw, 7);
+          if (double) pillow(bx + bw / 2 + 1, py, pw, 7);
+          const blanketY = head === "top" ? y0 + Math.round(bh * 0.32) : y0 + 1;
+          const blanketH = Math.round(bh * 0.68) - 2;
+          rect(c, bx + 1, blanketY, bw - 2, blanketH, "#5b7fbf");
+          rect(c, bx + 1, head === "top" ? blanketY : blanketY + blanketH - 2, bw - 2, 2, "#7d9bd2");
         } else {
-          rect(c, bx - 4, by - h, 6, bh, "#6b4a33");
-          rect(c, bx + 3, by - h + 3, 7, bh - 6, "#ffffff");
-          rect(c, bx + Math.round(bw * 0.3), by - h + 1, Math.round(bw * 0.7) - 1, bh - 2, "#5b7fbf");
-          rect(c, bx + Math.round(bw * 0.3), by - h + 1, 2, bh - 2, "#7d9bd2");
+          const hx = head === "left" ? bx - 4 : bx + bw - 2;
+          rect(c, hx, y0, 6, bh, "#6b4a33");
+          const px = head === "left" ? bx + 3 : bx + bw - 11;
+          const ph = double ? Math.floor(bh / 2) - 5 : bh - 8;
+          pillow(px, y0 + 4, 8, ph);
+          if (double) pillow(px, y0 + bh / 2 + 1, 8, ph);
+          const blanketX = head === "left" ? bx + Math.round(bw * 0.32) : bx + 1;
+          const blanketW = Math.round(bw * 0.68) - 2;
+          rect(c, blanketX, y0 + 1, blanketW, bh - 2, "#5b7fbf");
+          rect(c, head === "left" ? blanketX : blanketX + blanketW - 2, y0 + 1, 2, bh - 2, "#7d9bd2");
         }
         break;
       }
       case "wardrobe": {
         const h = lift(0.45);
-        this.box(c, f.points, h, "#8a5d3b", "#7a5236", { edge: "#a8774f", base: "#5a3c28" });
-        if (bw > bh) for (let x = bx + lift(0.5); x < bx + bw - 2; x += lift(0.5)) rect(c, x, by + bh - h, 1, h - 1, "#5e3f28");
+        this.box(c, f.points, h, "#8a5d3b", "#7a5236", { edge: "#a8774f", base: "#5a3c28", modules: lift(0.5), seam: "#5e3f28", handles: "#e0c890" });
+        if (bh > bw) for (let y = by - h + lift(0.5); y < by + bh - h - 2; y += lift(0.5)) rect(c, bx + 1, y, bw - 2, 1, "#6e4a30");
         break;
       }
-      case "tvstand":
-        this.box(c, f.points, lift(0.2), "#4a3a30", "#3a2d25", { edge: "#5e4a3d" });
-        rect(c, bx + 1, by - 2, Math.max(3, bw - 2), bh - 4, "#15161b");
+      case "shelf": {
+        const h = lift(0.45);
+        this.box(c, f.points, h, "#6e4a30", "#4e3322", { edge: "#8a5d3b" });
+        const books = ["#c0564b", "#3f6fd1", "#e0b04a", "#4c9a5b", "#8a5bb5", "#e8e3d6"];
+        if (bw >= bh) {
+          for (let row = 0; row < 3; row++) {
+            const y = by - h + 2 + Math.round((row * (h - 3)) / 3);
+            for (let x = bx + 2; x < bx + bw - 3; ) {
+              const w = 1 + Math.floor(hash(x, row, 3) * 3);
+              rect(c, x, y, w, Math.max(2, Math.round(h / 3) - 2), books[Math.floor(hash(x, row, 5) * books.length)]);
+              x += w + (hash(x, row, 7) < 0.2 ? 2 : 0);
+            }
+          }
+        } else for (let y = by - h + 2; y < by + bh - h - 2; y += 3) rect(c, bx + 2, y, bw - 4, 2, books[Math.floor(hash(bx, y, 5) * books.length)]);
         break;
-      case "cabinet":
-      case "desk":
-      case "nightstand":
-        this.box(c, f.points, lift(f.kind === "nightstand" ? 0.25 : 0.35), "#946645", "#7a5236", { edge: "#a8774f", handles: "#d8c08a" });
+      }
+      case "fridge": {
+        const h = lift(0.45);
+        this.box(c, f.points, h, "#f2f4f6", "#dfe3e7", { edge: "#ffffff", base: "#b9c0c7" });
+        rect(c, bx + bw - 4, by + bh - h + 3, 1, Math.max(3, h - 6), "#9aa1a8");
+        rect(c, bx + 3, by - h + 3, 3, 3, "#e8505b");
         break;
+      }
       case "table": {
         const h = lift(0.3);
-        this.box(c, f.points, h, "#7c4f2c", "#5c3920", { edge: "#94633b" });
+        if (round) {
+          this.disc3(c, f, h, "#4f301b", "#6e4528", "#86573a");
+        } else this.box(c, f.points, h, "#7c4f2c", "#5c3920", { edge: "#94633b" });
         const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
         disc(c, cx, cy - h, 3, "#f2efe6");
         rect(c, cx - 1, cy - h - 2, 2, 2, "#e8505b");
         break;
       }
-      case "chair":
-        this.box(c, f.points, lift(0.18), "#6a4226", "#4f301b", { edge: "#80522f" });
+      case "chair": {
+        const h = lift(0.18);
+        this.box(c, f.points, h, "#6a4226", "#4f301b", { edge: "#80522f" });
+        rect(c, bx, by - h - 3, bw, 3, "#4f301b");
         break;
-      case "roundtable": {
-        const centre = f.item.center ?? ([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2] as Point);
-        const [cx, cy] = this.px(centre);
-        const r = Math.round(((f.item.diameter ?? f.box[2] - f.box[0]) / 2) * P);
+      }
+      case "desk": {
+        const h = lift(0.3);
+        this.box(c, f.points, h, "#b58a5a", "#8f6a42", { edge: "#c99d6b", handles: "#e0c890" });
+        const [cx] = this.px([(f.box[0] + f.box[2]) / 2, 0]);
+        rect(c, cx - 6, by - h + 2, 12, 7, "#1d1f25");
+        rect(c, cx - 5, by - h + 3, 10, 5, "#4a7bd0");
+        break;
+      }
+      case "tvstand": {
         const h = lift(0.2);
-        disc(c, cx + 2, cy + 1, r, "rgba(0,0,0,.3)");
-        disc(c, cx, cy, r, "#4f301b");
-        disc(c, cx, cy - h, r + 1, "#2e1d12");
-        disc(c, cx, cy - h, r, "#6e4528");
-        disc(c, cx - 2, cy - h - 2, Math.max(1, r - 5), "#86573a");
+        this.box(c, f.points, h, "#4a3a30", "#3a2d25", { edge: "#5e4a3d" });
+        if (bw >= bh) {
+          const tv = lift(0.32);
+          rect(c, bx + Math.round(bw * 0.1), by - h - tv + 2, Math.round(bw * 0.8), tv, "#15161b");
+          rect(c, bx + Math.round(bw * 0.1) + 2, by - h - tv + 4, Math.round(bw * 0.8) - 4, tv - 4, "#262a35");
+        } else rect(c, bx + Math.round(bw / 2) - 1, by - h + 2, 3, bh - 4, "#15161b");
+        break;
+      }
+      case "dresser":
+      case "nightstand": {
+        const h = lift(f.kind === "nightstand" ? 0.25 : 0.3);
+        this.box(c, f.points, h, "#946645", "#7a5236", { edge: "#a8774f", drawers: true });
+        if (f.kind === "nightstand") {
+          const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+          rect(c, cx - 3, cy - h - 7, 6, 5, "#d9c896");
+          rect(c, cx - 1, cy - h - 2, 2, 2, "#555");
+        }
         break;
       }
       case "bathtub":
         this.box(c, f.points, lift(0.25), "#f4f6f8", "#dfe5ea", { edge: "#ffffff" });
         rect(c, bx + 3, by - lift(0.25) + 3, bw - 6, bh - 6, "#8fd0ea");
+        rect(c, bx + 3, by - lift(0.25) + 3, bw - 6, 1, "#b9e4f3");
         break;
       case "shower":
         this.box(c, f.points, lift(0.45), "rgba(190,230,245,.55)", "rgba(160,205,225,.6)", { edge: "#e6f6fc" });
@@ -681,12 +768,72 @@ export class Scene {
         this.box(c, f.points, lift(0.2), "#f4f6f8", "#dfe5ea", { edge: "#ffffff" });
         disc(c, bx + bw / 2, by + bh / 2 - lift(0.2), Math.max(2, Math.round(Math.min(bw, bh) / 2) - 3), "#cfd8de");
         break;
-      case "lounge":
-        this.box(c, f.points, lift(0.22), "#8c7a66", "#6e5e4e", { edge: "#e8dcc4" });
+      case "washbasin": {
+        const h = lift(0.28);
+        this.box(c, f.points, h, "#f4f6f8", "#8f6a42", { edge: "#ffffff" });
+        const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+        rect(c, cx - 5, cy - h - 3, 10, 6, "#cfd8de");
+        rect(c, cx - 1, cy - h - 6, 2, 3, "#c0c6cc");
         break;
+      }
+      case "washer": {
+        const h = lift(0.28);
+        this.box(c, f.points, h, "#eef0f2", "#e1e4e8", { edge: "#ffffff" });
+        const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+        disc(c, cx, cy - h, Math.max(2, Math.round(Math.min(bw, bh) / 2) - 3), "#7f8a96");
+        disc(c, cx, cy - h, Math.max(1, Math.round(Math.min(bw, bh) / 2) - 5), "#b9d7ea");
+        break;
+      }
+      case "plant": {
+        const [cx, cy] = this.px([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2]);
+        const r = Math.max(3, Math.round(Math.min(bw, bh) / 2));
+        rect(c, cx - r / 2 + 1, cy - 2, r, 4, "rgba(0,0,0,.3)");
+        rect(c, cx - r / 2, cy - 6, r, 6, "#b5653a");
+        rect(c, cx - r / 2, cy - 6, r, 1, "#d07a4a");
+        disc(c, cx, cy - 10, r, "#2f7a3a");
+        disc(c, cx - 2, cy - 12, Math.max(2, r - 3), "#4aa04e");
+        rect(c, cx - 2, cy - 14, 1, 1, "#7cd06e");
+        break;
+      }
+      case "garden_sofa": {
+        const h = lift(0.22);
+        this.box(c, f.points, h, "#8c7a66", "#6e5e4e", { edge: "#a89480" });
+        this.path(c, f.points, h);
+        c.save();
+        c.clip();
+        c.fillStyle = "#e8dcc4";
+        c.fillRect(bx + 3, by - h + 3, bw - 6, bh - 6);
+        c.restore();
+        break;
+      }
+      case "garden_table": {
+        const h = lift(0.28);
+        if (round) this.disc3(c, f, h, "#6e5e4e", "#a89480", "#bfae98");
+        else this.box(c, f.points, h, "#a89480", "#8c7a66", { edge: "#bfae98" });
+        break;
+      }
+      case "bench": {
+        const h = lift(0.22);
+        this.box(c, f.points, h, "#9a6a40", "#7a5030", { edge: "#b8844f" });
+        if (bw >= bh) for (let y = by - h + 3; y < by + bh - h - 1; y += 3) rect(c, bx + 1, y, bw - 2, 1, "#7a5030");
+        else for (let x = bx + 3; x < bx + bw - 1; x += 3) rect(c, x, by - h + 1, 1, bh - 2, "#7a5030");
+        break;
+      }
       default:
-        this.box(c, f.points, lift(0.25), "#8c7a66", "#6e5e4e", { edge: "#a89480" });
+        this.box(c, f.points, lift(0.25), "#946645", "#7a5236", { edge: "#a8774f" });
     }
+  }
+
+  /** A round top on a leg, with its shadow, for round tables. */
+  private disc3(c: CanvasRenderingContext2D, f: Furniture, h: number, side: string, top: string, light: string): void {
+    const centre = f.item.center ?? ([(f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2] as Point);
+    const [cx, cy] = this.px(centre);
+    const r = Math.max(3, Math.round(((f.item.diameter ?? f.box[2] - f.box[0]) / 2) * PPM));
+    disc(c, cx + 2, cy + 1, r, "rgba(0,0,0,.3)");
+    disc(c, cx, cy, r, side);
+    disc(c, cx, cy - h, r + 1, "#2e1d12");
+    disc(c, cx, cy - h, r, top);
+    disc(c, cx - 2, cy - h - 2, Math.max(1, r - 5), light);
   }
 
   drawGardenObject(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {

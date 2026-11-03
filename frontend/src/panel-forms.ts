@@ -4,6 +4,9 @@ import { LANGUAGE_NAMES, N_, t } from "./i18n";
 import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
 import {
   CIRCLE_TYPES,
+  FURNITURE_KINDS,
+  OBSTACLE_TYPES,
+  type FurnitureKind,
   DEFAULT_CORNER_RADIUS,
   DEFAULT_CAMERA_RANGE,
   DEFAULT_FIELD_OF_VIEW,
@@ -45,6 +48,7 @@ import {
   wallLength,
 } from "./model";
 import { planPalette, DARK_PALETTE, LIGHT_PALETTE, PALETTE_GROUPS } from "./render";
+import { guessFurniture } from "./pixel/furniture";
 import {
   DEVICE_LABELS,
   Registry,
@@ -52,6 +56,7 @@ import {
   AREA_KINDS,
   Drag,
   ITEM_LABELS,
+  FURNITURE_LABELS,
   ZONE_LABELS,
   isNumberedLevel,
   inContext,
@@ -946,6 +951,25 @@ export function itemProperties(p: FloorCastPanel, item?: Item) {
         )}
       </select>
     </label>
+    ${OBSTACLE_TYPES.includes(item.type)
+      ? html`<label class="field wide">
+            <span>${t("Kind of furniture")}</span>
+            <select
+              @change=${(e: Event) =>
+                p.change(() => {
+                  const value = (e.target as HTMLSelectElement).value;
+                  if (value) item.furniture = value as FurnitureKind;
+                  else delete item.furniture;
+                })}
+            >
+              <option value="" ?selected=${!item.furniture}>${t("Automatic ({kind})", { kind: t(FURNITURE_LABELS[guessFurniture(item, p.level)]) })}</option>
+              ${FURNITURE_KINDS.map((kind) => html`<option value=${kind} ?selected=${item.furniture === kind}>${t(FURNITURE_LABELS[kind])}</option>`)}
+            </select>
+          </label>
+          <p class="muted">
+            ${t("For the pixel look of the card. A narrow sofa shows as an armchair, an L-shaped one as a corner sofa, kitchen units along two walls as a corner kitchen.")}
+          </p>`
+      : nothing}
     ${text(p, t("Name"), item.name ?? "", (v) => (item.name = v || undefined))}
     ${item.center
       ? nothing

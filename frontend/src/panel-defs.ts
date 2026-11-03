@@ -1,7 +1,7 @@
 // Types, tables and helpers of the editor: its tools and tabs, the names and hints it shows, and small
 // functions of geometry and storage it shares between its parts.
 import { N_, t } from "./i18n";
-import { levelBounds, type AreaKind, type Device, type Item, type ItemType, type Point, type Zone } from "./model";
+import { levelBounds, type AreaKind, type Device, type FurnitureKind, type Item, type ItemType, type Point, type Zone } from "./model";
 
 export type Tool = "select" | "wall" | "door" | "window" | "gate" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "indicator" | "mark" | "calibrate";
 export type Selection =
@@ -204,6 +204,31 @@ export const ITEM_LABELS: Record<ItemType, string> = {
   manhole: N_("Manhole"),
   obstacle: N_("Obstacle (furniture)"),
   round_obstacle: N_("Round obstacle (table, pouf)"),
+};
+
+/** Names of the pieces of furniture an obstacle can be, for the pixel look. */
+export const FURNITURE_LABELS: Record<FurnitureKind, string> = {
+  sofa: N_("Sofa or armchair"),
+  bed: N_("Bed"),
+  wardrobe: N_("Wardrobe"),
+  shelf: N_("Bookcase"),
+  kitchen: N_("Kitchen units"),
+  fridge: N_("Fridge"),
+  table: N_("Table"),
+  chair: N_("Chair"),
+  desk: N_("Desk"),
+  tvstand: N_("TV stand"),
+  dresser: N_("Chest of drawers"),
+  nightstand: N_("Bedside table"),
+  bathtub: N_("Bathtub"),
+  shower: N_("Shower"),
+  toilet: N_("Toilet"),
+  washbasin: N_("Washbasin"),
+  washer: N_("Washing machine"),
+  plant: N_("Plant"),
+  garden_sofa: N_("Garden sofa"),
+  garden_table: N_("Garden table"),
+  bench: N_("Bench"),
 };
 
 export const ZONE_LABELS: Record<Zone["kind"], string> = {

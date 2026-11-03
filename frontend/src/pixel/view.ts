@@ -9,7 +9,7 @@ import type { HomeAssistant } from "../ha";
 import { type Level, type Plan, type Point, type TrackedPerson, deviceCentre, isPowered } from "../model";
 import { PPM, canvas, rect } from "./art";
 import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
-import { type Facing, OUTFITS, type Outfit, drop, mower, person, vacuum } from "./sprites";
+import { type Facing, OUTFITS, type Outfit, drop, lying, mower, person, sitting, vacuum } from "./sprites";
 
 export interface PixelBounds {
   x: number;
@@ -46,7 +46,20 @@ interface Walker {
   facing: Facing;
   moving: boolean;
   outfit: Outfit;
+  /**
+   * Where the person stopped and for how many seconds the tracking has kept them near it. After a moment
+   * close to a sofa, chair or bench they sit on it, close to a bed they lie in it.
+   */
+  anchor: Point;
+  still: number;
 }
+
+const SEATS = new Set(["sofa", "chair", "bench", "garden_sofa"]);
+const SETTLE = 1.5;
+// Radar points of a still person wander: within STAY metres of where they stopped they count as still.
+const STAY = 0.45;
+// A seat or bed this close (m) to a still person is the one they use.
+const REACH = 0.7;
 
 interface Drop {
   x: number;
@@ -175,7 +188,7 @@ class LevelPicture {
       seen.add(id);
       let w = this.walkers.get(id);
       if (!w) {
-        w = { x: p.x, y: p.y, facing: "down", moving: false, outfit: OUTFITS[this.dressed++ % OUTFITS.length] };
+        w = { x: p.x, y: p.y, facing: "down", moving: false, outfit: OUTFITS[this.dressed++ % OUTFITS.length], anchor: [p.x, p.y], still: 0 };
         this.walkers.set(id, w);
       }
       const dx = p.x - w.x;
@@ -191,6 +204,10 @@ class LevelPicture {
         w.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
       }
       w.moving = d > 0.06;
+      if (Math.hypot(p.x - w.anchor[0], p.y - w.anchor[1]) > STAY) {
+        w.anchor = [p.x, p.y];
+        w.still = 0;
+      } else w.still += dt;
     }
     for (const id of [...this.walkers.keys()]) if (!seen.has(id)) this.walkers.delete(id);
 
@@ -288,7 +305,15 @@ class LevelPicture {
     }
     for (const w of this.walkers.values()) {
       const [x, y] = s.px([w.x, w.y]);
-      items.push({ y: y + 0.5, draw: standing(() => person(c, x, y, w.facing, w.moving ? Math.floor(time * 8) : 0, w.outfit)) });
+      const near = w.still > SETTLE ? s.restNear(w.anchor, REACH, (kind) => SEATS.has(kind) || kind === "bed") : undefined;
+      if (near) {
+        // On a seat or in a bed the person is drawn after it, at its height, on its nearest spot.
+        const { furniture, at } = near;
+        const [sx, sy] = s.px(at);
+        const top = s.px([0, furniture.box[3]])[1] + 0.6;
+        const seat = Math.round((furniture.kind === "bed" ? 0.18 : 0.22) * PPM);
+        items.push({ y: top, draw: standing(() => (furniture.kind === "bed" ? lying(c, sx, sy - seat, w.outfit) : sitting(c, sx, sy - seat + 4, w.facing, w.outfit))) });
+      } else items.push({ y: y + 0.5, draw: standing(() => person(c, x, y, w.facing, w.moving ? Math.floor(time * 8) : 0, w.outfit)) });
     }
     items.sort((a, b) => a.y - b.y);
     for (const item of items) item.draw();

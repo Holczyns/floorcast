@@ -154,7 +154,60 @@ export interface Item {
   points?: Point[];
   /** Corners rounded or square whatever the plan says; without it the object follows the plan. */
   corners?: "round" | "square";
+  /** Obstacle: the piece of furniture it is, for the pixel look; guessed from its room and size without it. */
+  furniture?: FurnitureKind;
 }
+
+/**
+ * Furniture of the pixel look. Size and shape choose the variant: a narrow sofa is an armchair, an L-shaped
+ * one a corner sofa, kitchen units along two walls a corner kitchen.
+ */
+export type FurnitureKind =
+  | "sofa"
+  | "bed"
+  | "wardrobe"
+  | "shelf"
+  | "kitchen"
+  | "fridge"
+  | "table"
+  | "chair"
+  | "desk"
+  | "tvstand"
+  | "dresser"
+  | "nightstand"
+  | "bathtub"
+  | "shower"
+  | "toilet"
+  | "washbasin"
+  | "washer"
+  | "plant"
+  | "garden_sofa"
+  | "garden_table"
+  | "bench";
+
+export const FURNITURE_KINDS: FurnitureKind[] = [
+  "sofa",
+  "bed",
+  "wardrobe",
+  "shelf",
+  "kitchen",
+  "fridge",
+  "table",
+  "chair",
+  "desk",
+  "tvstand",
+  "dresser",
+  "nightstand",
+  "bathtub",
+  "shower",
+  "toilet",
+  "washbasin",
+  "washer",
+  "plant",
+  "garden_sofa",
+  "garden_table",
+  "bench",
+];
 
 /**
  * EXPERIMENTAL: how a camera image is laid on the ground. A camera: the zones or rooms it is laid on and
