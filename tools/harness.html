@@ -537,7 +537,8 @@
           const holder = document.createElement("div");
           holder.style.width = width + "px";
           const card = document.createElement("floorcast-card");
-          card.setConfig({ type: "custom:floorcast-card", ...(params.get("look") ? { look: params.get("look") } : {}) });
+          // ?card={...}: more options of the card as JSON.
+          card.setConfig({ type: "custom:floorcast-card", ...(params.get("look") ? { look: params.get("look") } : {}), ...JSON.parse(params.get("card") ?? "{}") });
           card.hass = hass;
           elements.push(card);
           holder.appendChild(card);

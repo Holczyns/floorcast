@@ -188,6 +188,9 @@ class FloorCastCard extends LitElement {
   private _views: Record<string, Bounds> = {};
   // Levels side by side zoom and move together as one drawing: its scale and shift on the screen.
   private _group?: { s: number; tx: number; ty: number };
+  // Levels side by side: how far out they may zoom and move, from the last render. Out to the whole of the
+  // most spread level, and as far past their default views as their drawings reach (metres each way).
+  private _groupReach = { min: 1, pixels: 1, left: 0, right: 0, top: 0, bottom: 0 };
   private _pointers = new Map<number, { x: number; y: number }>();
   private _gesture?: { level: string; start: Bounds; points: { x: number; y: number }[]; rect: DOMRect };
   private _dragged = false;
@@ -604,14 +607,47 @@ class FloorCastCard extends LitElement {
    * wide, about a point of the frame that stays where it is, and kept inside the frame.
    */
   private setGroup(s: number, about: { x: number; y: number }, from: { s: number; tx: number; ty: number }, frame: DOMRect, maxScale: number): void {
-    const scale = Math.min(Math.max(s, 1), Math.max(1, maxScale));
+    const reach = this._groupReach;
+    const scale = Math.min(Math.max(s, reach.min), Math.max(1, maxScale));
     const cx = (about.x - from.tx) / from.s;
     const cy = (about.y - from.ty) / from.s;
-    const clamp = (shift: number, size: number) => Math.min(0, Math.max(size - size * scale, shift));
-    const tx = clamp(about.x - cx * scale, frame.width);
-    const ty = clamp(about.y - cy * scale, frame.height);
-    this._group = scale === 1 ? undefined : { s: scale, tx, ty };
+    // The default views may move away from the frame as far as the drawings reach past them.
+    const px = reach.pixels * scale;
+    const clamp = (shift: number, size: number, before: number, after: number) =>
+      Math.min(before * px, Math.max(size - size * scale - after * px, shift));
+    const tx = clamp(about.x - cx * scale, frame.width, reach.left, reach.right);
+    const ty = clamp(about.y - cy * scale, frame.height, reach.top, reach.bottom);
+    this._group = scale === 1 && Math.abs(tx) < 0.5 && Math.abs(ty) < 0.5 ? undefined : { s: scale, tx, ty };
     this.restartZoomReset();
+  }
+
+  /**
+   * What a level side by side shows: its default view moved and zoomed as the group is, kept within its
+   * drawing. offset is where the level starts in the row, in pixels; pixels is pixels per metre.
+   */
+  private groupView(level: Level, offset: number, pixels: number): Bounds {
+    const home = this.defaultBounds(level);
+    const group = this._group;
+    if (!group) return home;
+    const view = {
+      x: home.x + ((offset - group.tx) / group.s - offset) / pixels,
+      y: home.y + -group.ty / group.s / pixels,
+      w: home.w / group.s,
+      h: home.h / group.s,
+    };
+    const limit = this.levelReach(level);
+    const along = (start: number, size: number, low: number, room: number) =>
+      size >= room ? low - (size - room) / 2 : Math.min(Math.max(start, low), low + room - size);
+    return { x: along(view.x, view.w, limit.x, limit.w), y: along(view.y, view.h, limit.y, limit.h), w: view.w, h: view.h };
+  }
+
+  /** All a level may show when moved: its default view together with everything drawn on it. */
+  private levelReach(level: Level): Bounds {
+    const home = this.defaultBounds(level);
+    const drawn = drawnBounds(level);
+    const x = Math.min(home.x, drawn.x);
+    const y = Math.min(home.y, drawn.y);
+    return { x, y, w: Math.max(home.x + home.w, drawn.x + drawn.w) - x, h: Math.max(home.y + home.h, drawn.y + drawn.h) - y };
   }
 
   private groupDown(event: PointerEvent): void {
@@ -936,6 +972,18 @@ class FloorCastCard extends LitElement {
     // As close as MIN_ZOOM_WIDTH metres across the card.
     const maxScale = metres.reduce((sum, w) => sum + w, 0) / MIN_ZOOM_WIDTH;
     const group = this._group;
+    const reach = { min: 1, pixels: sideScale, left: 0, right: 0, top: 0, bottom: 0 };
+    for (const level of levels) {
+      const home = this.defaultBounds(level);
+      const limit = this.levelReach(level);
+      reach.min = Math.min(reach.min, home.w / limit.w, home.h / limit.h);
+      reach.left = Math.max(reach.left, home.x - limit.x);
+      reach.right = Math.max(reach.right, limit.x + limit.w - home.x - home.w);
+      reach.top = Math.max(reach.top, home.y - limit.y);
+      reach.bottom = Math.max(reach.bottom, limit.y + limit.h - home.y - home.h);
+    }
+    this._groupReach = reach;
+    let offset = 0;
     return html`<div
       class="levels side zoomable"
       @pointerdown=${(e: PointerEvent) => this.groupDown(e)}
@@ -950,8 +998,12 @@ class FloorCastCard extends LitElement {
         capture: true,
       }}
     >
-      <div class="group" style=${group ? `transform:translate(${group.tx}px,${group.ty}px) scale(${group.s})` : ""}>
-        ${levels.map((level) => this.renderLevel(level, width, sideScale, true))}
+      <div class="group">
+        ${levels.map((level, i) => {
+          const view = this.groupView(level, offset, sideScale);
+          offset += metres[i] * sideScale;
+          return this.renderLevel(level, width, sideScale, true, view);
+        })}
       </div>
       <div class="zoom">
         ${group ? html`<button title=${t("Default view")} @click=${() => (this._group = undefined)}>⌂</button>` : nothing}
@@ -961,13 +1013,13 @@ class FloorCastCard extends LitElement {
     </div>`;
   }
 
-  private renderLevel(level: Level, width: number, scale?: number, inGroup = false) {
-    const b = inGroup ? this.defaultBounds(level) : this.viewBounds(level);
+  private renderLevel(level: Level, width: number, scale?: number, inGroup = false, view?: Bounds) {
+    const b = view ?? (inGroup ? this.defaultBounds(level) : this.viewBounds(level));
     const home = this.defaultBounds(level);
     // Side by side every level uses the same scale, so a metre is equally long on each; zoom enlarges it.
     const style = scale ? `width:${(home.w * scale).toFixed(0)}px` : "width:100%";
     const pxPerMetre = (scale ?? width / home.w) * (home.w / b.w);
-    const zoomed = !!this._config.zoom && !!this._views[level.id] && !inGroup;
+    const zoomed = !!this._config.zoom && (inGroup ? !!this._group : !!this._views[level.id]);
     // In a group the levels zoom together; their own gestures and buttons rest.
     const own = !!this._config.zoom && !inGroup;
     // Pixel look: the drawing is a canvas under the plan; the plan keeps its taps, labels and previews.
@@ -2026,7 +2078,6 @@ class FloorCastCard extends LitElement {
       .group {
         display: flex;
         align-items: flex-start;
-        transform-origin: 0 0;
       }
       .zoom {
         position: absolute;
