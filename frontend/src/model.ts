@@ -163,6 +163,8 @@ export interface Item {
   furniture?: FurnitureKind;
   /** Obstacle: the main colour of the piece in the pixel look (fabric, fronts, wood); its own colour without it. */
   colour?: string;
+  /** Obstacle: the side its back is on in the pixel look (backrest, headboard, screen); against a wall without it. */
+  back?: "top" | "bottom" | "left" | "right";
 }
 
 /**

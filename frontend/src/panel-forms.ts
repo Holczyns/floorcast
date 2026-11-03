@@ -1078,7 +1078,28 @@ export function itemProperties(p: FloorCastPanel, item?: Item) {
               />
             </label>
             <button class="small" ?disabled=${!item.colour} @click=${() => p.change(() => delete item.colour)}>${t("Default colour")}</button>
-          </div>`
+          </div>
+          <label class="field wide">
+            <span>${t("Back towards")}</span>
+            <select
+              @change=${(e: Event) =>
+                p.change(() => {
+                  const value = (e.target as HTMLSelectElement).value;
+                  if (value) item.back = value as NonNullable<Item["back"]>;
+                  else delete item.back;
+                })}
+            >
+              ${(
+                [
+                  ["", t("Automatic")],
+                  ["top", t("Top")],
+                  ["bottom", t("Bottom")],
+                  ["left", t("Left")],
+                  ["right", t("Right")],
+                ] as [string, string][]
+              ).map(([value, label]) => html`<option value=${value} ?selected=${(item.back ?? "") === value}>${label}</option>`)}
+            </select>
+          </label>`
       : nothing}
     ${text(p, t("Name"), item.name ?? "", (v) => (item.name = v || undefined))}
     ${item.center

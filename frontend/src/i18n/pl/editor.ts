@@ -170,6 +170,7 @@ const editor: Dictionary = {
   "New wall": "Nowa ściana",
   "Add wall type": "Dodaj typ ściany",
   "Rounded corners": "Zaokrąglone narożniki",
+  "Back towards": "Tył w stronę",
   "Rug": "Dywan",
   "Fireplace": "Kominek",
   "Piano": "Pianino",

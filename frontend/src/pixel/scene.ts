@@ -14,6 +14,8 @@ export const LIGHT_CELL = 4;
  */
 export const FACE = 0.5;
 
+export type Side = "top" | "bottom" | "left" | "right";
+
 export type Box = [number, number, number, number];
 
 export interface SceneRoom {
@@ -666,7 +668,7 @@ export class Scene {
     const sides = this.wallSides(f.box);
     // The side a back, a headboard or a shelf front is on: against a wall, otherwise at the back of the room.
     // Never the front side: a back or headboard there would face away from the viewer.
-    const back = sides.find((side) => side !== "bottom") ?? "top";
+    const back: Side = f.item.back ?? sides.find((side) => side !== "bottom") ?? "top";
     const module = lift(0.6);
     // The main colour and its tones: the colour chosen for the piece, or its own.
     const main = f.item.colour ?? FURNITURE_COLOURS[f.kind];
@@ -695,13 +697,13 @@ export class Scene {
         break;
       }
       case "sofa":
-        this.drawSofa(c, f, { seat: shade.base, side: shade.dark, light: shade.light, dark: tone(main, -0.27), base: shade.darker });
+        this.drawSofa(c, f, { seat: shade.base, side: shade.dark, light: shade.light, dark: tone(main, -0.27), base: shade.darker }, f.item.back);
         break;
       case "bed": {
         const h = lift(0.18);
         this.box(c, f.points, h, "#efe9df", "#cfc6b6", { edge: "#ffffff" });
         const y0 = by - h;
-        const across = back === "top";
+        const across = back === "top" || back === "bottom";
         const width = across ? bw : bh;
         const double = width > 1.2 * P;
         const pillow = (x: number, y: number, w: number, hh: number) => {
@@ -709,13 +711,16 @@ export class Scene {
           rect(c, x, y + hh - 1, w, 1, "#d8d2c6");
         };
         if (across) {
-          rect(c, bx, y0 - 5, bw, 6, "#6b4a33");
+          const atTop = back === "top";
+          rect(c, bx, atTop ? y0 - 5 : y0 + bh - 1, bw, 6, "#6b4a33");
           const pw = double ? Math.floor(bw / 2) - 5 : bw - 8;
-          pillow(bx + 4, y0 + 3, pw, 7);
-          if (double) pillow(bx + bw / 2 + 1, y0 + 3, pw, 7);
-          const blanketY = y0 + Math.round(bh * 0.32);
-          rect(c, bx + 1, blanketY, bw - 2, Math.round(bh * 0.68) - 2, shade.base);
-          rect(c, bx + 1, blanketY, bw - 2, 2, shade.light);
+          const py = atTop ? y0 + 3 : y0 + bh - 10;
+          pillow(bx + 4, py, pw, 7);
+          if (double) pillow(bx + bw / 2 + 1, py, pw, 7);
+          const blanketH = Math.round(bh * 0.68) - 2;
+          const blanketY = atTop ? y0 + Math.round(bh * 0.32) : y0 + 1;
+          rect(c, bx + 1, blanketY, bw - 2, blanketH, shade.base);
+          rect(c, bx + 1, atTop ? blanketY : blanketY + blanketH - 2, bw - 2, 2, shade.light);
         } else {
           const hx = back === "left" ? bx - 4 : bx + bw - 2;
           rect(c, hx, y0, 6, bh, "#6b4a33");
@@ -770,24 +775,30 @@ export class Scene {
       case "chair": {
         const h = lift(0.18);
         this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
-        rect(c, bx, by - h - 3, bw, 3, shade.dark);
+        if (back === "top") rect(c, bx, by - h - 3, bw, 4, shade.dark);
+        else if (back === "bottom") rect(c, bx, by + bh - h - 4, bw, 4, shade.dark);
+        else rect(c, back === "left" ? bx : bx + bw - 3, by - h - 3, 3, bh + 2, shade.dark);
         break;
       }
       case "desk": {
         const h = lift(0.3);
         this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light, handles: "#e0c890" });
-        rect(c, cx - 6, by - h + 2, 12, 7, "#1d1f25");
-        rect(c, cx - 5, by - h + 3, 10, 5, "#4a7bd0");
+        const [sx, sy] =
+          back === "top" ? [cx - 6, by - h + 2] : back === "bottom" ? [cx - 6, by + bh - h - 9] : back === "left" ? [bx + 2, cy - h - 4] : [bx + bw - 14, cy - h - 4];
+        rect(c, sx, sy, 12, 7, "#1d1f25");
+        rect(c, sx + 1, sy + 1, 10, 5, back === "bottom" ? "#2a2c31" : "#4a7bd0");
         break;
       }
       case "tvstand": {
         const h = lift(0.2);
         this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
-        if (bw >= bh) {
+        if (back === "top" || back === "bottom") {
           const tv = lift(0.32);
-          rect(c, bx + Math.round(bw * 0.1), by - h - tv + 2, Math.round(bw * 0.8), tv, "#15161b");
-          rect(c, bx + Math.round(bw * 0.1) + 2, by - h - tv + 4, Math.round(bw * 0.8) - 4, tv - 4, "#262a35");
-        } else rect(c, bx + Math.round(bw / 2) - 1, by - h + 2, 3, bh - 4, "#15161b");
+          const ty = back === "top" ? by - h - tv + 2 : by + bh - h - tv;
+          rect(c, bx + Math.round(bw * 0.1), ty, Math.round(bw * 0.8), tv, "#15161b");
+          // From behind only its dark back shows.
+          if (back === "top") rect(c, bx + Math.round(bw * 0.1) + 2, ty + 2, Math.round(bw * 0.8) - 4, tv - 4, "#262a35");
+        } else rect(c, back === "left" ? bx + 2 : bx + bw - 5, by - h + 2, 3, bh - 4, "#15161b");
         break;
       }
       case "dresser":
@@ -865,24 +876,34 @@ export class Scene {
         const h = lift(0.5);
         this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light, base: shade.darker });
         for (let y = by + bh - h + 2; y < by + bh - 2; y += 4) for (let x = bx + ((y / 4) % 2) * 3; x < bx + bw; x += 6) rect(c, x, y, 1, 3, shade.darker);
-        const w = Math.max(6, Math.round(bw * 0.5));
-        const ox = bx + Math.round((bw - w) / 2);
-        const oy = by + bh - Math.round(h * 0.7);
-        rect(c, ox, oy, w, Math.round(h * 0.7) - 1, "#1a1210");
+        // The opening: in the face towards the viewer when the back is at the top, else in the top by the open side.
+        const facing = back === "top";
+        const w = facing ? Math.max(6, Math.round(bw * 0.5)) : back === "bottom" ? Math.max(6, Math.round(bw * 0.5)) : Math.max(4, Math.round(bw * 0.4));
+        const tall = facing ? Math.round(h * 0.7) - 1 : back === "bottom" ? Math.max(4, Math.round(bh * 0.4)) : Math.max(6, Math.round(bh * 0.5));
+        const ox = back === "left" ? bx + bw - w - 2 : back === "right" ? bx + 2 : bx + Math.round((bw - w) / 2);
+        const oy = facing ? by + bh - Math.round(h * 0.7) : back === "bottom" ? by - h + 2 : by - h + Math.round((bh - tall) / 2);
+        rect(c, ox, oy, w, tall, "#1a1210");
         for (let i = 0; i < w - 2; i += 2) {
-          const flame = 2 + Math.round((Math.sin(time * 9 + i * 1.7) * 0.5 + 0.5) * Math.max(2, h * 0.4));
-          rect(c, ox + 1 + i, oy + Math.round(h * 0.7) - 2 - flame, 2, flame, i % 4 ? "#f2a33a" : "#e0392f");
-          rect(c, ox + 1 + i, oy + Math.round(h * 0.7) - 2 - Math.round(flame / 2), 1, Math.round(flame / 2), "#ffe08a");
+          const flame = 2 + Math.round((Math.sin(time * 9 + i * 1.7) * 0.5 + 0.5) * Math.max(2, tall * 0.55));
+          rect(c, ox + 1 + i, oy + tall - 1 - flame, 2, flame, i % 4 ? "#f2a33a" : "#e0392f");
+          rect(c, ox + 1 + i, oy + tall - 1 - Math.round(flame / 2), 1, Math.round(flame / 2), "#ffe08a");
         }
         break;
       }
       case "piano": {
         const h = lift(0.38);
         this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.lighter });
-        if (bw >= bh) {
+        if (back === "top") {
           const ky = by + bh - Math.round(h * 0.55);
           rect(c, bx + 2, ky, bw - 4, 3, "#f4f4f0");
           for (let x = bx + 3; x < bx + bw - 3; x += 3) if (x % 7 !== 0) rect(c, x, ky, 1, 2, "#1a1a1a");
+        } else if (back === "bottom") {
+          rect(c, bx + 2, by - h + 2, bw - 4, 3, "#f4f4f0");
+          for (let x = bx + 3; x < bx + bw - 3; x += 3) if (x % 7 !== 0) rect(c, x, by - h + 2, 1, 2, "#1a1a1a");
+        } else {
+          const kx = back === "left" ? bx + bw - 5 : bx + 2;
+          rect(c, kx, by - h + 2, 3, bh - 4, "#f4f4f0");
+          for (let y = by - h + 3; y < by + bh - h - 3; y += 3) if (y % 7 !== 0) rect(c, kx, y, 2, 1, "#1a1a1a");
         }
         break;
       }
@@ -944,7 +965,7 @@ export class Scene {
       case "swing": {
         // A frame with two posts and a beam, a seat swinging under it.
         const h = lift(1.2);
-        const across = bw >= bh;
+        const across = f.item.back ? f.item.back === "top" || f.item.back === "bottom" : bw >= bh;
         rect(c, bx + 2, by + bh - 1, bw - 2, 2, "rgba(0,0,0,.25)");
         if (across) {
           rect(c, bx, by + bh - h, 2, h, shade.base);
@@ -1053,7 +1074,7 @@ export class Scene {
    * the long side farther from the middle of the room. A corner sofa is cut into its two arms; their
    * backrests run along the outer sides of the corner and the armrests close their free ends.
    */
-  private drawSofa(c: CanvasRenderingContext2D, f: Furniture, fabric: { seat: string; side: string; light: string; dark: string; base: string }): void {
+  private drawSofa(c: CanvasRenderingContext2D, f: Furniture, fabric: { seat: string; side: string; light: string; dark: string; base: string }, chosen?: Side): void {
     const P = PPM;
     const [x0, y0, x1, y1] = f.box;
     const armchair = x1 - x0 < 1.2 && y1 - y0 < 1.2;
@@ -1062,7 +1083,6 @@ export class Scene {
     const seatLift = Math.round(0.2 * P);
     const backLift = Math.round(0.42 * P);
     const armLift = Math.round(0.3 * P);
-    type Side = "top" | "bottom" | "left" | "right";
     type Block = { box: Box; lift: number; top: string; front: string };
     const blocks: Block[] = [];
     const band = (b: Box, side: Side, depth: number): Box =>
@@ -1095,9 +1115,10 @@ export class Scene {
         const b = band(f.box, side, 0);
         return Math.hypot((b[0] + b[2]) / 2 - middle[0], (b[1] + b[3]) / 2 - middle[1]);
       };
-      const back: Side = walls.length
+      const fitted: Side = walls.length
         ? walls.reduce((best, side) => (length(f.box, side) > length(f.box, best) ? side : best))
         : longSides.reduce((best, side) => (distance(side) > distance(best) ? side : best));
+      const back: Side = chosen ?? fitted;
       blocks.push({ box: band(f.box, back, backDepth), lift: backLift, top: fabric.dark, front: fabric.base });
       for (const end of across(back)) blocks.push({ box: band(f.box, end, armDepth), lift: armLift, top: fabric.side, front: fabric.dark });
       seams.push([f.box, back]);
