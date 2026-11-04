@@ -17,6 +17,7 @@ import { type CameraObject, type StillImage, type Device, type Level, type Track
   openGroups,
   planRadius,
   polygonPath,
+  itemPoints,
   pointInPolygon,
   pointOnWall,
   readingText,
@@ -1023,7 +1024,7 @@ class FloorCastCard extends LitElement {
             ? svg`${this.renderMowers(level)} ${this.renderVacuums(level)}`
             : svg`${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}`}
           ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
-          ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)} ${this.renderLocks(level, pxPerMetre)}
+          ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)} ${this.renderCarHits(level)} ${this.renderLocks(level, pxPerMetre)}
           ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)} ${this.renderIndicators(level, pxPerMetre)}
           ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}`;
     const svgClass = `${this._config.crop?.[level.id] || zoomed ? "cropped" : ""} ${pixel ? "pixel" : ""}`;
@@ -1055,6 +1056,13 @@ class FloorCastCard extends LitElement {
         ${own ? this.renderZoomButtons(level) : nothing}
       </div>
     `;
+  }
+
+  /** A tap on a car with a presence entity opens that entity. */
+  private renderCarHits(level: Level) {
+    return level.items
+      .filter((item) => item.type === "car" && item.presence)
+      .map((item) => svg`<path class="car-hit" d=${polygonPath(itemPoints(item))} @click=${() => this.openMoreInfo(item.presence!)}></path>`);
   }
 
   /** A tap moves the blind of a window: stops it while it moves, otherwise closes an open one and opens a closed one. Holding, or a tap on a window or door with only a sensor, opens its details. */
@@ -2160,6 +2168,10 @@ class FloorCastCard extends LitElement {
       }
       .fc-track.object {
         stroke: var(--fc-camera-object, #ab47bc);
+      }
+      .car-hit {
+        fill: transparent;
+        cursor: pointer;
       }
       .opening-hit {
         fill: none;

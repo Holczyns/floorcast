@@ -1,7 +1,7 @@
 // Types, tables and helpers of the editor: its tools and tabs, the names and hints it shows, and small
 // functions of geometry and storage it shares between its parts.
 import { N_, t } from "./i18n";
-import { levelBounds, type AreaKind, type Device, type FloorFinish, type FurnitureKind, type Item, type ItemType, type Point, type Zone } from "./model";
+import { levelBounds, type AreaKind, type CarBody, type FenceStyle, type Device, type FloorFinish, type FurnitureKind, type Item, type ItemType, type Point, type Zone } from "./model";
 
 export type Tool = "select" | "wall" | "door" | "window" | "gate" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "indicator" | "mark" | "calibrate";
 export type Selection =
@@ -205,6 +205,26 @@ export const ITEM_LABELS: Record<ItemType, string> = {
   obstacle: N_("Obstacle (furniture)"),
   round_obstacle: N_("Round obstacle (table, pouf)"),
   tree: N_("Tree"),
+  car: N_("Car"),
+};
+
+/** Kinds of fence a wall type can be. */
+export const FENCE_LABELS: Record<FenceStyle, string> = {
+  picket: N_("Wooden pickets"),
+  boards: N_("Horizontal boards"),
+  panel: N_("Metal panels"),
+  mesh: N_("Wire mesh"),
+  brick: N_("Brick wall"),
+  gabion: N_("Gabion"),
+};
+
+/** Bodies a car can have. */
+export const CAR_LABELS: Record<CarBody, string> = {
+  hatchback: N_("Hatchback"),
+  sedan: N_("Sedan"),
+  estate: N_("Estate"),
+  suv: N_("SUV"),
+  van: N_("Van"),
 };
 
 /** Names of the pieces of furniture an obstacle can be, for the pixel look. */

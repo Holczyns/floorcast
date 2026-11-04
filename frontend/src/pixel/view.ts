@@ -6,7 +6,19 @@
 // the drops of water in the air, how wet the lawn is, and the last light and sun pictures with the
 // states they were worked out from, so they are worked out again only when one of those changes.
 import type { HomeAssistant } from "../ha";
-import { type Level, type Plan, type Point, type TrackedPerson, deviceCentre, isPowered, pointInPolygon } from "../model";
+import { type Level, type Opening, type Plan, type Point, type TrackedPerson, carPresent, deviceCentre, isPowered, pointInPolygon } from "../model";
+
+/** Whether a door, gate or wicket stands open: a gate by its cover, any by its contact, else as drawn. */
+function openingOpen(hass: HomeAssistant, o: Opening): boolean {
+  if (o.type === "gate" && o.cover) {
+    const state = hass.states[o.cover]?.state;
+    return state === "open" || state === "opening";
+  }
+  const contact = o.contact ? hass.states[o.contact]?.state : undefined;
+  if (contact === "on") return true;
+  if (contact === "off") return false;
+  return o.drawn !== "closed";
+}
 import { PPM, canvas, rect } from "./art";
 import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
@@ -182,16 +194,7 @@ class LevelPicture {
   }
 
   private doorOpen(hass: HomeAssistant, d: Piece): boolean {
-    const o = d.opening;
-    if (!o) return true;
-    if (o.type === "gate" && o.cover) {
-      const state = hass.states[o.cover]?.state;
-      return state === "open" || state === "opening";
-    }
-    const contact = o.contact ? hass.states[o.contact]?.state : undefined;
-    if (contact === "on") return true;
-    if (contact === "off") return false;
-    return o.drawn !== "closed";
+    return d.opening ? openingOpen(hass, d.opening) : true;
   }
 
   private sunPlace(hass: HomeAssistant): { azimuth: number; elevation: number; day: number } {
@@ -334,6 +337,19 @@ class LevelPicture {
     }
     for (const f of s.furniture) if (f.kind !== "rug") items.push({ y: s.px([0, f.box[3]])[1] + 0.5, draw: () => s.drawFurniture(c, f) });
     for (const g of s.garden) if (STANDING_GARDEN.has(g.item.type)) items.push({ y: s.px([0, g.box[3]])[1] + 0.5, draw: () => s.drawGardenObject(c, g) });
+    for (const part of s.fenceParts) items.push({ y: part.order, draw: () => c.drawImage(s.fenceArt, part.x, part.y, part.w, part.h, part.x, part.y, part.w, part.h) });
+    for (const fence of s.fences)
+      for (const gap of fence.gaps) {
+        if (openingOpen(hass, gap.opening)) continue;
+        const foot = Math.max(s.px([fence.a[0] + fence.u[0] * gap.s, fence.a[1] + fence.u[1] * gap.s])[1], s.px([fence.a[0] + fence.u[0] * gap.e, fence.a[1] + fence.u[1] * gap.e])[1]);
+        items.push({ y: foot + 0.3, draw: () => s.drawGate(c, fence, gap) });
+      }
+    // A car home stands like the rest; one away leaves the outline of its place on the ground, under everything.
+    for (const g of s.garden) {
+      if (g.item.type !== "car") continue;
+      if (carPresent(g.item, hass.states)) items.push({ y: s.px([0, g.box[3]])[1] + 0.5, draw: () => s.drawCar(c, g) });
+      else items.push({ y: -Infinity, draw: () => s.drawParking(c, g) });
+    }
     for (const device of s.level.devices ?? []) {
       if (device.kind !== "vacuum" && device.kind !== "mower") continue;
       const place = source.robot(device.id);

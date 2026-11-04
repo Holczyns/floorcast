@@ -31,6 +31,13 @@ export class Grid {
       for (let j = Math.max(0, j0); j <= Math.min(this.rows - 1, j1); j++)
         for (let i = Math.max(0, i0); i <= Math.min(this.cols - 1, i1); i++) this.open[j * this.cols + i] = 0;
     }
+    // A fence closes the cells along its line, whatever its angle; its gates and wickets stay open.
+    for (const fence of scene.fences)
+      for (let d = 0; d <= fence.length; d += 0.05) {
+        if (fence.gaps.some((g) => d >= g.s && d < g.e)) continue;
+        const [i, j] = this.cell([fence.a[0] + fence.u[0] * d, fence.a[1] + fence.u[1] * d]);
+        if (i >= 0 && j >= 0 && i < this.cols && j < this.rows) this.open[j * this.cols + i] = 0;
+      }
   }
 
   centre(i: number, j: number): Point {

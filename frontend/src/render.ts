@@ -3,6 +3,7 @@ import { css, nothing, svg, type SVGTemplateResult } from "lit";
 import { N_, t } from "./i18n";
 import {
   CIRCLE_TYPES,
+  carPresent,
   DEFAULT_CORNER_RADIUS,
   OBSTACLE_TYPES,
   ITEM_ORDER,
@@ -54,7 +55,39 @@ export const PLAN_DEFS = svg`
 
 const PATTERNS: Partial<Record<Item["type"], string>> = { lawn: "url(#fc-lawn)", vegetable: "url(#fc-veg)" };
 
-export function renderItem(item: Item, variant = "", radius = 0): SVGTemplateResult {
+/**
+ * A car seen from above: the body with its windscreen towards the front and the rear window behind, in its
+ * colour. Away (by its presence entity) only a dashed outline of its place is left.
+ */
+function renderCar(item: Item, states?: States): SVGTemplateResult {
+  const [x, y, w, h] = item.rect ?? [0, 0, 1.8, 4.5];
+  const rotation = item.rotation ?? 0;
+  const transform = rotation ? `rotate(${rotation} ${n(x + w / 2)} ${n(y + h / 2)})` : "";
+  const away = states ? !carPresent(item, states) : false;
+  const front = item.front ?? (h >= w ? "top" : "left");
+  const lengthwise = front === "top" || front === "bottom";
+  const length = lengthwise ? h : w;
+  // A band across the car from t0 to t1 of its length counted from the front, inset from its sides.
+  const band = (t0: number, t1: number, inset: number): [number, number, number, number] => {
+    const a = front === "top" || front === "left" ? t0 : 1 - t1;
+    const b = front === "top" || front === "left" ? t1 : 1 - t0;
+    return lengthwise ? [x + inset, y + a * length, w - 2 * inset, (b - a) * length] : [x + a * length, y + inset, (b - a) * length, h - 2 * inset];
+  };
+  const cabin = { hatchback: [0.36, 0.86], sedan: [0.35, 0.72], estate: [0.35, 0.93], suv: [0.33, 0.93], van: [0.16, 0.96] }[item.body ?? "hatchback"];
+  const side = lengthwise ? w : h;
+  const glass = (r: [number, number, number, number]) => svg`<rect class="fc-car-glass" x=${n(r[0])} y=${n(r[1])} width=${n(r[2])} height=${n(r[3])} rx="0.08"></rect>`;
+  return svg`<g data-item=${item.id} transform=${transform} class="fc-car ${away ? "away" : ""}" style=${item.colour ? `--fc-car:${item.colour}` : ""}>
+    <rect class="fc-car-body" x=${n(x)} y=${n(y)} width=${n(w)} height=${n(h)} rx=${n(Math.min(0.4, side / 4))}></rect>
+    ${away
+      ? nothing
+      : svg`${glass(band(cabin[0], cabin[0] + 0.12, side * 0.1))} ${glass(band(cabin[1] - 0.07, cabin[1], side * 0.12))}
+        <rect class="fc-car-roof" x=${n(band(cabin[0] + 0.12, cabin[1] - 0.07, side * 0.14)[0])} y=${n(band(cabin[0] + 0.12, cabin[1] - 0.07, side * 0.14)[1])}
+          width=${n(band(cabin[0] + 0.12, cabin[1] - 0.07, side * 0.14)[2])} height=${n(band(cabin[0] + 0.12, cabin[1] - 0.07, side * 0.14)[3])} rx="0.06"></rect>`}
+  </g>`;
+}
+
+export function renderItem(item: Item, variant = "", radius = 0, states?: States): SVGTemplateResult {
+  if (item.type === "car") return variant ? svg`` : renderCar(item, states);
   // A round obstacle looks like any other piece of furniture.
   const look = item.type === "round_obstacle" ? "obstacle" : item.type;
   const cls = `fc-item fc-${look}${variant}${item.type === "shelter" && item.roof === "polycarbonate" ? " polycarbonate" : ""}`;
@@ -333,7 +366,22 @@ function isFreeEnd(p: [number, number], wall: Wall, walls: Wall[]): boolean {
  * A wall as a band cut square at its ends. With rounded corners its free ends get the corner
  * radius, at most half the thickness, which makes a thin wall end in a half disc.
  */
+/** A fence: a thin line with posts about every two metres and a wide invisible band to pick it by. */
+function renderFence(wall: Wall): SVGTemplateResult {
+  const length = wallLength(wall);
+  const d = wallDirection(wall);
+  const count = Math.max(1, Math.round(length / 2));
+  const posts = Array.from({ length: count + 1 }, (_, i) => [wall.a[0] + d[0] * (length * i) / count, wall.a[1] + d[1] * (length * i) / count]);
+  const line = `M${n(wall.a[0])} ${n(wall.a[1])}L${n(wall.b[0])} ${n(wall.b[1])}`;
+  return svg`<g data-wall=${wall.id} class="fc-fence ${wall.fence}">
+    <path class="fc-fence-hit" d=${line}></path>
+    <path class="fc-fence-line" d=${line}></path>
+    ${posts.map((p) => svg`<rect class="fc-fence-post" x=${n(p[0] - 0.05)} y=${n(p[1] - 0.05)} width="0.1" height="0.1"></rect>`)}
+  </g>`;
+}
+
 function renderWall(wall: Wall, walls: Wall[], radius: number): SVGTemplateResult {
+  if (wall.fence) return renderFence(wall);
   const d = wallDirection(wall);
   const half = wall.t / 2;
   const side: [number, number] = [-d[1] * half, d[0] * half];
@@ -855,7 +903,7 @@ export function renderLevel(
   const ground = items.filter((item) => !OBSTACLE_TYPES.includes(item.type));
   const obstacles = items.filter((item) => OBSTACLE_TYPES.includes(item.type));
   return svg`
-    ${ground.map((item) => renderItem(item, "", radius))}
+    ${ground.map((item) => renderItem(item, "", radius, states))}
     ${level.rooms.map((room) => {
       const radii = roomRadii(room, level.walls, room.outdoor ? 0 : radius);
       const fill = fills[room.id];
@@ -866,7 +914,7 @@ export function renderLevel(
     ${level.rooms.filter((room) => room.stairs).map(renderStairs)}
     ${obstacles.map((item) => renderItem(item, "-edge", radius))} ${obstacles.map((item) => renderItem(item, "", radius))}
     ${under} ${level.walls.map((wall) => renderWall(wall, level.walls, radius))}
-    ${renderJoints(level.walls, radius)}
+    ${renderJoints(level.walls.filter((wall) => !wall.fence), radius)}
     ${level.openings.filter((o) => walls.has(o.wall)).map((o) => renderOpening(o, walls.get(o.wall)!, level, states))}
   `;
 }
@@ -1254,6 +1302,55 @@ export const planStyles = css`
   .fc-shelter,
   .fc-garden_house {
     fill: var(--fc-wood);
+  }
+  .fc-fence-hit {
+    stroke: transparent;
+    stroke-width: 0.3;
+    fill: none;
+  }
+  .fc-fence-line {
+    stroke: var(--fc-fence, #8a6a4a);
+    stroke-width: 0.05;
+    fill: none;
+  }
+  .fc-fence-post {
+    fill: var(--fc-fence, #8a6a4a);
+  }
+  .fc-fence.panel {
+    --fc-fence: #4a4e55;
+  }
+  .fc-fence.mesh {
+    --fc-fence: #8f989f;
+  }
+  .fc-fence.brick {
+    --fc-fence: #b5654a;
+  }
+  .fc-fence.brick .fc-fence-line {
+    stroke-width: 0.2;
+  }
+  .fc-fence.gabion {
+    --fc-fence: #8a857d;
+  }
+  .fc-fence.gabion .fc-fence-line {
+    stroke-width: 0.3;
+  }
+  .fc-car-body {
+    fill: var(--fc-car, #9aa3ad);
+    stroke: rgba(0, 0, 0, 0.45);
+    stroke-width: 0.04;
+  }
+  .fc-car-glass {
+    fill: #2b3540;
+  }
+  .fc-car-roof {
+    fill: var(--fc-car, #9aa3ad);
+    filter: brightness(1.1);
+  }
+  .fc-car.away .fc-car-body {
+    fill: none;
+    stroke: var(--fc-label);
+    stroke-opacity: 0.5;
+    stroke-dasharray: 0.2 0.15;
   }
   .fc-shelter.polycarbonate {
     fill: var(--fc-glass);

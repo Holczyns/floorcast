@@ -10,18 +10,29 @@ export interface Wall {
   /** Thickness; follows the wall type when the wall has one. */
   t: number;
   type?: string;
+  /** A fence of this kind instead of a wall of the house: no rooms, light or corners, only a gate or wicket in it. Follows the wall type. */
+  fence?: FenceStyle;
 }
+
+export type FenceStyle = "picket" | "boards" | "panel" | "mesh" | "brick" | "gabion";
+export const FENCE_STYLES: FenceStyle[] = ["picket", "boards", "panel", "mesh", "brick", "gabion"];
 
 export interface WallType {
   id: string;
   name: string;
   t: number;
+  /** Walls of this type are fences of this kind. */
+  fence?: FenceStyle;
 }
+
+/** The fence type every plan gets. */
+export const FENCE_TYPE: WallType = { id: "fence", name: "Fence", t: 0.05, fence: "panel" };
 
 export const DEFAULT_WALL_TYPES: WallType[] = [
   { id: "outer", name: "Outer wall", t: 0.275 },
   { id: "load", name: "Load-bearing wall", t: 0.25 },
   { id: "partition", name: "Partition", t: 0.12 },
+  FENCE_TYPE,
 ];
 
 export interface Opening {
@@ -143,7 +154,8 @@ export type ItemType =
   | "manhole"
   | "obstacle"
   | "round_obstacle"
-  | "tree";
+  | "tree"
+  | "car";
 
 export interface Item {
   id: string;
@@ -161,12 +173,29 @@ export interface Item {
   corners?: "round" | "square";
   /** Obstacle: the piece of furniture it is, for the pixel look; guessed from its room and size without it. */
   furniture?: FurnitureKind;
-  /** Obstacle: the main colour of the piece in the pixel look (fabric, fronts, wood); its own colour without it. */
+  /** Obstacle or car: its main colour (fabric, fronts, wood, paint); its own colour without it. */
   colour?: string;
   /** Obstacle: the side its back is on in the pixel look (backrest, headboard, screen); against a wall without it. */
   back?: "top" | "bottom" | "left" | "right";
   /** Shelter: its roof, wooden slats without it or clear polycarbonate on a frame of rafters. */
   roof?: "slats" | "polycarbonate";
+  /** Car: its body. */
+  body?: CarBody;
+  /** Car: the side its front is on; along its length towards the top or left without it. */
+  front?: "top" | "bottom" | "left" | "right";
+  /** Car: an entity telling whether it is home (person, device tracker or binary sensor); always there without it. */
+  presence?: string;
+}
+
+export type CarBody = "hatchback" | "sedan" | "estate" | "suv" | "van";
+export const CAR_BODIES: CarBody[] = ["hatchback", "sedan", "estate", "suv", "van"];
+
+/** Whether a car is home by its presence entity; one unknown or unavailable counts as home. */
+export function carPresent(item: Item, states: Record<string, { state: string } | undefined>): boolean {
+  if (!item.presence) return true;
+  const state = states[item.presence]?.state;
+  if (!state || state === "unknown" || state === "unavailable") return true;
+  return state === "home" || state === "on" || state === "present";
 }
 
 /**
@@ -792,6 +821,7 @@ export const GARDEN_TYPES: ItemType[] = [
   "trampoline",
   "manhole",
   "tree",
+  "car",
 ];
 
 /** Devices of the garden, hidden with it. */
@@ -833,6 +863,7 @@ export const ITEM_ORDER: ItemType[] = [
   "shelter",
   "garden_house",
   "trampoline",
+  "car",
   "obstacle",
   "round_obstacle",
   "tree",
@@ -985,6 +1016,7 @@ export function planRadius(plan: Plan | undefined): number {
 export function onWallFace(p: Point, q: Point, walls: Wall[]): boolean {
   const mid: Point = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
   return walls.some((wall) => {
+    if (wall.fence) return false;
     const { at, distance } = projectOnWall(wall, mid);
     return at > 0 && at < wallLength(wall) && distance <= wall.t / 2 + 0.03;
   });

@@ -26,6 +26,7 @@ import {
   mapToPlan,
   mapTransform,
   DEFAULT_WALL_TYPES,
+  FENCE_TYPE,
   GARDEN_TYPES,
   type Item,
   type ItemType,
@@ -378,7 +379,12 @@ export class FloorCastPanel extends LitElement {
       // A plan from before wall types: walls whose thickness matches a type get that type.
       plan.wallTypes = clone(DEFAULT_WALL_TYPES);
       for (const level of plan.levels)
-        for (const wall of level.walls ?? []) wall.type ??= plan.wallTypes.find((type) => Math.abs(type.t - wall.t) < 1e-6)?.id;
+        for (const wall of level.walls ?? []) wall.type ??= plan.wallTypes.find((type) => Math.abs(type.t - wall.t) < 1e-6 && !type.fence)?.id;
+    }
+    // A plan from before fences gets the fence type to draw them with.
+    if (!plan.wallTypes.some((type) => type.fence)) {
+      updated = true;
+      plan.wallTypes.push(clone(FENCE_TYPE));
     }
     for (const level of plan.levels) {
       level.walls ??= [];
@@ -452,7 +458,13 @@ export class FloorCastPanel extends LitElement {
 
   /** A changed thickness of a type reaches every wall of that type on every level. */
   applyWallType(type: WallType): void {
-    for (const level of this._plan!.levels) for (const wall of level.walls) if (wall.type === type.id) wall.t = type.t;
+    for (const level of this._plan!.levels)
+      for (const wall of level.walls) {
+        if (wall.type !== type.id) continue;
+        wall.t = type.t;
+        if (type.fence) wall.fence = type.fence;
+        else delete wall.fence;
+      }
   }
 
   get level(): Level {
@@ -1479,7 +1491,7 @@ export class FloorCastPanel extends LitElement {
     const last = this._draft.at(-1);
     if (last && dist(last, p) > 0.05) {
       const type = this.wallType(this._wallType);
-      this.change(() => this.level.walls.push({ id: uid("wall"), a: last, b: p, t: type.t, type: type.id }));
+      this.change(() => this.level.walls.push({ id: uid("wall"), a: last, b: p, t: type.t, type: type.id, ...(type.fence ? { fence: type.fence } : {}) }));
     }
     this._draft = [p];
   }
@@ -1537,8 +1549,9 @@ export class FloorCastPanel extends LitElement {
       if (w < 0.1 || h < 0.1) {
         x = start[0];
         y = start[1];
-        w = 1;
-        h = 1;
+        // A car comes at the size of one, a little under two metres by four and a half.
+        w = type === "car" ? 1.8 : 1;
+        h = type === "car" ? 4.5 : 1;
       }
       item = { id: uid("item"), type, rect: [fix(x), fix(y), fix(w), fix(h)], rotation: 0 };
     }

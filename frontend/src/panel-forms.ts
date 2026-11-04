@@ -3,6 +3,10 @@ import { html, nothing } from "lit";
 import { LANGUAGE_NAMES, N_, t } from "./i18n";
 import { EDITOR_LANGUAGES } from "./i18n/editor-languages";
 import {
+  CAR_BODIES,
+  type CarBody,
+  FENCE_STYLES,
+  type FenceStyle,
   CIRCLE_TYPES,
   FURNITURE_KINDS,
   FLOOR_FINISHES,
@@ -54,6 +58,8 @@ import {
 import { planPalette, DARK_PALETTE, LIGHT_PALETTE, PALETTE_GROUPS } from "./render";
 import { FURNITURE_COLOURS, furnitureOf, guessFurniture } from "./pixel/furniture";
 import {
+  CAR_LABELS,
+  FENCE_LABELS,
   DEVICE_LABELS,
   Registry,
   ON_OPENING,
@@ -298,6 +304,19 @@ export function levelProperties(p: FloorCastPanel) {
           }}
         />
         <em>cm</em>
+        <select
+          title=${t("Fence")}
+          @change=${(e: Event) =>
+            p.change(() => {
+              const value = (e.target as HTMLSelectElement).value as FenceStyle | "";
+              if (value) type.fence = value;
+              else delete type.fence;
+              p.applyWallType(type);
+            })}
+        >
+          <option value="" ?selected=${!type.fence}>${t("Wall")}</option>
+          ${FENCE_STYLES.map((style) => html`<option value=${style} ?selected=${type.fence === style}>${t(FENCE_LABELS[style])}</option>`)}
+        </select>
         <button
           class="small"
           title=${t("Remove the type; its walls keep their thickness")}
@@ -456,6 +475,9 @@ export function wallProperties(p: FloorCastPanel, wall?: Wall) {
             }
             wall.type = id;
             wall.t = p.wallType(id).t;
+            const fence = p.wallType(id).fence;
+            if (fence) wall.fence = fence;
+            else delete wall.fence;
           })}
       >
         ${p.wallTypes.map(
@@ -1038,6 +1060,60 @@ function petProperties(p: FloorCastPanel) {
   `;
 }
 
+/** A car: its body, colour, which way its front is and the entity telling whether it is home. */
+function carProperties(p: FloorCastPanel, item: Item) {
+  return html`<label class="field wide">
+      <span>${t("Body")}</span>
+      <select @change=${(e: Event) => p.change(() => (item.body = (e.target as HTMLSelectElement).value as CarBody))}>
+        ${CAR_BODIES.map((body) => html`<option value=${body} ?selected=${(item.body ?? "hatchback") === body}>${t(CAR_LABELS[body])}</option>`)}
+      </select>
+    </label>
+    <div class="row">
+      <label class="field">
+        <span>${t("Main colour")}</span>
+        <input type="color" .value=${item.colour ?? "#9aa3ad"} @change=${(e: Event) => p.change(() => (item.colour = (e.target as HTMLInputElement).value))} />
+      </label>
+      <button class="small" ?disabled=${!item.colour} @click=${() => p.change(() => delete item.colour)}>${t("Default colour")}</button>
+    </div>
+    <label class="field wide">
+      <span>${t("Front towards")}</span>
+      <select
+        @change=${(e: Event) =>
+          p.change(() => {
+            const value = (e.target as HTMLSelectElement).value;
+            if (value) item.front = value as NonNullable<Item["front"]>;
+            else delete item.front;
+          })}
+      >
+        ${(
+          [
+            ["", t("Automatic")],
+            ["top", t("Top")],
+            ["bottom", t("Bottom")],
+            ["left", t("Left")],
+            ["right", t("Right")],
+          ] as [string, string][]
+        ).map(([value, label]) => html`<option value=${value} ?selected=${(item.front ?? "") === value}>${label}</option>`)}
+      </select>
+    </label>
+    <div class="pick">
+      <span>${t("Presence")}</span>
+      <floorcast-entity-picker
+        .hass=${p.hass}
+        .domains=${["person", "device_tracker", "binary_sensor"]}
+        .value=${item.presence ?? null}
+        optional
+        @value-changed=${(e: CustomEvent) =>
+          p.change(() => {
+            if (e.detail) item.presence = e.detail;
+            else delete item.presence;
+          })}
+      ></floorcast-entity-picker>
+    </div>
+    ${p.stateLine(item.presence)}
+    <p class="muted">${t("The car shows while this entity is home or on; otherwise only its parking space is outlined.")}</p>`;
+}
+
 export function itemProperties(p: FloorCastPanel, item?: Item) {
   if (!item) return nothing;
   return html`
@@ -1050,6 +1126,7 @@ export function itemProperties(p: FloorCastPanel, item?: Item) {
         )}
       </select>
     </label>
+    ${item.type === "car" ? carProperties(p, item) : nothing}
     ${item.type === "shelter"
       ? html`<label class="field wide">
           <span>${t("Roof")}</span>

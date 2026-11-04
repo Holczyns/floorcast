@@ -1,7 +1,7 @@
 // What a level looks like in the pixel look, worked out once from the plan: walls cut by their openings,
 // the base picture (ground, floors, wall faces, wall tops), furniture guessed from the obstacles and what
 // each light, window and screen can reach past the walls.
-import { type Device, type FurnitureKind, type Item, type Level, type Opening, type Plan, type Point, type Room, deviceCentre, drawnBounds, itemPoints, pointInPolygon } from "../model";
+import { type Device, type FenceStyle, type FurnitureKind, type Item, type Level, type Opening, type Plan, type Point, type Room, deviceCentre, drawnBounds, itemPoints, pointInPolygon } from "../model";
 import { FURNITURE_COLOURS, furnitureOf } from "./furniture";
 import { LOOKS, PPM, type RoomKind, type RoomLook, type Texture, canvas, crops, disc, flowers, hash, rect, roomKind, texture, tone } from "./art";
 import { drawStairs } from "./stairs";
@@ -78,6 +78,64 @@ export interface SceneLight {
 
 const DOOR_LIKE = new Set(["door", "gate"]);
 
+/** How tall a fence stands in the picture, a little lower than the walls of the house. */
+export const FENCE_HEIGHT = 0.4;
+
+/** A fence along a line: its kind, where it starts, which way it runs, and its gates and wickets. */
+export interface Fence {
+  style: FenceStyle;
+  a: Point;
+  u: Point;
+  length: number;
+  gaps: { s: number; e: number; opening: Opening }[];
+}
+
+/** The colour of a fence of each kind at a pixel along it (s) and above the ground (z), or none where it is open. */
+function fencePixel(style: FenceStyle, s: number, z: number, h: number): string | null {
+  switch (style) {
+    case "picket": {
+      if (s % 40 < 2) return z === h - 1 ? "#7a5232" : "#6b4a33";
+      const m = s % 4;
+      if (m === 3) return z === 3 || z === h - 4 ? "#8a6440" : null;
+      if (z === h - 1) return m === 1 ? "#d9b483" : null;
+      return m === 0 ? "#b88f60" : "#c8a070";
+    }
+    case "boards": {
+      if (s % 48 < 2) return "#5a3c28";
+      if (z === h - 1) return "#b8865a";
+      if (z % 3 === 2) return "#6b4a33";
+      return Math.floor(z / 3) % 2 ? "#9a6a44" : "#a87650";
+    }
+    case "panel": {
+      if (s % 80 < 2) return "#2a2c31";
+      if (z === 1 || z === Math.floor(h / 2) || z === h - 2) return "#3a3d42";
+      return s % 3 === 0 ? "#43474e" : null;
+    }
+    case "mesh": {
+      if (s % 80 < 2) return "#5d6a5a";
+      if (z === h - 1) return "#7d868f";
+      return (s + z) % 4 === 0 || (s - z + 400) % 4 === 0 ? "#9aa3ad" : null;
+    }
+    case "brick": {
+      if (z >= h - 2) return z === h - 1 ? "#cfc9bf" : "#b8b2a8";
+      const row = Math.floor(z / 3);
+      if (z % 3 === 2 || (s + (row % 2) * 4) % 8 === 7) return "#c9c0b0";
+      return ["#b5654a", "#a85a40", "#bf7055"][Math.floor(hash(Math.floor((s + (row % 2) * 4) / 8), row, 5) * 3)];
+    }
+    case "gabion": {
+      if (s % 6 === 0 || z % 6 === 0 || z === h - 1) return "#8a9099";
+      return ["#9a958d", "#857f77", "#b0aba2", "#6f6a63"][Math.floor(hash(s >> 1, z >> 1, 9) * 4)];
+    }
+  }
+  return null;
+}
+
+/** A shut gate or wicket in a fence: a frame with bars of dark metal. */
+function gatePixel(s: number, z: number, h: number, width: number): string | null {
+  if (z === 0 || z === h - 1 || s < 2 || s >= width - 2) return "#2a2c31";
+  return s % 3 === 0 ? "#3a3d42" : null;
+}
+
 function boxOf(points: Point[]): Box {
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
@@ -107,6 +165,10 @@ export class Scene {
   readonly furniture: Furniture[] = [];
   readonly garden: { item: Item; points: Point[]; box: Box }[] = [];
   readonly lights: SceneLight[] = [];
+  readonly fences: Fence[] = [];
+  /** Fences drawn once, and slices of them for the drawing order like the walls. */
+  readonly fenceArt: HTMLCanvasElement;
+  readonly fenceParts: { x: number; y: number; w: number; h: number; order: number }[] = [];
   readonly screens: { device: Device; mask: Mask }[] = [];
   /** Light buffer: size and, by cell, the room index, -1 outside, -2 on a wall top. */
   readonly lightWidth: number;
@@ -155,6 +217,134 @@ export class Scene {
     oc.drawImage(walls, 0, 0);
     this.outline = outline;
     this.cutWallParts();
+    const [fenceArt, fc] = canvas(this.width, this.height);
+    this.fenceArt = fenceArt;
+    for (const fence of this.fences) this.drawFenceArt(fc, fence);
+  }
+
+  /**
+   * A fence into the picture of fences, standing up from its line, with slices for the drawing order: across
+   * a fence running sideways, down one running down the screen, each as far as the fence reaches the other way.
+   */
+  private drawFenceArt(c: CanvasRenderingContext2D, f: Fence): void {
+    const h = Math.round(FENCE_HEIGHT * PPM);
+    const sideways = Math.abs(f.u[0]) >= Math.abs(f.u[1]);
+    const column = sideways ? 1 : 2;
+    const steps = Math.ceil(f.length * PPM);
+    const at = (k: number) => this.px([f.a[0] + (f.u[0] * k) / PPM, f.a[1] + (f.u[1] * k) / PPM]);
+    const open = (k: number) => f.gaps.some((g) => k / PPM >= g.s && k / PPM < g.e);
+    for (let k = 0; k <= steps; k++) {
+      if (open(k)) continue;
+      const [x, y] = at(k);
+      rect(c, sideways ? x : x + column, sideways ? y + 1 : y, 1, 1, "rgba(0,0,0,.2)");
+      for (let z = 0; z < h; z++) {
+        const colour = fencePixel(f.style, k, z, h);
+        if (colour) rect(c, x, y - 1 - z, column, 1, colour);
+      }
+    }
+    const [ax, ay] = at(0);
+    const [bx, by] = at(steps);
+    const x0 = Math.min(ax, bx) - 1;
+    const x1 = Math.max(ax, bx) + column + 2;
+    const y0 = Math.min(ay, by) - h - 1;
+    const y1 = Math.max(ay, by) + 2;
+    const slice = 16;
+    if (sideways) {
+      for (let x = x0; x < x1; x += slice) {
+        // The foot of the fence where this slice ends nearest the viewer.
+        const k0 = Math.max(0, Math.min(steps, Math.round(((x - ax) / (bx - ax || 1)) * steps)));
+        const k1 = Math.max(0, Math.min(steps, Math.round(((x + slice - ax) / (bx - ax || 1)) * steps)));
+        this.fenceParts.push({ x, y: y0, w: Math.min(slice, x1 - x), h: y1 - y0, order: Math.max(at(k0)[1], at(k1)[1]) + 0.2 });
+      }
+    } else {
+      for (let y = y0; y < y1; y += slice) {
+        const part = Math.min(slice, y1 - y);
+        this.fenceParts.push({ x: x0, y, w: x1 - x0, h: part, order: Math.min(y + part + h, y1) + 0.2 });
+      }
+    }
+  }
+
+  /** A shut gate or wicket in a fence, drawn in the order of things as it opens and shuts. */
+  drawGate(c: CanvasRenderingContext2D, f: Fence, gap: Fence["gaps"][number]): void {
+    const h = Math.round(FENCE_HEIGHT * PPM);
+    const sideways = Math.abs(f.u[0]) >= Math.abs(f.u[1]);
+    const column = sideways ? 1 : 2;
+    const from = Math.round(gap.s * PPM);
+    const width = Math.round((gap.e - gap.s) * PPM);
+    for (let k = 0; k < width; k++) {
+      const [x, y] = this.px([f.a[0] + (f.u[0] * (from + k)) / PPM, f.a[1] + (f.u[1] * (from + k)) / PPM]);
+      for (let z = 0; z < h; z++) {
+        const colour = gatePixel(k, z, h, width);
+        if (colour) rect(c, x, y - 1 - z, column, 1, colour);
+      }
+    }
+  }
+
+  /**
+   * A car standing like the rest of the picture: the body raised as tall as its kind, wheels peeping out,
+   * the cabin on top with the windscreen towards its front, and lights at the end facing the viewer.
+   */
+  drawCar(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
+    const [bx, by, bw, bh] = this.pxBox(g.box);
+    const item = g.item;
+    const main = item.colour ?? "#9aa3ad";
+    const body = item.body ?? "hatchback";
+    const front = item.front ?? (bh >= bw ? "top" : "left");
+    const lengthwise = front === "top" || front === "bottom";
+    const h = Math.round((body === "van" ? 0.34 : body === "suv" ? 0.3 : 0.24) * PPM);
+    const wheel = "#1d1f25";
+    for (const t of [0.18, 0.8]) {
+      if (lengthwise) {
+        const wy = by + Math.round(bh * t) - 3 - Math.round(h / 2);
+        rect(c, bx - 1, wy, 2, 6, wheel);
+        rect(c, bx + bw - 1, wy, 2, 6, wheel);
+      }
+    }
+    this.box(c, g.points, h, tone(main, 0.08), tone(main, -0.22), { edge: tone(main, 0.3) });
+    if (!lengthwise) for (const t of [0.18, 0.8]) rect(c, bx + Math.round(bw * t) - 3, by + bh - 3, 6, 3, wheel);
+    // A band of the top from t0 to t1 of the length counted from the front, inset from the sides.
+    const top = by - h;
+    const band = (t0: number, t1: number, inset: number): Box => {
+      const forward = front === "top" || front === "left";
+      const a = forward ? t0 : 1 - t1;
+      const b = forward ? t1 : 1 - t0;
+      return lengthwise
+        ? [bx + inset, top + Math.round(a * bh), bw - 2 * inset, Math.round((b - a) * bh)]
+        : [bx + Math.round(a * bw), top + inset, Math.round((b - a) * bw), bh - 2 * inset];
+    };
+    const [c0, c1] = { hatchback: [0.36, 0.86], sedan: [0.35, 0.72], estate: [0.35, 0.93], suv: [0.33, 0.93], van: [0.16, 0.96] }[body];
+    const rise = 3;
+    const [gx, gy, gw, gh] = band(c0, c1, 2);
+    rect(c, gx, gy - rise, gw, gh + rise, "#2b3540");
+    const [sx, sy, sw, sh] = band(c0, c0 + 0.1, 2);
+    rect(c, sx, sy - rise, sw, sh, "#5f7d95");
+    const [rx, ry, rw, rh] = band(c0 + 0.12, c1 - 0.06, 3);
+    rect(c, rx, ry - rise, rw, rh, tone(main, 0.15));
+    rect(c, rx, ry - rise, rw, 1, tone(main, 0.35));
+    // Lights on the face towards the viewer: headlights when the front is there, tail lights when the back is.
+    const face = by + bh - h + 2;
+    if (lengthwise) {
+      const colour = front === "bottom" ? "#f5e6a0" : "#d0312d";
+      rect(c, bx + 2, face, 3, 2, colour);
+      rect(c, bx + bw - 5, face, 3, 2, colour);
+    } else {
+      rect(c, front === "left" ? bx + 1 : bx + bw - 3, face, 2, 2, "#f5e6a0");
+      rect(c, front === "left" ? bx + bw - 3 : bx + 1, face, 2, 2, "#d0312d");
+    }
+  }
+
+  /** The place of a car that is away: a dashed outline on the ground. */
+  drawParking(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
+    const [bx, by, bw, bh] = this.pxBox(g.box);
+    const line = "rgba(255,255,255,.45)";
+    for (let x = bx; x < bx + bw; x += 5) {
+      rect(c, x, by, Math.min(3, bx + bw - x), 1, line);
+      rect(c, x, by + bh - 1, Math.min(3, bx + bw - x), 1, line);
+    }
+    for (let y = by; y < by + bh; y += 5) {
+      rect(c, bx, y, 1, Math.min(3, by + bh - y), line);
+      rect(c, bx + bw - 1, y, 1, Math.min(3, by + bh - y), line);
+    }
   }
 
   /** Each wall as strips for the drawing order; walls running down the screen in short strips, so a person beside one is not covered by all of it. */
@@ -208,6 +398,15 @@ export class Scene {
       const length = Math.hypot(dx, dy);
       if (length < 0.01) continue;
       const u: Point = [dx / length, dy / length];
+      if (wall.fence) {
+        // A fence is no wall of the house: only its gates and wickets open it; a window in it is ignored.
+        const gaps = this.level.openings
+          .filter((o) => o.wall === wall.id && DOOR_LIKE.has(o.type))
+          .map((o) => ({ s: Math.max(0, o.at - o.width / 2), e: Math.min(length, o.at + o.width / 2), opening: o }))
+          .sort((p, q) => p.s - q.s);
+        this.fences.push({ style: wall.fence, a: wall.a, u, length, gaps });
+        continue;
+      }
       const n: Point = [-u[1], u[0]];
       const t = wall.t || plan?.wallTypes?.find((type) => type.id === wall.type)?.t || 0.15;
       const horizontal = Math.abs(dy) < Math.abs(dx);
