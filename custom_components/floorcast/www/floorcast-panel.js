@@ -2140,7 +2140,9 @@ data:
       svg.plan.pixel .fc-trampoline-ring,
       svg.plan.pixel .fc-trampoline-mat,
       svg.plan.pixel .fc-tree,
-      svg.plan.pixel .fc-tree-trunk {
+      svg.plan.pixel .fc-tree-trunk,
+      svg.plan.pixel .fc-car-body,
+      svg.plan.pixel .fc-fence-line {
         fill: transparent !important;
         stroke: rgba(255, 255, 255, 0.28) !important;
         stroke-width: 0.02px !important;
@@ -2148,6 +2150,12 @@ data:
       svg.plan.pixel .fc-gap,
       svg.plan.pixel .fc-stairs {
         stroke: transparent !important;
+      }
+      /* The car and the fence are drawn by the pixel look; the plan keeps only their outlines. */
+      svg.plan.pixel .fc-car-glass,
+      svg.plan.pixel .fc-car-roof,
+      svg.plan.pixel .fc-fence-post {
+        display: none;
       }
       .tabs {
         display: flex;
