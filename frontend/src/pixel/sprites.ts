@@ -20,82 +20,99 @@ export const OUTFITS: Outfit[] = [
   { shirt: "#4c9a5b", shade: "#3a7a47", trousers: "#3a3a40", hair: "#1e1a18", skin: "#e0b48c", long: true },
 ];
 
-/** A person standing or walking; step counts frames of the walk, zero standing still. */
-export function person(c: CanvasRenderingContext2D, x: number, y: number, facing: Facing, step: number, o: Outfit): void {
+/** Pets drawn as ghosts leave their shadows out, so a shadow seen twice does not darken. */
+let shadows = true;
+
+export function withoutShadows(draw: () => void): void {
+  shadows = false;
+  try {
+    draw();
+  } finally {
+    shadows = true;
+  }
+}
+
+function shadow(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  if (shadows) rect(c, x, y, w, h, "rgba(0,0,0,.2)");
+}
+
+/** A person standing or walking; step counts frames of the walk, zero standing still. Without its shadow when ghost. */
+export function person(c: CanvasRenderingContext2D, x: number, y: number, facing: Facing, step: number, o: Outfit, ghost = false): void {
   const f = step % 4;
   const bob = f === 1 || f === 3 ? 1 : 0;
-  rect(c, x - 5, y - 1, 10, 2, "rgba(0,0,0,.18)");
+  if (!ghost) rect(c, x - 6, y - 1, 12, 2, "rgba(0,0,0,.2)");
   if (facing === "left" || facing === "right") {
     const s = f === 1 ? -2 : f === 3 ? 2 : 0;
-    rect(c, x - 1 + s, y - 5, 2, 4, o.trousers);
-    rect(c, x - 1 - s, y - 5, 2, 4, o.trousers);
+    rect(c, x - 1 + s, y - 6, 3, 5, o.trousers);
+    rect(c, x - 1 - s, y - 6, 3, 5, o.trousers);
+    rect(c, x - 1 + s, y - 1, 3, 1, "#2a2a2e");
+    rect(c, x - 1 - s, y - 1, 3, 1, "#2a2a2e");
   } else {
     const l = f === 1 ? 1 : 0;
     const r = f === 3 ? 1 : 0;
-    rect(c, x - 3, y - 5 - l, 2, 4, o.trousers);
-    rect(c, x + 1, y - 5 - r, 2, 4, o.trousers);
+    rect(c, x - 4, y - 6 - l, 3, 5, o.trousers);
+    rect(c, x + 1, y - 6 - r, 3, 5, o.trousers);
+    rect(c, x - 4, y - 1 - l, 3, 1, "#2a2a2e");
+    rect(c, x + 1, y - 1 - r, 3, 1, "#2a2a2e");
   }
-  const by = y - 11 - bob;
-  rect(c, x - 4, by, 8, 6, o.shirt);
-  rect(c, x - 4, by + 5, 8, 1, o.shade);
+  const by = y - 14 - bob;
+  rect(c, x - 5, by, 10, 8, o.shirt);
+  rect(c, x - 5, by + 7, 10, 1, o.shade);
   const swing = f === 1 ? 1 : f === 3 ? -1 : 0;
   if (facing === "left" || facing === "right") {
-    rect(c, x - 1 + swing, by + 1, 2, 4, o.shade);
-    rect(c, x - 1 + swing, by + 5, 2, 1, o.skin);
+    rect(c, x - 1 + swing, by + 1, 2, 5, o.shade);
+    rect(c, x - 1 + swing, by + 6, 2, 2, o.skin);
   } else {
-    rect(c, x - 5, by + 1 + swing, 1, 4, o.shirt);
-    rect(c, x + 4, by + 1 - swing, 1, 4, o.shirt);
-    rect(c, x - 5, by + 5 + swing, 1, 1, o.skin);
-    rect(c, x + 4, by + 5 - swing, 1, 1, o.skin);
+    rect(c, x - 7, by + 1 + swing, 2, 5, o.shirt);
+    rect(c, x + 5, by + 1 - swing, 2, 5, o.shirt);
+    rect(c, x - 7, by + 6 + swing, 2, 2, o.skin);
+    rect(c, x + 5, by + 6 - swing, 2, 2, o.skin);
   }
-  const hy = by - 7;
-  rect(c, x - 3, hy + 1, 6, 6, o.skin);
+  head(c, x, by - 9, facing, o);
+}
+
+/** A head of eight by eight pixels with its top at hy; hair and eyes by the way it faces. */
+function head(c: CanvasRenderingContext2D, x: number, hy: number, facing: Facing, o: Outfit): void {
+  rect(c, x - 4, hy + 1, 8, 8, o.skin);
   if (facing === "up") {
-    rect(c, x - 3, hy, 6, 6, o.hair);
-    if (o.long) rect(c, x - 3, hy + 6, 6, 3, o.hair);
+    rect(c, x - 4, hy, 8, 8, o.hair);
+    if (o.long) rect(c, x - 4, hy + 8, 8, 3, o.hair);
   } else if (facing === "down") {
-    rect(c, x - 3, hy, 6, 2, o.hair);
-    rect(c, x - 4, hy + 1, 1, o.long ? 7 : 3, o.hair);
-    rect(c, x + 3, hy + 1, 1, o.long ? 7 : 3, o.hair);
-    rect(c, x - 2, hy + 4, 1, 1, "#2a2a2e");
-    rect(c, x + 1, hy + 4, 1, 1, "#2a2a2e");
+    rect(c, x - 4, hy, 8, 3, o.hair);
+    rect(c, x - 5, hy + 1, 1, o.long ? 9 : 4, o.hair);
+    rect(c, x + 4, hy + 1, 1, o.long ? 9 : 4, o.hair);
+    rect(c, x - 2, hy + 5, 1, 2, "#2a2a2e");
+    rect(c, x + 1, hy + 5, 1, 2, "#2a2a2e");
   } else {
     const s = facing === "left" ? -1 : 1;
-    rect(c, x - 3, hy, 6, 2, o.hair);
-    rect(c, x - 3 * s - (s > 0 ? 1 : 0), hy + 1, 2, o.long ? 7 : 4, o.hair);
-    rect(c, x + 2 * s - (s > 0 ? 1 : 0), hy + 4, 1, 1, "#2a2a2e");
+    rect(c, x - 4, hy, 8, 3, o.hair);
+    rect(c, s > 0 ? x - 4 : x + 1, hy + 1, 3, o.long ? 9 : 5, o.hair);
+    rect(c, s > 0 ? x + 2 : x - 3, hy + 5, 1, 2, "#2a2a2e");
   }
 }
 
 /** A person sitting: the upper body over the seat, the legs hidden by it. */
 export function sitting(c: CanvasRenderingContext2D, x: number, y: number, facing: Facing, o: Outfit): void {
-  const by = y - 8;
-  rect(c, x - 4, by, 8, 6, o.shirt);
-  rect(c, x - 4, by + 5, 8, 1, o.shade);
-  rect(c, x - 5, by + 1, 1, 4, o.shirt);
-  rect(c, x + 4, by + 1, 1, 4, o.shirt);
-  const hy = by - 7;
-  rect(c, x - 3, hy + 1, 6, 6, o.skin);
-  if (facing === "up") rect(c, x - 3, hy, 6, 6, o.hair);
-  else {
-    rect(c, x - 3, hy, 6, 2, o.hair);
-    rect(c, x - 4, hy + 1, 1, o.long ? 6 : 3, o.hair);
-    rect(c, x + 3, hy + 1, 1, o.long ? 6 : 3, o.hair);
-    rect(c, x - 2, hy + 4, 1, 1, "#2a2a2e");
-    rect(c, x + 1, hy + 4, 1, 1, "#2a2a2e");
-  }
+  const by = y - 10;
+  rect(c, x - 5, by, 10, 8, o.shirt);
+  rect(c, x - 5, by + 7, 10, 1, o.shade);
+  rect(c, x - 7, by + 1, 2, 5, o.shirt);
+  rect(c, x + 5, by + 1, 2, 5, o.shirt);
+  rect(c, x - 7, by + 6, 2, 2, o.skin);
+  rect(c, x + 5, by + 6, 2, 2, o.skin);
+  head(c, x, by - 9, facing === "up" ? "up" : "down", o);
 }
 
 /** A person lying in bed: the head on the pillow side, a hump under the blanket. */
 export function lying(c: CanvasRenderingContext2D, x: number, y: number, o: Outfit): void {
-  rect(c, x - 3, y - 9, 6, 6, o.skin);
-  rect(c, x - 3, y - 10, 6, 3, o.hair);
-  if (o.long) rect(c, x - 4, y - 9, 1, 5, o.hair);
-  rect(c, x - 2, y - 6, 1, 1, "#2a2a2e");
-  rect(c, x + 1, y - 6, 1, 1, "#2a2a2e");
-  rect(c, x - 5, y - 3, 10, 8, "#5b7fbf");
-  rect(c, x - 5, y - 3, 10, 2, "#7d9bd2");
-  rect(c, x - 4, y + 1, 8, 3, "#4f72b0");
+  rect(c, x - 4, y - 11, 8, 7, o.skin);
+  rect(c, x - 4, y - 12, 8, 3, o.hair);
+  if (o.long) rect(c, x - 5, y - 11, 1, 6, o.hair);
+  rect(c, x - 2, y - 7, 1, 1, "#2a2a2e");
+  rect(c, x + 1, y - 7, 1, 1, "#2a2a2e");
+  rect(c, x - 6, y - 4, 12, 9, "#5b7fbf");
+  rect(c, x - 6, y - 4, 12, 2, "#7d9bd2");
+  rect(c, x - 5, y + 1, 10, 3, "#4f72b0");
 }
 
 /** A robot vacuum; its light blinks blue while it cleans, green on the dock. */
@@ -160,7 +177,7 @@ export function cat(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
   const s = facing === "left" ? -1 : 1;
   const X = (dx: number, w: number) => (s > 0 ? x + dx : x - dx - w);
   if (pose === "sleep") {
-    rect(c, x - 6, y - 1, 12, 2, "rgba(0,0,0,.2)");
+    shadow(c, x - 6, y - 1, 12, 2);
     rect(c, x - 5, y - 6, 10, 5, b);
     rect(c, x - 4, y - 7, 8, 1, b);
     rect(c, x - 3, y - 6, 5, 1, l);
@@ -171,7 +188,7 @@ export function cat(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
     if (coat === "tabby" || coat === "calico") rect(c, x - 2, y - 5, 2, 2, d);
     return;
   }
-  rect(c, x - 5, y - 1, 10, 2, "rgba(0,0,0,.2)");
+  shadow(c, x - 5, y - 1, 10, 2);
   const striped = coat === "tabby" || coat === "calico";
   if (pose === "crouch" || pose === "stalk") {
     // Low to the ground: creeping up on prey, or ready to jump with the tail twitching.
@@ -255,7 +272,7 @@ export function dog(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
   if (pose === "pounce" || pose === "carry") pose = "run";
   if (pose === "play") {
     // Bowing to play: front down, rear up, tail wagging.
-    rect(c, x - 7, y - 1, 14, 2, "rgba(0,0,0,.2)");
+    shadow(c, x - 7, y - 1, 14, 2);
     rect(c, X(-6, 6), y - 10, 6, 5, b);
     rect(c, X(-6, 1), y - 5, 1, 5, d);
     rect(c, X(-3, 1), y - 5, 1, 5, d);
@@ -272,7 +289,7 @@ export function dog(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
     return;
   }
   if (pose === "sleep") {
-    rect(c, x - 8, y - 1, 16, 2, "rgba(0,0,0,.2)");
+    shadow(c, x - 8, y - 1, 16, 2);
     rect(c, x - 7, y - 6, 13, 5, b);
     rect(c, x - 6, y - 7, 10, 1, b);
     rect(c, X(4, 5), y - 5, 5, 4, b);
@@ -283,7 +300,7 @@ export function dog(c: CanvasRenderingContext2D, x: number, y: number, pose: Pet
     if (coat === "spotted") rect(c, x - 3, y - 6, 3, 2, d);
     return;
   }
-  rect(c, x - 7, y - 1, 14, 2, "rgba(0,0,0,.2)");
+  shadow(c, x - 7, y - 1, 14, 2);
   if (pose === "sit") {
     rect(c, X(-3, 7), y - 9, 7, 8, b);
     rect(c, X(-1, 4), y - 6, 4, 4, l);

@@ -11,7 +11,7 @@ import { PPM, canvas, rect } from "./art";
 import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
 import { PetLife } from "./pets";
-import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
+import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, toy, vacuum, withoutShadows } from "./sprites";
 
 export interface PixelBounds {
   x: number;
@@ -335,6 +335,8 @@ class LevelPicture {
       const [x, y] = s.px(at);
       items.push({ y: y + 0.5, draw: () => (device.kind === "vacuum" ? vacuum(c, x, y, state, time) : mower(c, x, y, place?.heading, state)) });
     }
+    // Standing people and pets drawn once more over everything, see-through: unchanged where seen, a ghost behind furniture.
+    const ghosts: (() => void)[] = [];
     for (const w of this.walkers.values()) {
       const [x, y] = s.px([w.x, w.y]);
       const near = w.still > SETTLE ? s.restNear(w.anchor, REACH, (kind) => SEATS.has(kind) || kind === "bed") : undefined;
@@ -345,11 +347,18 @@ class LevelPicture {
         const top = s.px([0, furniture.box[3]])[1] + 0.6;
         const seat = Math.round((furniture.kind === "bed" ? 0.18 : 0.22) * PPM);
         items.push({ y: top, draw: () => (furniture.kind === "bed" ? lying(c, sx, sy - seat, w.outfit) : sitting(c, sx, sy - seat + 4, w.facing, w.outfit)) });
-      } else items.push({ y: y + 0.5, draw: () => person(c, x, y, w.facing, w.moving ? Math.floor(time * 8) : 0, w.outfit) });
+      } else {
+        const step = w.moving ? Math.floor(time * 8) : 0;
+        items.push({ y: y + 0.5, draw: () => person(c, x, y, w.facing, step, w.outfit) });
+        ghosts.push(() => person(c, x, y, w.facing, step, w.outfit, true));
+      }
     }
-    const overhead = this.addPets(items, time);
+    const overhead = this.addPets(items, ghosts, time);
     items.sort((a, b) => a.y - b.y);
     for (const item of items) item.draw();
+    c.globalAlpha = 0.4;
+    for (const ghost of ghosts) ghost();
+    c.globalAlpha = 1;
     for (const g of s.garden) if (g.item.type === "shelter") s.drawGardenObject(c, g);
     for (const draw of overhead) draw();
     for (const d of this.drops) {
@@ -372,7 +381,7 @@ class LevelPicture {
    * Pets at the place their life gives for now, a little aside from people near them. Returns what is
    * drawn over everything: the z of a sleeping pet and the hearts of a stroked one.
    */
-  private addPets(items: { y: number; draw: () => void }[], time: number): (() => void)[] {
+  private addPets(items: { y: number; draw: () => void }[], ghosts: (() => void)[], time: number): (() => void)[] {
     const s = this.scene;
     const c = this.fc;
     const now = Date.now() / 1000;
@@ -405,11 +414,10 @@ class LevelPicture {
       const top = place.on ? s.px([0, place.on.box[3]])[1] + 0.7 : y + 0.4;
       const step = Math.floor(place.walked * (place.state === "run" ? 5 : 8));
       const coat = pet.coat ?? (pet.species === "dog" ? "brown" : "ginger");
-      items.push({
-        y: top,
-        draw: () =>
-          pet.species === "dog" ? dog(c, x, y - seat - hop, pose, place.facing, step, coat, time, since < PLAY) : cat(c, x, y - seat - hop, pose, place.facing, step, coat, time),
-      });
+      const draw = () =>
+        pet.species === "dog" ? dog(c, x, y - seat - hop, pose, place.facing, step, coat, time, since < PLAY) : cat(c, x, y - seat - hop, pose, place.facing, step, coat, time);
+      items.push({ y: top, draw });
+      ghosts.push(() => withoutShadows(draw));
       const plaything = place.toy;
       if (plaything) {
         const [tx, ty] = s.px(plaything.at);
