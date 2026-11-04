@@ -2056,6 +2056,15 @@ class FloorCastCard extends LitElement {
       svg.pixel .lamp.on .lamp-line {
         opacity: 0 !important;
       }
+      svg.pixel .fc-device-tag,
+      svg.pixel .fc-opening-label,
+      svg.pixel .fc-thermometer text,
+      svg.pixel .fc-indicator text {
+        paint-order: stroke;
+        stroke: rgba(0, 0, 0, 0.75) !important;
+        stroke-width: 0.08px !important;
+        stroke-linejoin: round;
+      }
       svg.pixel .room-text {
         paint-order: stroke;
         stroke: rgba(0, 0, 0, 0.6);

@@ -343,7 +343,8 @@ class LevelPicture {
       const [x, y] = s.px(at);
       items.push({ y: y + 0.5, draw: () => (device.kind === "vacuum" ? vacuum(c, x, y, state, time) : mower(c, x, y, place?.heading, state)) });
     }
-    // Standing people and pets drawn once more over everything, see-through: unchanged where seen, a ghost behind furniture.
+    // Standing people and pets in the house drawn once more over everything, see-through: unchanged where seen,
+    // a ghost behind furniture. Outdoors a hedge or shed hides them.
     const ghosts: (() => void)[] = [];
     for (const w of this.walkers.values()) {
       const [x, y] = s.px([w.x, w.y]);
@@ -358,7 +359,7 @@ class LevelPicture {
       } else {
         const step = w.moving ? Math.floor(time * 8) : 0;
         items.push({ y: y + 0.5, draw: () => person(c, x, y, w.facing, step, w.outfit) });
-        ghosts.push(() => person(c, x, y, w.facing, step, w.outfit, true));
+        if (s.insideHouse([w.x, w.y])) ghosts.push(() => person(c, x, y, w.facing, step, w.outfit, true));
       }
     }
     const overhead = this.addPets(items, ghosts, time);
@@ -425,7 +426,7 @@ class LevelPicture {
       const draw = () =>
         pet.species === "dog" ? dog(c, x, y - seat - hop, pose, place.facing, step, coat, time, since < PLAY) : cat(c, x, y - seat - hop, pose, place.facing, step, coat, time);
       items.push({ y: top, draw });
-      ghosts.push(() => withoutShadows(draw));
+      if (s.insideHouse(at)) ghosts.push(() => withoutShadows(draw));
       const plaything = place.toy;
       if (plaything) {
         const [tx, ty] = s.px(plaything.at);
@@ -627,7 +628,8 @@ class LevelPicture {
     }
     const c = this.fc;
     c.save();
-    c.imageSmoothingEnabled = false;
+    // Light blends smoothly from cell to cell; the picture under it stays sharp.
+    c.imageSmoothingEnabled = true;
     c.globalCompositeOperation = "multiply";
     c.drawImage(this.light, 0, 0, s.lightWidth * LIGHT_CELL, s.lightHeight * LIGHT_CELL);
     c.restore();
@@ -689,7 +691,7 @@ class LevelPicture {
     }
     const c = this.fc;
     c.save();
-    c.imageSmoothingEnabled = false;
+    c.imageSmoothingEnabled = true;
     c.globalCompositeOperation = "lighter";
     c.drawImage(this.sun, 0, 0, s.lightWidth * LIGHT_CELL, s.lightHeight * LIGHT_CELL);
     c.restore();

@@ -735,9 +735,9 @@ export class Scene {
           rect(c, bx + 1, blanketY, bw - 2, blanketH, shade.base);
           rect(c, bx + 1, atTop ? blanketY : blanketY + blanketH - 2, bw - 2, 2, shade.light);
         } else {
-          const hx = back === "left" ? bx - 4 : bx + bw - 2;
+          const hx = back === "left" ? bx : bx + bw - 6;
           rect(c, hx, y0, 6, bh, "#6b4a33");
-          const px = back === "left" ? bx + 3 : bx + bw - 11;
+          const px = back === "left" ? bx + 7 : bx + bw - 15;
           const ph = double ? Math.floor(bh / 2) - 5 : bh - 8;
           pillow(px, y0 + 4, 8, ph);
           if (double) pillow(px, y0 + bh / 2 + 1, 8, ph);
@@ -874,7 +874,12 @@ export class Scene {
       case "garden_table": {
         const h = lift(0.28);
         if (round) this.disc3(c, f, h, shade.dark, shade.base, shade.light);
-        else this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
+        else {
+          this.box(c, f.points, h, shade.base, shade.dark, { edge: shade.light });
+          // Slats along its length, as on a wooden garden table.
+          if (bw >= bh) for (let y = by - h + 3; y < by + bh - h - 1; y += 3) rect(c, bx + 1, y, bw - 2, 1, shade.dark);
+          else for (let x = bx + 3; x < bx + bw - 1; x += 3) rect(c, x, by - h + 1, 1, bh - 2, shade.dark);
+        }
         break;
       }
       case "bench": {
@@ -1198,9 +1203,22 @@ export class Scene {
       case "trampoline": {
         const [cx, cy] = this.px(g.item.center ?? [(g.box[0] + g.box[2]) / 2, (g.box[1] + g.box[3]) / 2]);
         const r = Math.round(((g.item.diameter ?? 3) / 2) * P);
-        disc(c, cx, cy, r, "rgba(0,0,0,.18)");
-        disc(c, cx, cy - 6, r, "#3f6fd1");
-        disc(c, cx, cy - 6, r - 4, "#1d1f25");
+        const top = cy - 6;
+        disc(c, cx + 2, cy + 1, r, "rgba(0,0,0,.18)");
+        // Legs in front, then the padded frame, a ring of springs and the mat with a sheen.
+        for (const side of [-0.75, -0.3, 0.3, 0.75]) {
+          const lx = cx + Math.round(side * r);
+          rect(c, lx - 1, top + Math.round(Math.sqrt(1 - side * side) * r) - 2, 2, 8, "#5a5f68");
+        }
+        disc(c, cx, top, r, "#3f6fd1");
+        disc(c, cx, top - 1, r - 1, "#5b86e0");
+        disc(c, cx, top, r - 3, "#9aa3ad");
+        for (let k = 0; k < 48; k++) {
+          const a = (k / 48) * Math.PI * 2;
+          rect(c, cx + Math.round(Math.cos(a) * (r - 4)), top + Math.round(Math.sin(a) * (r - 4)), 1, 1, "#6b737d");
+        }
+        disc(c, cx, top, r - 6, "#1d1f25");
+        disc(c, cx - Math.round(r * 0.25), top - Math.round(r * 0.25), Math.round(r * 0.35), "rgba(255,255,255,.05)");
         break;
       }
       case "shelter": {

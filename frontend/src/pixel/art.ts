@@ -239,8 +239,9 @@ const tiles = new Map<Texture, HTMLCanvasElement>();
 export function texture(c: CanvasRenderingContext2D, type: Texture): CanvasPattern {
   let tile = tiles.get(type);
   if (!tile) {
-    const [element, tc] = canvas(64, 64);
-    for (let by = 0; by < 4; by++) for (let bx = 0; bx < 4; bx++) textureBlock(tc, type, bx * 16, by * 16, bx + 7, by + 3);
+    // Eight metres a side: smaller tiles show their tufts and flowers repeating in a grid.
+    const [element, tc] = canvas(256, 256);
+    for (let by = 0; by < 16; by++) for (let bx = 0; bx < 16; bx++) textureBlock(tc, type, bx * 16, by * 16, bx + 7, by + 3);
     tiles.set(type, element);
     tile = element;
   }
