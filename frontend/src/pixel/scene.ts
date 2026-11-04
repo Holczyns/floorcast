@@ -81,6 +81,9 @@ const DOOR_LIKE = new Set(["door", "gate"]);
 /** How tall a fence stands in the picture, a little lower than the walls of the house. */
 export const FENCE_HEIGHT = 0.4;
 
+/** How high the roof of a shelter stands in the picture, a little below the walls of the house. */
+export const SHELTER_HEIGHT = 0.45;
+
 /** A fence along a line: its kind, where it starts, which way it runs, and its gates and wickets. */
 export interface Fence {
   style: FenceStyle;
@@ -1432,7 +1435,7 @@ export class Scene {
       case "shelter": {
         // Seen like the walls of the house: the roof raised a little below their height, the front posts
         // from its edge down to the ground, a beam along its front as its thickness.
-        const h = Math.round(0.45 * P);
+        const h = Math.round(SHELTER_HEIGHT * P);
         rect(c, bx + 1, by + bh - h, 2, h, "#5a3c28");
         rect(c, bx + bw - 3, by + bh - h, 2, h, "#5a3c28");
         rect(c, bx, by + bh - h, bw, 3, "#4a3020");

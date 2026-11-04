@@ -8,7 +8,7 @@
 import type { HomeAssistant } from "../ha";
 import { type Level, type Opening, type Plan, type Point, type TrackedPerson, carPresent, deviceCentre, isPowered, pointInPolygon } from "../model";
 import { PPM, canvas, hash, rect } from "./art";
-import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
+import { FACE, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
 import { PetLife } from "./pets";
 import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, toy, vacuum, withoutShadows } from "./sprites";
@@ -960,6 +960,19 @@ class LevelPicture {
     s.lights.forEach((l, i) => {
       if (this.lightLevel(hass, l.entity) > 0.05) roomOn.add(this.lightRooms[i]);
     });
+    // The glass is drawn over the lit picture, so a shelter's roof in front of a window is cut out of it.
+    c.save();
+    const roofs = s.garden.filter((g) => g.item.type === "shelter");
+    if (roofs.length) {
+      c.beginPath();
+      c.rect(0, 0, s.width, s.height);
+      for (const g of roofs) {
+        const [bx, by, bw, bh] = s.pxBox(g.box);
+        const h = Math.round(SHELTER_HEIGHT * PPM);
+        c.rect(bx, by - h, bw, bh + h);
+      }
+      c.clip("evenodd");
+    }
     for (const w of s.windows) {
       if (!w.glass) continue;
       const [x, y, gw, gh] = w.glass;
@@ -979,6 +992,7 @@ class LevelPicture {
       }
       if (day > 0.4 && down < gh - 2) rect(c, x + 2, y + down + 1, 2, 1, "rgba(255,255,255,.6)");
     }
+    c.restore();
     s.lights.forEach((l) => {
       if (!l.line || !l.device.to) return;
       const level = this.lightLevel(hass, l.entity);
