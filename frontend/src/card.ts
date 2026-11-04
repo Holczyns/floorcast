@@ -334,6 +334,7 @@ class FloorCastCard extends LitElement {
       plan: () => this._plan,
       people: (level) => (this._people ? (this._people[level.id] ?? []) : this.levelPeople(level)),
       robot: (id) => this._robots.get(id)?.place,
+      track: (id) => this._robots.get(id)?.track ?? [],
     });
     const targets: PixelTarget[] = [];
     for (const target of this._pixelTargets) {
@@ -2034,6 +2035,7 @@ class FloorCastCard extends LitElement {
       svg.pixel .nozzle circle:not(.lamp-hit),
       svg.pixel .fc-mower,
       svg.pixel .fc-vacuum,
+      svg.pixel .fc-trail,
       svg.pixel .fc-screen {
         opacity: 0 !important;
       }

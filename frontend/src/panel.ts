@@ -332,6 +332,7 @@ export class FloorCastPanel extends LitElement {
       plan: () => this._plan,
       people: (level) => (this._live ? (this._people?.[level.id] ?? []) : []),
       robot: () => undefined,
+      track: () => [],
     });
     this._pixelView.sync([{ canvas: element, level: this._pixelLevel, key: `${this._pixelLevel.id}|${this._pixelStamp}`, bounds: this.pixelBounds(element) }]);
   }

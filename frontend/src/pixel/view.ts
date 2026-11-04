@@ -6,7 +6,7 @@
 // the drops of water in the air, how wet the lawn is, and the last light and sun pictures with the
 // states they were worked out from, so they are worked out again only when one of those changes.
 import type { HomeAssistant } from "../ha";
-import { type Level, type Plan, type Point, type TrackedPerson, deviceCentre, isPowered } from "../model";
+import { type Level, type Plan, type Point, type TrackedPerson, deviceCentre, isPowered, pointInPolygon } from "../model";
 import { PPM, canvas, rect } from "./art";
 import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
@@ -40,6 +40,8 @@ export interface PixelSource {
   plan(): Plan | undefined;
   people(level: Level): TrackedPerson[];
   robot(id: string): RobotPlace | null | undefined;
+  /** Where a mower or vacuum has gone in its current run, oldest first; empty without one. */
+  track(id: string): Point[];
 }
 
 interface Walker {
@@ -88,6 +90,9 @@ const GRAVITY = 9.8;
 const WALK = 2.2;
 const JUMP = 3;
 const WET_CELL = 0.5;
+// Ground a robot has worked: cells of a picture cell size, as wide as it cuts or sweeps.
+const WORK_CELL = 4 / PPM;
+const WORK_HALF = { mower: 0.11, vacuum: 0.17 };
 
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
@@ -121,6 +126,8 @@ class LevelPicture {
   private readonly sweep = new Map<string, { angle: number; dir: number; tick: number }>();
   private readonly wet: Float32Array;
   private readonly wetColumns: number;
+  // What each robot has worked in its run, drawn into its own picture as the track grows; a new run starts it again.
+  private readonly worked = new Map<string, { last?: Point; canvas: HTMLCanvasElement; c: CanvasRenderingContext2D }>();
   // Pets: their life on this level, how far each steps aside from people, when it was last stroked, and
   // where it was drawn last, for taps.
   private readonly pets: PetLife[];
@@ -309,6 +316,7 @@ class LevelPicture {
     c.drawImage(s.base, 0, 0);
     // Rugs lie flat on the floor, under everything standing on it.
     for (const f of s.furniture) if (f.kind === "rug") s.drawRug(c, f);
+    this.drawWorked(c, source);
     const cell = Math.ceil(WET_CELL * PPM);
     for (let k = 0; k < this.wet.length; k++) {
       if (this.wet[k] < 0.02) continue;
@@ -474,6 +482,69 @@ class LevelPicture {
       rect(c, x + Math.round(w / 2) - 2, top + 2, 4, h - 4, "#8b5a2b");
       rect(c, x + Math.round(w / 2) - 2, top + 2, 1, h - 4, "#a8703a");
     }
+  }
+
+  /**
+   * The run of every mower and vacuum on the ground: a mower leaves lighter stripes one way and darker
+   * the way back on the lawn, a vacuum a slightly fresher floor in the house. Only new steps are added.
+   */
+  private drawWorked(c: CanvasRenderingContext2D, source: PixelSource): void {
+    const s = this.scene;
+    for (const device of s.level.devices ?? []) {
+      if (device.kind !== "mower" && device.kind !== "vacuum") continue;
+      const track = source.track(device.id);
+      // New steps follow the last one drawn; a track without it is a new run (the old one may be cut short at its start).
+      let work = this.worked.get(device.id);
+      let from = work?.last ? track.lastIndexOf(work.last) : -1;
+      if (!work || (work.last && from < 0)) {
+        const [picture, pc] = canvas(s.width, s.height);
+        work = { canvas: picture, c: pc };
+        this.worked.set(device.id, work);
+        from = -1;
+      }
+      const mowing = device.kind === "mower";
+      const half = WORK_HALF[device.kind];
+      for (let i = Math.max(1, from + 1); i < track.length; i++) {
+        const a = track[i - 1];
+        const b = track[i];
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const length = Math.hypot(dx, dy);
+        // A jump is a lost fix, not a way the robot went.
+        if (length > 2) continue;
+        const forward = Math.abs(dx) >= Math.abs(dy) ? dx >= 0 : dy >= 0;
+        const colour = mowing ? (forward ? "rgba(225,255,170,.16)" : "rgba(10,50,10,.12)") : "rgba(255,255,255,.1)";
+        const steps = Math.max(1, Math.ceil(length / 0.06));
+        for (let t = 0; t <= steps; t++) {
+          const p: Point = [a[0] + (dx * t) / steps, a[1] + (dy * t) / steps];
+          const reach = Math.ceil(half / WORK_CELL);
+          const ci = Math.floor((p[0] - s.x0) / WORK_CELL);
+          const cj = Math.floor((p[1] - s.y0) / WORK_CELL);
+          for (let j = cj - reach; j <= cj + reach; j++)
+            for (let i2 = ci - reach; i2 <= ci + reach; i2++) {
+              const centre: Point = [s.x0 + (i2 + 0.5) * WORK_CELL, s.y0 + (j + 0.5) * WORK_CELL];
+              if (Math.hypot(centre[0] - p[0], centre[1] - p[1]) > half) continue;
+              if (mowing ? !this.onLawn(centre) : !s.insideHouse(centre)) continue;
+              // The latest pass over a cell decides its shade.
+              work.c.clearRect(i2 * 4, j * 4, 4, 4);
+              rect(work.c, i2 * 4, j * 4, 4, 4, colour);
+            }
+        }
+      }
+      work.last = track.at(-1);
+      if (track.length) c.drawImage(work.canvas, 0, 0);
+    }
+  }
+
+  /** Whether a point is on a lawn, not on a bed, path or anything else laid in it. */
+  private onLawn(p: Point): boolean {
+    let lawn = false;
+    for (const g of this.scene.garden) {
+      if (!pointInPolygon(p, g.points)) continue;
+      if (g.item.type !== "lawn") return false;
+      lawn = true;
+    }
+    return lawn;
   }
 
   /** Daylight through the windows and the lamps, stopped by walls, multiplied over the picture. */
