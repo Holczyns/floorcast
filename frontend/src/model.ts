@@ -165,6 +165,8 @@ export interface Item {
   colour?: string;
   /** Obstacle: the side its back is on in the pixel look (backrest, headboard, screen); against a wall without it. */
   back?: "top" | "bottom" | "left" | "right";
+  /** Shelter: its roof, wooden slats without it or clear polycarbonate on a frame of rafters. */
+  roof?: "slats" | "polycarbonate";
 }
 
 /**

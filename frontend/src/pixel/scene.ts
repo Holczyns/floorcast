@@ -313,8 +313,13 @@ export class Scene {
     const all: Point[] = [];
     for (let y = counter.box[1] + 0.2; y < counter.box[3]; y += 0.1)
       for (let x = counter.box[0] + 0.2; x < counter.box[2]; x += 0.1) if (pointInPolygon([x, y], counter.points)) all.push([x, y]);
-    const open = all.filter((q) => !hidden(q));
-    const spots = open.length ? open : all;
+    // The whole unit stays on the worktop: the hob, the largest, is about 44 by 38 cm.
+    const fits = (q: Point) =>
+      [[-0.23, -0.2], [0.23, -0.2], [-0.23, 0.2], [0.23, 0.2]].every(([dx, dy]) => pointInPolygon([q[0] + dx, q[1] + dy], counter.points));
+    const fitting = all.filter(fits);
+    const room = fitting.length ? fitting : all;
+    const open = room.filter((q) => !hidden(q));
+    const spots = open.length ? open : room;
     if (!spots.length) return;
     const window = this.windows.find((w) => w.room === counter.room);
     const near = (target: Point, distance: number, avoid?: Point) =>
@@ -1225,7 +1230,35 @@ export class Scene {
         const h = Math.round(1.1 * P);
         rect(c, bx + 1, by - h, 2, bh + h, "#5a3c28");
         rect(c, bx + bw - 3, by - h, 2, bh + h, "#5a3c28");
-        for (let y = by - h; y < by + bh - h; y += 4) rect(c, bx, y, bw, 2, "rgba(139,94,60,.85)");
+        if (g.item.roof !== "polycarbonate") {
+          for (let y = by - h; y < by + bh - h; y += 4) rect(c, bx, y, bw, 2, "rgba(139,94,60,.85)");
+          break;
+        }
+        // Clear sheets on a frame: rafters across the short span about every 60 cm, a beam round the edge,
+        // glints on the sheets between the rafters.
+        const top = by - h;
+        rect(c, bx, top, bw, bh, "rgba(200,232,245,.28)");
+        const along = bw >= bh;
+        const span = along ? bw : bh;
+        const bays = Math.max(1, Math.round(span / (0.6 * P)));
+        for (let k = 0; k <= bays; k++) {
+          const at = Math.round((k * (span - 2)) / bays);
+          if (along) rect(c, bx + at, top, 2, bh, "#6b4a33");
+          else rect(c, bx, top + at, bw, 2, "#6b4a33");
+        }
+        for (let k = 0; k < bays; k++) {
+          const from = Math.round((k * (span - 2)) / bays) + 3;
+          const size = Math.round((span - 2) / bays) - 4;
+          for (let d = 0; d < 3; d++) {
+            const gx = along ? bx + from + 1 + d : bx + 3 + d * 2;
+            const gy = along ? top + 3 + d * 2 : top + from + 1 + d;
+            rect(c, gx, gy, along ? 1 : Math.min(4, size), along ? Math.min(4, bh - 6) : 1, "rgba(255,255,255,.45)");
+          }
+        }
+        rect(c, bx, top, bw, 2, "#5a3c28");
+        rect(c, bx, top + bh - 2, bw, 2, "#5a3c28");
+        rect(c, bx, top, 2, bh, "#5a3c28");
+        rect(c, bx + bw - 2, top, 2, bh, "#5a3c28");
         break;
       }
     }

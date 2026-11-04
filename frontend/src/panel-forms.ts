@@ -1050,6 +1050,22 @@ export function itemProperties(p: FloorCastPanel, item?: Item) {
         )}
       </select>
     </label>
+    ${item.type === "shelter"
+      ? html`<label class="field wide">
+          <span>${t("Roof")}</span>
+          <select
+            @change=${(e: Event) =>
+              p.change(() => {
+                const value = (e.target as HTMLSelectElement).value;
+                if (value === "polycarbonate") item.roof = "polycarbonate";
+                else delete item.roof;
+              })}
+          >
+            <option value="" ?selected=${item.roof !== "polycarbonate"}>${t("Wooden slats")}</option>
+            <option value="polycarbonate" ?selected=${item.roof === "polycarbonate"}>${t("Polycarbonate")}</option>
+          </select>
+        </label>`
+      : nothing}
     ${OBSTACLE_TYPES.includes(item.type)
       ? html`<label class="field wide">
             <span>${t("Kind of furniture")}</span>

@@ -57,7 +57,7 @@ const PATTERNS: Partial<Record<Item["type"], string>> = { lawn: "url(#fc-lawn)",
 export function renderItem(item: Item, variant = "", radius = 0): SVGTemplateResult {
   // A round obstacle looks like any other piece of furniture.
   const look = item.type === "round_obstacle" ? "obstacle" : item.type;
-  const cls = `fc-item fc-${look}${variant}`;
+  const cls = `fc-item fc-${look}${variant}${item.type === "shelter" && item.roof === "polycarbonate" ? " polycarbonate" : ""}`;
   // Patterns go in the fill attribute: a url() in the shadow stylesheet does not resolve everywhere.
   const pattern = PATTERNS[item.type] ?? null;
   if (CIRCLE_TYPES.includes(item.type) && item.center) {
@@ -1254,6 +1254,12 @@ export const planStyles = css`
   .fc-shelter,
   .fc-garden_house {
     fill: var(--fc-wood);
+  }
+  .fc-shelter.polycarbonate {
+    fill: var(--fc-glass);
+    fill-opacity: 0.25;
+    stroke: var(--fc-wood);
+    stroke-width: 0.06;
   }
   .fc-manhole {
     fill: var(--fc-paving);
