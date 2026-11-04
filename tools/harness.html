@@ -158,6 +158,8 @@
       // The sun for the pixel look: ?sun=azimuth,elevation (degrees).
       const [sunAzimuth, sunElevation] = (params.get("sun") ?? "200,20").split(",").map(Number);
       set("sun.sun", sunElevation > 0 ? "above_horizon" : "below_horizon", { azimuth: sunAzimuth, elevation: sunElevation });
+      // ?weather=rainy (or any condition of Home Assistant): the weather the pixel look shows.
+      set("weather.home", params.get("weather") ?? "sunny", {});
       set("binary_sensor.garden_person", "off", { device_class: "occupancy" });
       // Indicators: a power sensor draws a few hundred watts, a switch is off.
       for (const level of plan.levels)

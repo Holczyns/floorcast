@@ -7,6 +7,76 @@
 // states they were worked out from, so they are worked out again only when one of those changes.
 import type { HomeAssistant } from "../ha";
 import { type Level, type Opening, type Plan, type Point, type TrackedPerson, carPresent, deviceCentre, isPowered, pointInPolygon } from "../model";
+import { PPM, canvas, hash, rect } from "./art";
+import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
+import { Grid } from "./grid";
+import { PetLife } from "./pets";
+import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, toy, vacuum, withoutShadows } from "./sprites";
+
+/**
+ * How far a door, gate or wicket should stand open, 0 shut to 1 open, and how fast it gets there per second:
+ * a gate follows the position of its cover (or runs while it opens or closes), a door swings at once.
+ */
+function openingTarget(hass: HomeAssistant, o: Opening): { open: number; speed: number } {
+  if (o.cover) {
+    const state = hass.states[o.cover];
+    const position = state?.attributes.current_position;
+    if (typeof position === "number") return { open: clamp(position / 100, 0, 1), speed: 0.3 };
+    if (state?.state === "opening") return { open: 1, speed: 0.08 };
+    if (state?.state === "closing") return { open: 0, speed: 0.08 };
+    if (state?.state === "open" || state?.state === "closed") return { open: state.state === "open" ? 1 : 0, speed: 0.3 };
+  }
+  return { open: openingOpen(hass, o) ? 1 : 0, speed: 3 };
+}
+
+/** Weather conditions of Home Assistant as the picture shows them. */
+interface Sky {
+  rain: number;
+  snow: number;
+  fog: number;
+  lightning: boolean;
+  /** Share of daylight left under the clouds, and of the sun's patches. */
+  light: number;
+  sun: number;
+}
+
+function skyOf(condition: string | undefined): Sky {
+  const sky: Sky = { rain: 0, snow: 0, fog: 0, lightning: false, light: 1, sun: 1 };
+  switch (condition) {
+    case "partlycloudy":
+      return { ...sky, light: 0.95, sun: 0.6 };
+    case "cloudy":
+      return { ...sky, light: 0.82, sun: 0.15 };
+    case "fog":
+      return { ...sky, fog: 1, light: 0.8, sun: 0 };
+    case "rainy":
+      return { ...sky, rain: 0.5, light: 0.72, sun: 0 };
+    case "pouring":
+      return { ...sky, rain: 1, light: 0.62, sun: 0 };
+    case "lightning":
+      return { ...sky, lightning: true, light: 0.7, sun: 0 };
+    case "lightning-rainy":
+      return { ...sky, rain: 0.8, lightning: true, light: 0.62, sun: 0 };
+    case "hail":
+      return { ...sky, rain: 0.7, light: 0.66, sun: 0 };
+    case "snowy":
+      return { ...sky, snow: 0.6, light: 0.85, sun: 0 };
+    case "snowy-rainy":
+      return { ...sky, snow: 0.4, rain: 0.3, light: 0.75, sun: 0 };
+    default:
+      return sky;
+  }
+}
+
+/** A raindrop or snowflake in the air, in pixels, falling to where it lands. */
+interface Flake {
+  x: number;
+  y: number;
+  land: number;
+  snow: boolean;
+  splash: number;
+  phase: number;
+}
 
 /** Whether a door, gate or wicket stands open: a gate by its cover, any by its contact, else as drawn. */
 function openingOpen(hass: HomeAssistant, o: Opening): boolean {
@@ -19,11 +89,6 @@ function openingOpen(hass: HomeAssistant, o: Opening): boolean {
   if (contact === "off") return false;
   return o.drawn !== "closed";
 }
-import { PPM, canvas, rect } from "./art";
-import { FACE, LIGHT_CELL, type Piece, Scene, STANDING_GARDEN } from "./scene";
-import { Grid } from "./grid";
-import { PetLife } from "./pets";
-import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, toy, vacuum, withoutShadows } from "./sprites";
 
 export interface PixelBounds {
   x: number;
@@ -135,6 +200,15 @@ class LevelPicture {
   private readonly walkers = new Map<string, Walker>();
   private dressed = 0;
   private readonly drops: Drop[] = [];
+  // How far each door, gate and wicket stands open as drawn, moving towards what Home Assistant says.
+  private readonly swing = new Map<string, number>();
+  // The weather: drops and flakes in the air, how much snow lies, a lightning flash fading, the ground outside.
+  private sky: Sky = skyOf(undefined);
+  private readonly flakes: Flake[] = [];
+  private snowCover = 0;
+  private flash = 0;
+  private readonly outdoors: HTMLCanvasElement;
+  private readonly outdoorCells: number;
   private readonly sweep = new Map<string, { angle: number; dir: number; tick: number }>();
   private readonly wet: Float32Array;
   private readonly wetColumns: number;
@@ -162,6 +236,16 @@ class LevelPicture {
       const room = s.roomAt(deviceCentre(l.device), false);
       return room ? s.rooms.indexOf(room) : -1;
     });
+    // The ground under the open sky: cells of the light outside every room and wall.
+    const [outdoors, oc] = canvas(s.lightWidth, s.lightHeight);
+    this.outdoors = outdoors;
+    let open = 0;
+    for (let k = 0; k < s.region.length; k++)
+      if (s.region[k] === -1) {
+        rect(oc, k % s.lightWidth, Math.floor(k / s.lightWidth), 1, 1, "#fff");
+        open++;
+      }
+    this.outdoorCells = open;
     this.wetColumns = Math.ceil(s.width / PPM / WET_CELL);
     this.wet = new Float32Array(this.wetColumns * Math.ceil(s.height / PPM / WET_CELL));
     const first = plan?.levels[0]?.id;
@@ -193,8 +277,109 @@ class LevelPicture {
     return state.state === "closed" ? 1 : 0;
   }
 
-  private doorOpen(hass: HomeAssistant, d: Piece): boolean {
-    return d.opening ? openingOpen(hass, d.opening) : true;
+  /** How far an opening stands open as drawn now. */
+  private opened(o: Opening): number {
+    return this.swing.get(o.id) ?? 0;
+  }
+
+  /** Doors, gates and wickets move towards how open Home Assistant says they are. */
+  private moveOpenings(hass: HomeAssistant, dt: number): void {
+    const openings = [...this.scene.doors.map((d) => d.opening), ...this.scene.fences.flatMap((f) => f.gaps.map((g) => g.opening))];
+    for (const o of openings) {
+      if (!o) continue;
+      const { open, speed } = openingTarget(hass, o);
+      const now = this.swing.get(o.id);
+      // A door or gate first seen stands as it is, without moving into place.
+      if (now === undefined) this.swing.set(o.id, open);
+      else this.swing.set(o.id, now + clamp(open - now, -speed * dt, speed * dt));
+    }
+  }
+
+  /** Is the point of the picture (in pixels) on the ground under the open sky. */
+  private outside(x: number, y: number): boolean {
+    const s = this.scene;
+    const i = Math.floor(x / LIGHT_CELL);
+    const j = Math.floor(y / LIGHT_CELL);
+    return i >= 0 && j >= 0 && i < s.lightWidth && j < s.lightHeight && s.region[j * s.lightWidth + i] === -1;
+  }
+
+  /**
+   * The weather of the plan's weather entity, or the first one: rain and snow fall on the ground outside, rain
+   * wets it and snow settles on it, a storm flashes now and then.
+   */
+  private moveWeather(hass: HomeAssistant, plan: Plan | undefined, dt: number): void {
+    const s = this.scene;
+    const entity = plan?.weather ?? Object.keys(hass.states).find((id) => id.startsWith("weather."));
+    this.sky = skyOf(entity ? hass.states[entity]?.state : undefined);
+    const sky = this.sky;
+    if (sky.lightning && Math.random() < dt / 9) this.flash = 1;
+    this.flash = Math.max(0, this.flash - dt * 4);
+    this.snowCover = clamp(this.snowCover + (sky.snow ? sky.snow * dt * 0.01 : -dt * 0.003), 0, 1);
+    if (sky.rain)
+      for (let k = 0; k < this.wet.length; k++) {
+        const x = ((k % this.wetColumns) + 0.5) * WET_CELL * PPM;
+        const y = (Math.floor(k / this.wetColumns) + 0.5) * WET_CELL * PPM;
+        if (this.outside(x, y)) this.wet[k] = Math.min(1, this.wet[k] + dt * 0.02 * sky.rain);
+      }
+    // As many in the air as the weather and the size of the ground outside call for.
+    const wanted = Math.min(700, Math.round(((sky.rain + sky.snow) * this.outdoorCells) / 6));
+    for (let tries = 0; this.flakes.length < wanted && tries < 40; tries++) {
+      const x = Math.random() * s.width;
+      const land = Math.random() * s.height;
+      if (!this.outside(x, land)) continue;
+      const snow = Math.random() < sky.snow / (sky.snow + sky.rain);
+      this.flakes.push({ x, y: land - 20 - Math.random() * 60, land, snow, splash: 0, phase: Math.random() * 6 });
+    }
+    if (this.flakes.length > wanted) this.flakes.length = wanted;
+    for (let i = this.flakes.length - 1; i >= 0; i--) {
+      const f = this.flakes[i];
+      if (f.splash > 0) {
+        f.splash -= dt;
+        if (f.splash <= 0) this.flakes.splice(i, 1);
+        continue;
+      }
+      f.y += (f.snow ? 18 : 260) * dt;
+      if (f.snow) f.x += Math.sin(f.phase + f.y / 9) * 0.4;
+      else f.x -= 40 * dt;
+      if (f.y >= f.land) {
+        if (f.snow) this.flakes.splice(i, 1);
+        else f.splash = 0.08;
+      }
+    }
+  }
+
+  /** Puddles on paving while it is wet: a few flat patches of sky at the same places each time. */
+  private drawPuddles(c: CanvasRenderingContext2D): void {
+    const s = this.scene;
+    const wet = this.wet.reduce((sum, v) => sum + v, 0) / Math.max(1, this.wet.length);
+    if (wet < 0.05) return;
+    for (const g of s.garden) {
+      if (g.item.type !== "paving") continue;
+      const [bx, by, bw, bh] = s.pxBox(g.box);
+      const count = Math.floor((bw * bh) / 900);
+      for (let k = 0; k < count; k++) {
+        const x = bx + Math.floor(hash(k, bw, 31) * (bw - 12));
+        const y = by + Math.floor(hash(bh, k, 37) * (bh - 6));
+        const w = 6 + Math.floor(hash(k, k, 41) * 8);
+        const alpha = Math.min(0.4, wet * 0.8).toFixed(2);
+        rect(c, x + 1, y, w - 2, 1, `rgba(120,150,180,${alpha})`);
+        rect(c, x, y + 1, w, 2, `rgba(120,150,180,${alpha})`);
+        rect(c, x + 1, y + 3, w - 2, 1, `rgba(120,150,180,${alpha})`);
+        rect(c, x + 2, y + 1, 2, 1, `rgba(220,235,250,${alpha})`);
+      }
+    }
+  }
+
+  private drawFlakes(c: CanvasRenderingContext2D): void {
+    for (const f of this.flakes) {
+      const x = Math.round(f.x);
+      const y = Math.round(f.y);
+      if (f.snow) rect(c, x, y, 1, 1, "rgba(255,255,255,.9)");
+      else if (f.splash > 0) {
+        rect(c, x - 1, Math.round(f.land), 1, 1, "rgba(200,220,255,.6)");
+        rect(c, x + 1, Math.round(f.land), 1, 1, "rgba(200,220,255,.6)");
+      } else rect(c, x, y, 1, 3, "rgba(190,210,240,.55)");
+    }
   }
 
   private sunPlace(hass: HomeAssistant): { azimuth: number; elevation: number; day: number } {
@@ -210,6 +395,8 @@ class LevelPicture {
   update(dt: number, source: PixelSource): void {
     const s = this.scene;
     const hass = source.hass();
+    this.moveOpenings(hass, dt);
+    this.moveWeather(hass, source.plan(), dt);
     const seen = new Set<string>();
     for (const p of source.people(s.level)) {
       if (p.status === "unconfirmed") continue;
@@ -324,7 +511,14 @@ class LevelPicture {
     for (let k = 0; k < this.wet.length; k++) {
       if (this.wet[k] < 0.02) continue;
       const [x, y] = s.px([s.x0 + (k % this.wetColumns) * WET_CELL, s.y0 + Math.floor(k / this.wetColumns) * WET_CELL]);
-      rect(c, x, y, cell, cell, `rgba(15,45,25,${(this.wet[k] * 0.4).toFixed(3)})`);
+      rect(c, x, y, cell, cell, `rgba(20,30,38,${(this.wet[k] * 0.35).toFixed(3)})`);
+    }
+
+    this.drawPuddles(c);
+    if (this.snowCover > 0.01) {
+      c.globalAlpha = this.snowCover * 0.75;
+      c.drawImage(this.outdoors, 0, 0, s.lightWidth * LIGHT_CELL, s.lightHeight * LIGHT_CELL);
+      c.globalAlpha = 1;
     }
 
     // Everything stands where the plan puts its foot. Walls take part in the order: a thing in front of a
@@ -332,7 +526,7 @@ class LevelPicture {
     const items: { y: number; draw: () => void }[] = [];
     for (const part of s.wallParts) items.push({ y: part.order, draw: () => c.drawImage(s.walls, part.x, part.y, part.w, part.h, part.x, part.y, part.w, part.h) });
     for (const d of s.doors) {
-      const open = this.doorOpen(hass, d);
+      const open = d.opening ? this.opened(d.opening) : 1;
       items.push({ y: s.px([0, d.box[3]])[1] + 0.1, draw: () => this.drawDoor(c, d, open) });
     }
     for (const f of s.furniture) if (f.kind !== "rug") items.push({ y: s.px([0, f.box[3]])[1] + 0.5, draw: () => s.drawFurniture(c, f) });
@@ -340,9 +534,10 @@ class LevelPicture {
     for (const part of s.fenceParts) items.push({ y: part.order, draw: () => c.drawImage(s.fenceArt, part.x, part.y, part.w, part.h, part.x, part.y, part.w, part.h) });
     for (const fence of s.fences)
       for (const gap of fence.gaps) {
-        if (openingOpen(hass, gap.opening)) continue;
+        const open = this.opened(gap.opening);
+        if (open > 0.99) continue;
         const foot = Math.max(s.px([fence.a[0] + fence.u[0] * gap.s, fence.a[1] + fence.u[1] * gap.s])[1], s.px([fence.a[0] + fence.u[0] * gap.e, fence.a[1] + fence.u[1] * gap.e])[1]);
-        items.push({ y: foot + 0.3, draw: () => s.drawGate(c, fence, gap) });
+        items.push({ y: foot + 0.3, draw: () => s.drawGate(c, fence, gap, open) });
       }
     // A car home stands like the rest; one away leaves the outline of its place on the ground, under everything.
     for (const g of s.garden) {
@@ -391,14 +586,31 @@ class LevelPicture {
       drop(c, x, y, Math.round(d.z * PPM * 0.6), d.splash);
     }
 
+    this.drawFlakes(c);
+
+    // Clouds dim the day; fog lies over the ground outside, lightning lights everything for a moment.
     const sun = this.sunPlace(hass);
     this.drawLight(hass, sun.day, time);
+    if (this.sky.light < 1) {
+      const l = this.sky.light;
+      c.globalCompositeOperation = "multiply";
+      rect(c, 0, 0, s.width, s.height, `rgb(${Math.round(255 * l)},${Math.round(255 * l)},${Math.round(Math.min(255, 268 * l))})`);
+      c.globalCompositeOperation = "source-over";
+    }
+    if (this.sky.fog) {
+      c.globalAlpha = 0.3 * this.sky.fog;
+      c.globalCompositeOperation = "screen";
+      c.drawImage(this.outdoors, 0, 0, s.lightWidth * LIGHT_CELL, s.lightHeight * LIGHT_CELL);
+      c.globalCompositeOperation = "source-over";
+      c.globalAlpha = 1;
+    }
+    if (this.flash > 0) rect(c, 0, 0, s.width, s.height, `rgba(235,240,255,${(this.flash * 0.45).toFixed(3)})`);
     if (!s.opaque) {
       c.globalCompositeOperation = "destination-in";
       c.drawImage(s.outline, 0, 0);
       c.globalCompositeOperation = "source-over";
     }
-    this.drawSun(hass, sun, source.plan()?.north ?? 0);
+    if (this.sky.sun > 0) this.drawSun(hass, sun, source.plan()?.north ?? 0, this.sky.sun);
     this.drawGlass(hass, sun.day, time);
   }
 
@@ -481,24 +693,48 @@ class LevelPicture {
     return !!best;
   }
 
-  private drawDoor(c: CanvasRenderingContext2D, d: Piece, open: boolean): void {
+  /**
+   * A door, gate or garage door open by the share given. A door's leaf swings: seen narrower as it turns
+   * out of its wall. A gate or garage door slides back to the start of its opening.
+   */
+  private drawDoor(c: CanvasRenderingContext2D, d: Piece, open: number): void {
     const [x, y, w, h] = this.scene.pxBox(d.box);
     const face = Math.round(FACE * PPM);
     // Doors stand up from the foot of their wall like the wall.
     const top = y - face;
-    if (d.horizontal) {
-      if (open) rect(c, x + 2, top, 2, h + face - 1, "#8b5a2b");
-      else {
-        rect(c, x + 2, top, w - 4, h + face - 1, d.exterior ? "#6e3f22" : "#8b5a2b");
-        rect(c, x + 2, top, w - 4, 1, "#a8703a");
-        rect(c, x + 4, top + 3, w - 8, Math.max(2, face / 2 - 3), d.exterior ? "#5c331b" : "#784b23");
-        rect(c, x + w - 6, top + face / 2 + 2, 1, 2, "#e0c35f");
+    if (d.opening?.type === "gate") {
+      const shut = 1 - open;
+      if (d.horizontal) {
+        const width = Math.round((w - 4) * shut);
+        if (width <= 0) return;
+        rect(c, x + 2, top, width, h + face - 1, "#5d636b");
+        for (let k = x + 4; k < x + 2 + width; k += 3) rect(c, k, top + 1, 1, h + face - 3, "#474c53");
+        rect(c, x + 2, top, width, 1, "#7d848c");
+      } else {
+        const length = Math.round((h - 4) * shut);
+        if (length > 0) rect(c, x + Math.round(w / 2) - 2, top + 2, 4, length, "#5d636b");
       }
-    } else if (open) rect(c, x, top + 2, w, 2, "#8b5a2b");
-    else {
-      rect(c, x + Math.round(w / 2) - 2, top + 2, 4, h - 4, "#8b5a2b");
-      rect(c, x + Math.round(w / 2) - 2, top + 2, 1, h - 4, "#a8703a");
+      return;
     }
+    const turn = (open * Math.PI) / 2;
+    if (d.horizontal) {
+      const width = Math.max(2, Math.round((w - 4) * Math.cos(turn)));
+      if (open > 0.98) rect(c, x + 2, top, 2, h + face - 1, "#8b5a2b");
+      else {
+        rect(c, x + 2, top, width, h + face - 1, d.exterior ? "#6e3f22" : "#8b5a2b");
+        rect(c, x + 2, top, width, 1, "#a8703a");
+        if (width > 8) rect(c, x + 4, top + 3, width - 4, Math.max(2, face / 2 - 3), d.exterior ? "#5c331b" : "#784b23");
+        if (width > 6) rect(c, x + 2 + width - 4, top + face / 2 + 2, 1, 2, "#e0c35f");
+      }
+      return;
+    }
+    const length = Math.round((h - 4) * Math.cos(turn));
+    const reach = Math.round(w * Math.sin(turn));
+    if (length > 1) {
+      rect(c, x + Math.round(w / 2) - 2, top + 2, 4, length, "#8b5a2b");
+      rect(c, x + Math.round(w / 2) - 2, top + 2, 1, length, "#a8703a");
+    }
+    if (reach > 1) rect(c, x, top + 2, reach, 2, "#8b5a2b");
   }
 
   /**
@@ -656,7 +892,7 @@ class LevelPicture {
    * sun is high enough over its sill, cut by what the window sees past the walls. north is the compass
    * bearing the top of the plan faces.
    */
-  private drawSun(hass: HomeAssistant, sun: { azimuth: number; elevation: number }, north: number): void {
+  private drawSun(hass: HomeAssistant, sun: { azimuth: number; elevation: number }, north: number, strength: number): void {
     const s = this.scene;
     const shutters = s.windows.map((w) => this.shutter(hass, w));
     const key = [Math.round(sun.azimuth), Math.round(sun.elevation), north, shutters.map((v) => v.toFixed(2))].join("|");
@@ -708,6 +944,7 @@ class LevelPicture {
     const c = this.fc;
     c.save();
     c.imageSmoothingEnabled = true;
+    c.globalAlpha = strength;
     c.globalCompositeOperation = "lighter";
     c.drawImage(this.sun, 0, 0, s.lightWidth * LIGHT_CELL, s.lightHeight * LIGHT_CELL);
     c.restore();

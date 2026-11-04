@@ -171,6 +171,8 @@ const editor: Dictionary = {
   "Add wall type": "Dodaj typ ściany",
   "Rounded corners": "Zaokrąglone narożniki",
   "Back towards": "Tył w stronę",
+  "Weather": "Pogoda",
+  "Rain, snow, fog and clouds of the pixel look; without a choice the first weather entity.": "Deszcz, śnieg, mgła i chmury w widoku pikselowym; bez wyboru pierwsza encja pogody.",
   "Car": "Samochód",
   "Fence": "Płot",
   "Wooden pickets": "Drewniane sztachety",

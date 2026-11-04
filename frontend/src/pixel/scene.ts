@@ -136,6 +136,32 @@ function gatePixel(s: number, z: number, h: number, width: number): string | nul
   return s % 3 === 0 ? "#3a3d42" : null;
 }
 
+/**
+ * An item's outline for the pixel look, which stands square: a rectangle turned by other than a quarter is
+ * turned to the nearest one about its middle. A car keeps the rest of its turn for its sprite.
+ */
+function squarePoints(item: Item): Point[] {
+  const rotation = item.rotation ?? 0;
+  if (!item.rect || rotation % 90 === 0) return itemPoints(item);
+  const [x, y, w, h] = item.rect;
+  const odd = Math.abs(Math.round(rotation / 90)) % 2 === 1;
+  const [cx, cy] = [x + w / 2, y + h / 2];
+  const [hw, hh] = odd ? [h / 2, w / 2] : [w / 2, h / 2];
+  return [
+    [cx - hw, cy - hh],
+    [cx + hw, cy - hh],
+    [cx + hw, cy + hh],
+    [cx - hw, cy + hh],
+  ];
+}
+
+const SIDES: Side[] = ["top", "right", "bottom", "left"];
+
+/** A side turned by quarters clockwise. */
+function turned(side: Side, quarters: number): Side {
+  return SIDES[(SIDES.indexOf(side) + ((quarters % 4) + 4)) % 4];
+}
+
 function boxOf(points: Point[]): Box {
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
@@ -191,7 +217,7 @@ export class Scene {
     this.cutWalls(plan);
     this.sideOfOpenings();
     for (const item of level.items) {
-      const points = itemPoints(item);
+      const points = squarePoints(item);
       if (!points.length) continue;
       if (item.type === "obstacle" || item.type === "round_obstacle") this.furniture.push(this.guess(item, points));
       else this.garden.push({ item, points, box: boxOf(points) });
@@ -264,14 +290,15 @@ export class Scene {
     }
   }
 
-  /** A shut gate or wicket in a fence, drawn in the order of things as it opens and shuts. */
-  drawGate(c: CanvasRenderingContext2D, f: Fence, gap: Fence["gaps"][number]): void {
+  /** A gate or wicket in a fence, open by the share given: its leaf slides back to the start of the gap. */
+  drawGate(c: CanvasRenderingContext2D, f: Fence, gap: Fence["gaps"][number], open: number): void {
     const h = Math.round(FENCE_HEIGHT * PPM);
     const sideways = Math.abs(f.u[0]) >= Math.abs(f.u[1]);
     const column = sideways ? 1 : 2;
     const from = Math.round(gap.s * PPM);
     const width = Math.round((gap.e - gap.s) * PPM);
-    for (let k = 0; k < width; k++) {
+    const shut = Math.round(width * (1 - open));
+    for (let k = 0; k < shut; k++) {
       const [x, y] = this.px([f.a[0] + (f.u[0] * (from + k)) / PPM, f.a[1] + (f.u[1] * (from + k)) / PPM]);
       for (let z = 0; z < h; z++) {
         const colour = gatePixel(k, z, h, width);
@@ -291,10 +318,21 @@ export class Scene {
       rect(c, x, y + 2, w, hh - 4, colour);
       rect(c, x + 1, y + 1, w - 2, hh - 2, colour);
     };
+    const item = g.item;
+    c.save();
+    const turn = (((item.rotation ?? 0) - Math.round((item.rotation ?? 0) / 90) * 90) * Math.PI) / 180;
+    if (turn) {
+      c.translate(bx + bw / 2, by + bh / 2);
+      c.rotate(turn);
+      c.translate(-(bx + bw / 2), -(by + bh / 2));
+    }
     rounded(bx - 1, by, bw + 4, bh + 3, "rgba(0,0,0,.1)");
     rounded(bx + 1, by + 1, bw, bh, "rgba(0,0,0,.2)");
-    const item = g.item;
-    const front = item.front ?? (bh >= bw ? "top" : "left");
+    // The front as the car is turned: by whole quarters for the sprite, the rest of the turn for the picture.
+    const rotation = item.rotation ?? 0;
+    const quarters = Math.round(rotation / 90);
+    const [, , rw, rh] = item.rect ?? [0, 0, bw, bh];
+    const front = turned(item.front ?? (rh >= rw ? "top" : "left"), quarters);
     const key = JSON.stringify([item.body ?? "hatchback", item.colour ?? "", front, bw, bh]);
     let sprite = this.carSprites.get(key);
     if (!sprite) {
@@ -302,6 +340,7 @@ export class Scene {
       this.carSprites.set(key, sprite);
     }
     c.drawImage(sprite, bx - CAR_MARGIN, by - CAR_TOP - CAR_MARGIN);
+    c.restore();
   }
 
   /** The place of a car that is away: a faint darker patch on the ground where it stands. */

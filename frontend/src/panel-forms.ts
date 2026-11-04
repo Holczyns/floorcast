@@ -360,6 +360,21 @@ export function levelProperties(p: FloorCastPanel) {
       "°",
     )}
     <p class="muted">${t("Compass bearing of the top of the plan: 0 north, 90 east. The sun of the pixel look follows it.")}</p>
+    <div class="pick">
+      <span>${t("Weather")}</span>
+      <floorcast-entity-picker
+        .hass=${p.hass}
+        .domains=${["weather"]}
+        .value=${p._plan!.weather ?? null}
+        optional
+        @value-changed=${(e: CustomEvent) =>
+          p.change(() => {
+            if (e.detail) p._plan!.weather = e.detail;
+            else delete p._plan!.weather;
+          })}
+      ></floorcast-entity-picker>
+    </div>
+    <p class="muted">${t("Rain, snow, fog and clouds of the pixel look; without a choice the first weather entity.")}</p>
     ${petProperties(p)}
     ${appearanceProperties(p)}
     <h3>${t("Language")}</h3>

@@ -782,6 +782,8 @@ export interface Plan {
   cornerRadius?: number;
   /** Compass bearing the top of the plan faces, in degrees clockwise from north; 0 without it. The sun of the pixel look follows it. */
   north?: number;
+  /** Weather entity whose rain, snow, fog and clouds the pixel look shows; the first weather entity without it. */
+  weather?: string;
   /** Pets of the pixel look: mascots that live their own life on the plan; nothing is measured. */
   pets?: Pet[];
 }
