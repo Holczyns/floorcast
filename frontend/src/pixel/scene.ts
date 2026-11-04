@@ -280,116 +280,28 @@ export class Scene {
     }
   }
 
-  /**
-   * A car standing like the rest of the picture: a soft shadow, the rounded body raised as tall as its kind
-   * with its face towards the viewer, the bonnet, the cabin with its windscreen towards the front, the roof,
-   * mirrors, and lights and bumpers at its ends.
-   */
+  /** Cars drawn once each, by their look and size. */
+  private readonly carSprites = new Map<string, HTMLCanvasElement>();
+
+  /** A car standing like the rest of the picture: a soft shadow on the ground and its sprite over it. */
   drawCar(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
     const [bx, by, bw, bh] = this.pxBox(g.box);
-    const item = g.item;
-    const main = item.colour ?? "#9aa3ad";
-    const body = item.body ?? "hatchback";
-    const front = item.front ?? (bh >= bw ? "top" : "left");
-    const lengthwise = front === "top" || front === "bottom";
-    const forward = front === "top" || front === "left";
-    const h = Math.round((body === "van" ? 0.34 : body === "suv" ? 0.3 : 0.24) * PPM);
-    const top = by - h;
-    // A rectangle with its corners cut by one pixel.
     const rounded = (x: number, y: number, w: number, hh: number, colour: string) => {
-      rect(c, x + 1, y, w - 2, hh, colour);
-      rect(c, x, y + 1, w, hh - 2, colour);
+      rect(c, x + 2, y, w - 4, hh, colour);
+      rect(c, x, y + 2, w, hh - 4, colour);
+      rect(c, x + 1, y + 1, w - 2, hh - 2, colour);
     };
-    rounded(bx - 1, by - 1, bw + 4, bh + 4, "rgba(0,0,0,.1)");
-    rounded(bx + 1, by + 1, bw, bh, "rgba(0,0,0,.22)");
-    const wheel = "#1d1f25";
-    if (lengthwise)
-      for (const t of [0.2, 0.78]) {
-        const wy = top + Math.round(bh * t) - 3;
-        rect(c, bx - 1, wy, 2, 7, wheel);
-        rect(c, bx + bw - 1, wy, 2, 7, wheel);
-      }
-    // The face towards the viewer: a bumper below, and on a car standing across, its wheels and a door line.
-    const faceY = by + bh - h;
-    rounded(bx, faceY, bw, h, tone(main, -0.25));
-    rect(c, bx + 1, by + bh - 3, bw - 2, 2, tone(main, -0.45));
-    if (lengthwise) {
-      const atFront = front === "bottom";
-      if (atFront) rect(c, bx + Math.round(bw / 2) - 4, faceY + 2, 8, 2, "#2a2c31");
-      else rect(c, bx + Math.round(bw / 2) - 3, faceY + 2, 6, 2, "#e8e8e0");
-      const light = atFront ? "#f5e6a0" : "#d0312d";
-      rect(c, bx + 2, faceY + 1, 4, 2, light);
-      rect(c, bx + bw - 6, faceY + 1, 4, 2, light);
-    } else {
-      for (const t of [0.2, 0.78]) {
-        const wx = bx + Math.round(bw * t) - 4;
-        rect(c, wx + 1, by + bh - 4, 6, 4, wheel);
-        rect(c, wx, by + bh - 3, 8, 2, wheel);
-        rect(c, wx + 3, by + bh - 3, 2, 2, "#8a9099");
-      }
-      rect(c, bx + Math.round(bw / 2), faceY + 1, 1, h - 4, tone(main, -0.4));
-      rect(c, front === "left" ? bx + 1 : bx + bw - 3, faceY + 1, 2, 2, "#f5e6a0");
-      rect(c, front === "left" ? bx + bw - 3 : bx + 1, faceY + 1, 2, 2, "#d0312d");
+    rounded(bx - 1, by, bw + 4, bh + 3, "rgba(0,0,0,.1)");
+    rounded(bx + 1, by + 1, bw, bh, "rgba(0,0,0,.2)");
+    const item = g.item;
+    const front = item.front ?? (bh >= bw ? "top" : "left");
+    const key = JSON.stringify([item.body ?? "hatchback", item.colour ?? "", front, bw, bh]);
+    let sprite = this.carSprites.get(key);
+    if (!sprite) {
+      sprite = carSprite(item.body ?? "hatchback", item.colour ?? "#9aa3ad", front, bw, bh);
+      this.carSprites.set(key, sprite);
     }
-    // The top: lit from above, darker along its sides.
-    rounded(bx, top, bw, bh, main);
-    if (lengthwise) {
-      rect(c, bx, top + 2, 1, bh - 4, tone(main, -0.15));
-      rect(c, bx + bw - 1, top + 2, 1, bh - 4, tone(main, -0.15));
-    } else {
-      rect(c, bx + 2, top + bh - 1, bw - 4, 1, tone(main, -0.15));
-    }
-    rect(c, bx + 2, top, lengthwise ? bw - 4 : bw - 4, 1, tone(main, 0.3));
-    // A band of the top from t0 to t1 of the length counted from the front, inset from the sides.
-    const band = (t0: number, t1: number, inset: number): Box => {
-      const a = forward ? t0 : 1 - t1;
-      const b = forward ? t1 : 1 - t0;
-      return lengthwise
-        ? [bx + inset, top + Math.round(a * bh), bw - 2 * inset, Math.max(1, Math.round((b - a) * bh))]
-        : [bx + Math.round(a * bw), top + inset, Math.max(1, Math.round((b - a) * bw)), bh - 2 * inset];
-    };
-    const fill = (b: Box, colour: string) => rect(c, b[0], b[1], b[2], b[3], colour);
-    // Bumpers at both ends, lights at the front and back corners.
-    fill(band(0, 0.03, 1), tone(main, -0.35));
-    fill(band(0.97, 1, 1), tone(main, -0.35));
-    const [l0, l1] = lengthwise ? [band(0.02, 0.06, 1), band(0.94, 0.98, 1)] : [band(0.02, 0.06, 1), band(0.94, 0.98, 1)];
-    const corners = (b: Box, colour: string) => {
-      if (lengthwise) {
-        rect(c, b[0], b[1], 3, b[3], colour);
-        rect(c, b[0] + b[2] - 3, b[1], 3, b[3], colour);
-      } else {
-        rect(c, b[0], b[1], b[2], 3, colour);
-        rect(c, b[0], b[1] + b[3] - 3, b[2], 3, colour);
-      }
-    };
-    corners(l0, "#f5e6a0");
-    corners(l1, "#d0312d");
-    const [c0, c1] = { hatchback: [0.36, 0.86], sedan: [0.35, 0.72], estate: [0.35, 0.93], suv: [0.33, 0.93], van: [0.16, 0.96] }[body];
-    // A crease down the middle of the bonnet.
-    const bonnet = band(0.05, c0 - 0.01, 0);
-    if (lengthwise) rect(c, bx + Math.round(bw / 2), bonnet[1], 1, bonnet[3], tone(main, 0.18));
-    else rect(c, bonnet[0], top + Math.round(bh / 2), bonnet[2], 1, tone(main, 0.18));
-    // The cabin: side windows round it, the windscreen at its front, the rear window behind, the roof on top.
-    fill(band(c0, c1, 2), "#26303a");
-    // Side windows: a lighter strip of glass inside the dark frame along both sides of the cabin.
-    fill(band(c0 + 0.1, c1 - 0.07, 3), "#3d4f60");
-    const screen = band(c0, c0 + 0.09, 2);
-    fill(screen, "#6f8fa8");
-    if (lengthwise) rect(c, screen[0] + 2, screen[1] + 1, 2, Math.max(1, screen[3] - 2), "#a9c3d6");
-    else rect(c, screen[0] + 1, screen[1] + 2, Math.max(1, screen[2] - 2), 2, "#a9c3d6");
-    fill(band(c1 - 0.06, c1, 3), "#4d6478");
-    const roof = band(c0 + 0.11, c1 - 0.08, 5);
-    fill(roof, tone(main, 0.12));
-    if (lengthwise) rect(c, roof[0], roof[1], 1, roof[3], tone(main, 0.3));
-    else rect(c, roof[0], roof[1], roof[2], 1, tone(main, 0.3));
-    // Mirrors beside the windscreen.
-    if (lengthwise) {
-      rect(c, bx - 1, screen[1], 1, 2, tone(main, -0.2));
-      rect(c, bx + bw, screen[1], 1, 2, tone(main, -0.2));
-    } else {
-      rect(c, screen[0], top - 1, 2, 1, tone(main, -0.2));
-      rect(c, screen[0], top + bh, 2, 1, tone(main, -0.2));
-    }
+    c.drawImage(sprite, bx - CAR_MARGIN, by - CAR_TOP - CAR_MARGIN);
   }
 
   /** The place of a car that is away: a faint darker patch on the ground where it stands. */
@@ -1614,4 +1526,157 @@ export class Scene {
 
 
 /** Garden objects that stand up and take part in the drawing order; the rest is flat ground. */
+// ---------------------------------------------------------------- cars
+const CAR_MARGIN = 3;
+/** Room above a car's footprint for its roof, in pixels. */
+const CAR_TOP = 14;
+
+/**
+ * Heights of each body in pixels (bonnet and boot, roof) and where along it, from the front, the windscreen
+ * starts, the roof starts and ends, and the rear window ends.
+ */
+const CAR_SHAPES: Record<string, { body: number; roof: number; cabin: [number, number, number, number] }> = {
+  hatchback: { body: 6, roof: 10, cabin: [0.3, 0.46, 0.82, 0.95] },
+  sedan: { body: 6, roof: 10, cabin: [0.3, 0.46, 0.66, 0.8] },
+  estate: { body: 6, roof: 10, cabin: [0.3, 0.46, 0.9, 0.97] },
+  suv: { body: 7, roof: 12, cabin: [0.27, 0.42, 0.9, 0.97] },
+  van: { body: 8, roof: 13, cabin: [0.06, 0.2, 0.96, 0.99] },
+};
+
+type RGB = [number, number, number];
+
+function rgbOf(hex: string): RGB {
+  const v = parseInt(hex.replace("#", "").padEnd(6, "0").slice(0, 6), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+/** A colour lighter (amount above 0) or darker (below 0), a little warmer when lit and cooler in shade. */
+function shadeOf(c: RGB, amount: number): RGB {
+  const towards: RGB = amount >= 0 ? [255, 250, 235] : [10, 14, 30];
+  const a = Math.abs(amount);
+  return [0, 1, 2].map((i) => Math.round(c[i] + (towards[i] - c[i]) * a)) as RGB;
+}
+
+/**
+ * A car in the three-quarter view of the picture, as a sprite. Its body is a height field over its footprint:
+ * low bonnet and boot, the windscreen rising to the roof, the rear window falling from it, a cabin narrower
+ * than the body so its side windows show from above. Columns stand from the ground to that height, drawn from
+ * the far end to the near one; their tops are the surfaces, the rest the face towards the viewer with the
+ * lights, grille or plate. Wheels and mirrors stick out at the sides, and a dark line goes round it all.
+ */
+function carSprite(body: string, colour: string, front: "top" | "bottom" | "left" | "right", bw: number, bh: number): HTMLCanvasElement {
+  const shape = CAR_SHAPES[body] ?? CAR_SHAPES.hatchback;
+  const paint = rgbOf(colour);
+  const width = bw + 2 * CAR_MARGIN;
+  const height = bh + CAR_TOP + 2 * CAR_MARGIN;
+  const [sprite, sc] = canvas(width, height);
+  const image = sc.createImageData(width, height);
+  const data = image.data;
+  const lengthwise = front === "top" || front === "bottom";
+  const breadth = lengthwise ? bw : bh;
+  const [c0, c1, c2, c3] = shape.cabin;
+  const radius = Math.max(2, Math.round(breadth * 0.2));
+  const put = (x: number, y: number, rgb: RGB) => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return;
+    const k = (y * width + x) * 4;
+    data[k] = rgb[0];
+    data[k + 1] = rgb[1];
+    data[k + 2] = rgb[2];
+    data[k + 3] = 255;
+  };
+  // Along the car from its front (0) to its back (1), and across it from its middle (0) to its sides (1).
+  const along = (gx: number, gy: number) => {
+    const t = lengthwise ? (gy + 0.5) / bh : (gx + 0.5) / bw;
+    return front === "top" || front === "left" ? t : 1 - t;
+  };
+  const across = (gx: number, gy: number) => (lengthwise ? (gx + 0.5 - bw / 2) / (bw / 2) : (gy + 0.5 - bh / 2) / (bh / 2));
+  const inside = (gx: number, gy: number) => {
+    if (gx < 0 || gy < 0 || gx >= bw || gy >= bh) return false;
+    const dx = Math.max(radius - gx - 0.5, gx + 0.5 - (bw - radius), 0);
+    const dy = Math.max(radius - gy - 0.5, gy + 0.5 - (bh - radius), 0);
+    return dx * dx + dy * dy <= radius * radius;
+  };
+  const roofAt = (t: number) => {
+    if (t < c1) return shape.body + ((t - c0) / (c1 - c0)) * (shape.roof - shape.body);
+    if (t <= c2) return shape.roof;
+    return shape.roof - ((t - c2) / (c3 - c2)) * (shape.roof - shape.body);
+  };
+  const cabinHalf = 0.8;
+  /** Height of the column at a pixel of the footprint, nothing outside it. */
+  const heightAt = (gx: number, gy: number) => {
+    if (!inside(gx, gy)) return -1;
+    const t = along(gx, gy);
+    const cabin = t >= c0 && t <= c3 && Math.abs(across(gx, gy)) < cabinHalf;
+    return Math.round(cabin ? roofAt(t) : shape.body - (t < 0.04 || t > 0.96 ? 1 : 0));
+  };
+  const roofHalf = 0.64;
+  const tyre: RGB = [29, 31, 37];
+  const hub: RGB = [138, 144, 153];
+  const glassSky: RGB = [127, 166, 196];
+  const glassGlint: RGB = [214, 230, 240];
+  const glassDark: RGB = [47, 63, 80];
+  const glassRear: RGB = [79, 106, 130];
+  const headlight: RGB = [245, 230, 160];
+  const taillight: RGB = [208, 49, 45];
+  // From the far rows to the near ones, so what is nearer covers what is behind.
+  for (let gy = -1; gy <= bh; gy++)
+    for (let gx = -1; gx <= bw; gx++) {
+      const t = along(gx, gy);
+      const s = across(gx, gy);
+      const x = gx + CAR_MARGIN;
+      const ground = gy + CAR_TOP + CAR_MARGIN;
+      if (!inside(gx, gy)) {
+        // Wheels and mirrors just past the sides.
+        const side = lengthwise ? gx === -1 || gx === bw : gy === -1 || gy === bh;
+        const within = lengthwise ? gy >= 0 && gy < bh : gx >= 0 && gx < bw;
+        if (!side || !within) continue;
+        if ((t > 0.13 && t < 0.25) || (t > 0.73 && t < 0.85)) for (let z = 0; z < 4; z++) put(x, ground - z, z === 1 && !lengthwise ? hub : tyre);
+        if (Math.abs(t - (c0 + 0.04)) < 0.025) put(x, ground - shape.body - 1, shadeOf(paint, -0.3));
+        continue;
+      }
+      const top = heightAt(gx, gy);
+      const cabin = t >= c0 && t <= c3 && Math.abs(s) < cabinHalf;
+      const end = t < 0.04 || t > 0.96;
+      const lamp = Math.abs(s) > 0.55 && Math.abs(s) < 0.9;
+      // On a slope towards the viewer the next row is lower: what shows of this column above it is still surface.
+      const nearer = heightAt(gx, gy + 1);
+      for (let z = 0; z <= top; z++) {
+        let rgb: RGB;
+        if (z === top || (cabin && z >= nearer && z > shape.body)) {
+          // The surfaces seen from above.
+          if (!cabin) {
+            if (lamp && (t < 0.05 || t > 0.95)) rgb = t < 0.5 ? headlight : taillight;
+            else if (end) rgb = shadeOf(paint, -0.3);
+            else if (Math.abs(s) > 0.88) rgb = shadeOf(paint, -0.12);
+            else if (Math.abs(s) < 0.06 && t < c0) rgb = shadeOf(paint, 0.18);
+            else rgb = paint;
+          } else if (Math.abs(s) > roofHalf) rgb = glassDark;
+          else if (t < c1) rgb = (x + ground - z) % 7 === 0 ? glassGlint : glassSky;
+          else if (t > c2) rgb = glassRear;
+          else rgb = shadeOf(paint, Math.abs(s) < 0.3 && t < (c1 + c2) / 2 ? 0.3 : 0.15);
+        } else {
+          // The face towards the viewer: windows in the cabin, lights and grille or plate at the ends, the sill below.
+          rgb = z < 2 ? shadeOf(paint, -0.5) : z >= top - 1 ? shadeOf(paint, -0.12) : shadeOf(paint, -0.28);
+          if (cabin && z > shape.body) rgb = glassDark;
+          if ((t < 0.05 || t > 0.95) && z >= shape.body - 3 && z <= shape.body - 2) {
+            if (lamp) rgb = t < 0.5 ? headlight : taillight;
+            else if (Math.abs(s) < 0.4) rgb = t < 0.5 ? [42, 44, 49] : [232, 232, 224];
+          }
+          // Door lines on a car seen from its side.
+          if (!lengthwise && z >= 2 && z <= shape.body - 1 && (Math.abs(t - c1) < 0.01 || Math.abs(t - (c1 + c2) / 2) < 0.01)) rgb = shadeOf(paint, -0.45);
+        }
+        put(x, ground - z, rgb);
+      }
+    }
+  // A dark line round the whole car.
+  const outline = shadeOf(paint, -0.7);
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height && data[(y * width + x) * 4 + 3] === 255;
+  const edge: [number, number][] = [];
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) if (!filled(x, y) && (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1))) edge.push([x, y]);
+  for (const [x, y] of edge) put(x, y, outline);
+  sc.putImageData(image, 0, 0);
+  return sprite;
+}
+
 export const STANDING_GARDEN = new Set(["hedge", "greenhouse", "garden_house", "trampoline", "tree"]);
