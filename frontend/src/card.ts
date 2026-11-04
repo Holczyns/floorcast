@@ -76,7 +76,6 @@ const DETAILS_PX_PER_M = 40;
 // Narrowest level width in pixels that still reads well side by side.
 const MIN_SIDE_WIDTH = 150;
 // Height of the row with the name of a level over its plan, side by side.
-const NAME_ROW = 20;
 const HOLD_MS = 350;
 // A still covering someone moves away at most this often.
 const STILL_MOVE_MS = 5000;
@@ -957,25 +956,26 @@ class FloorCastCard extends LitElement {
     // As close as MIN_ZOOM_WIDTH metres across the card.
     const maxScale = metres.reduce((sum, w) => sum + w, 0) / MIN_ZOOM_WIDTH;
     const group = this._group;
-    // Each level drawn past its visible part on the outer sides of the row and below it; not above it, where
-    // the names of the levels stand, so the visible parts stay side by side as configured.
+    // Each level drawn past its visible part on the outer sides of the row, below it and above it; above by the
+    // same length for all levels, so the visible parts stay side by side as configured.
     const homes = levels.map((level) => this.defaultBounds(level));
     const reaches = levels.map((level) => this.levelReach(level));
+    const above = Math.max(0, ...homes.map((home, i) => home.y - reaches[i].y));
     const views = homes.map((home, i) => {
       const reach = reaches[i];
       const left = i === 0 ? home.x - reach.x : 0;
       const right = i === levels.length - 1 ? reach.x + reach.w - home.x - home.w : 0;
       const bottom = Math.max(0, reach.y + reach.h - home.y - home.h);
-      return { x: home.x - left, y: home.y, w: home.w + left + right, h: home.h + bottom };
+      return { x: home.x - left, y: home.y - above, w: home.w + left + right, h: home.h + above + bottom };
     });
     const k = sideScale;
     this._picture = {
       left: (homes[0].x - views[0].x) * k,
-      top: 0,
+      top: above * k,
       width: views.reduce((sum, view) => sum + view.w, 0) * k,
-      height: Math.max(...views.map((view) => view.h)) * k + NAME_ROW,
+      height: Math.max(...views.map((view) => view.h)) * k,
       frameWidth: homes.reduce((sum, home) => sum + home.w, 0) * k,
-      frameHeight: Math.max(...homes.map((home) => home.h)) * k + NAME_ROW,
+      frameHeight: Math.max(...homes.map((home) => home.h)) * k,
     };
     const picture = this._picture;
     const shift = `translate(${(-picture.left).toFixed(1)}px,${(-picture.top).toFixed(1)}px)`;
@@ -1044,9 +1044,6 @@ class FloorCastCard extends LitElement {
           capture: true,
         }}
       >
-        ${scale
-          ? html`<div class="name" style=${view ? `margin-left:${((home.x - view.x) * scale + 4).toFixed(0)}px` : ""}>${level.name}</div>`
-          : nothing}
         ${pixel
           ? html`<div class="pixel-box" @pointerdown=${this._petCatch} @pointerup=${this._petCatch} @click=${this._petCatch}>
               <canvas class="pixel" data-level=${level.id}></canvas>
@@ -2131,12 +2128,6 @@ class FloorCastCard extends LitElement {
         line-height: 1;
         cursor: pointer;
         opacity: 0.85;
-      }
-      .name {
-        color: var(--secondary-text-color);
-        font-size: 13px;
-        line-height: 18px;
-        margin: 0 0 2px 4px;
       }
       .room {
         fill: transparent;
