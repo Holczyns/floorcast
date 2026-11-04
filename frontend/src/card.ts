@@ -912,7 +912,7 @@ class FloorCastCard extends LitElement {
     this._pixelTargets = [];
     this._gardenShown = showGarden;
     return html`
-      <ha-card .header=${this._config.title} @pointerdown=${this.notePointer}>
+      <ha-card class="background-${this._config.background ?? "plan"}" .header=${this._config.title} @pointerdown=${this.notePointer}>
         ${(side || levels.length < 2) && !gardenToggle && !this._config.history && !heatConfigured
           ? nothing
           : html`<div class="tabs">
@@ -1778,6 +1778,25 @@ class FloorCastCard extends LitElement {
         overflow: hidden;
         position: relative;
         background: var(--fc-background);
+      }
+      /* A card without a background: the dashboard shows through, with no frame or shadow round it. */
+      ha-card.background-transparent,
+      ha-card.background-transparent .tabs {
+        background: transparent;
+      }
+      ha-card.background-transparent {
+        border: none;
+        box-shadow: none;
+      }
+      /* A card in the card colour of the theme. */
+      ha-card.background-theme,
+      ha-card.background-theme .tabs {
+        background: var(--ha-card-background, var(--card-background-color));
+      }
+      /* Off the plan's own background the switches above the plan take the text colour of the theme. */
+      ha-card.background-transparent .tabs,
+      ha-card.background-theme .tabs {
+        color: var(--primary-text-color);
       }
       .ask {
         position: absolute;

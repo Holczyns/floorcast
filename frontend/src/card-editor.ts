@@ -236,6 +236,16 @@ export class FloorCastCardEditor extends LitElement {
         </select>
       </label>
       ${this.select(
+        t("Background"),
+        "background",
+        [
+          ["plan", t("From the plan")],
+          ["transparent", t("Transparent")],
+          ["theme", t("As the theme")],
+        ],
+        "plan",
+      )}
+      ${this.select(
         t("Look"),
         "look",
         [
