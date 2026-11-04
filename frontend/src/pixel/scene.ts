@@ -1227,9 +1227,12 @@ export class Scene {
         break;
       }
       case "shelter": {
-        const h = Math.round(1.1 * P);
-        rect(c, bx + 1, by - h, 2, bh + h, "#5a3c28");
-        rect(c, bx + bw - 3, by - h, 2, bh + h, "#5a3c28");
+        // Seen like the walls of the house: the roof raised a little below their height, the front posts
+        // from its edge down to the ground, a beam along its front as its thickness.
+        const h = Math.round(0.45 * P);
+        rect(c, bx + 1, by + bh - h, 2, h, "#5a3c28");
+        rect(c, bx + bw - 3, by + bh - h, 2, h, "#5a3c28");
+        rect(c, bx, by + bh - h, bw, 3, "#4a3020");
         if (g.item.roof !== "polycarbonate") {
           for (let y = by - h; y < by + bh - h; y += 4) rect(c, bx, y, bw, 2, "rgba(139,94,60,.85)");
           break;
