@@ -187,7 +187,7 @@ const editor: Dictionary = {
   "Body": "Nadwozie",
   "Front towards": "Przód w stronę",
   "Presence": "Obecność",
-  "The car shows while this entity is home or on; otherwise only its parking space is outlined.": "Samochód jest widoczny, gdy ta encja jest w domu lub włączona; w przeciwnym razie widać tylko obrys miejsca parkingowego.",
+  "The car shows while this entity is home or on; otherwise a faint shadow marks its place.": "Samochód jest widoczny, gdy ta encja jest w domu lub włączona; w przeciwnym razie jego miejsce znaczy delikatny cień.",
   "Roof": "Dach",
   "Wooden slats": "Drewniane deski",
   "Polycarbonate": "Poliwęglan",

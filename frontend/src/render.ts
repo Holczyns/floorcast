@@ -1347,10 +1347,9 @@ export const planStyles = css`
     filter: brightness(1.1);
   }
   .fc-car.away .fc-car-body {
-    fill: none;
-    stroke: var(--fc-label);
-    stroke-opacity: 0.5;
-    stroke-dasharray: 0.2 0.15;
+    fill: #000;
+    fill-opacity: 0.12;
+    stroke: none;
   }
   .fc-shelter.polycarbonate {
     fill: var(--fc-glass);

@@ -281,8 +281,9 @@ export class Scene {
   }
 
   /**
-   * A car standing like the rest of the picture: the body raised as tall as its kind, wheels peeping out,
-   * the cabin on top with the windscreen towards its front, and lights at the end facing the viewer.
+   * A car standing like the rest of the picture: a soft shadow, the rounded body raised as tall as its kind
+   * with its face towards the viewer, the bonnet, the cabin with its windscreen towards the front, the roof,
+   * mirrors, and lights and bumpers at its ends.
    */
   drawCar(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
     const [bx, by, bw, bh] = this.pxBox(g.box);
@@ -291,60 +292,112 @@ export class Scene {
     const body = item.body ?? "hatchback";
     const front = item.front ?? (bh >= bw ? "top" : "left");
     const lengthwise = front === "top" || front === "bottom";
+    const forward = front === "top" || front === "left";
     const h = Math.round((body === "van" ? 0.34 : body === "suv" ? 0.3 : 0.24) * PPM);
-    const wheel = "#1d1f25";
-    for (const t of [0.18, 0.8]) {
-      if (lengthwise) {
-        const wy = by + Math.round(bh * t) - 3 - Math.round(h / 2);
-        rect(c, bx - 1, wy, 2, 6, wheel);
-        rect(c, bx + bw - 1, wy, 2, 6, wheel);
-      }
-    }
-    this.box(c, g.points, h, tone(main, 0.08), tone(main, -0.22), { edge: tone(main, 0.3) });
-    if (!lengthwise) for (const t of [0.18, 0.8]) rect(c, bx + Math.round(bw * t) - 3, by + bh - 3, 6, 3, wheel);
-    // A band of the top from t0 to t1 of the length counted from the front, inset from the sides.
     const top = by - h;
+    // A rectangle with its corners cut by one pixel.
+    const rounded = (x: number, y: number, w: number, hh: number, colour: string) => {
+      rect(c, x + 1, y, w - 2, hh, colour);
+      rect(c, x, y + 1, w, hh - 2, colour);
+    };
+    rounded(bx - 1, by - 1, bw + 4, bh + 4, "rgba(0,0,0,.1)");
+    rounded(bx + 1, by + 1, bw, bh, "rgba(0,0,0,.22)");
+    const wheel = "#1d1f25";
+    if (lengthwise)
+      for (const t of [0.2, 0.78]) {
+        const wy = top + Math.round(bh * t) - 3;
+        rect(c, bx - 1, wy, 2, 7, wheel);
+        rect(c, bx + bw - 1, wy, 2, 7, wheel);
+      }
+    // The face towards the viewer: a bumper below, and on a car standing across, its wheels and a door line.
+    const faceY = by + bh - h;
+    rounded(bx, faceY, bw, h, tone(main, -0.25));
+    rect(c, bx + 1, by + bh - 3, bw - 2, 2, tone(main, -0.45));
+    if (lengthwise) {
+      const atFront = front === "bottom";
+      if (atFront) rect(c, bx + Math.round(bw / 2) - 4, faceY + 2, 8, 2, "#2a2c31");
+      else rect(c, bx + Math.round(bw / 2) - 3, faceY + 2, 6, 2, "#e8e8e0");
+      const light = atFront ? "#f5e6a0" : "#d0312d";
+      rect(c, bx + 2, faceY + 1, 4, 2, light);
+      rect(c, bx + bw - 6, faceY + 1, 4, 2, light);
+    } else {
+      for (const t of [0.2, 0.78]) {
+        const wx = bx + Math.round(bw * t) - 4;
+        rect(c, wx + 1, by + bh - 4, 6, 4, wheel);
+        rect(c, wx, by + bh - 3, 8, 2, wheel);
+        rect(c, wx + 3, by + bh - 3, 2, 2, "#8a9099");
+      }
+      rect(c, bx + Math.round(bw / 2), faceY + 1, 1, h - 4, tone(main, -0.4));
+      rect(c, front === "left" ? bx + 1 : bx + bw - 3, faceY + 1, 2, 2, "#f5e6a0");
+      rect(c, front === "left" ? bx + bw - 3 : bx + 1, faceY + 1, 2, 2, "#d0312d");
+    }
+    // The top: lit from above, darker along its sides.
+    rounded(bx, top, bw, bh, main);
+    if (lengthwise) {
+      rect(c, bx, top + 2, 1, bh - 4, tone(main, -0.15));
+      rect(c, bx + bw - 1, top + 2, 1, bh - 4, tone(main, -0.15));
+    } else {
+      rect(c, bx + 2, top + bh - 1, bw - 4, 1, tone(main, -0.15));
+    }
+    rect(c, bx + 2, top, lengthwise ? bw - 4 : bw - 4, 1, tone(main, 0.3));
+    // A band of the top from t0 to t1 of the length counted from the front, inset from the sides.
     const band = (t0: number, t1: number, inset: number): Box => {
-      const forward = front === "top" || front === "left";
       const a = forward ? t0 : 1 - t1;
       const b = forward ? t1 : 1 - t0;
       return lengthwise
-        ? [bx + inset, top + Math.round(a * bh), bw - 2 * inset, Math.round((b - a) * bh)]
-        : [bx + Math.round(a * bw), top + inset, Math.round((b - a) * bw), bh - 2 * inset];
+        ? [bx + inset, top + Math.round(a * bh), bw - 2 * inset, Math.max(1, Math.round((b - a) * bh))]
+        : [bx + Math.round(a * bw), top + inset, Math.max(1, Math.round((b - a) * bw)), bh - 2 * inset];
     };
+    const fill = (b: Box, colour: string) => rect(c, b[0], b[1], b[2], b[3], colour);
+    // Bumpers at both ends, lights at the front and back corners.
+    fill(band(0, 0.03, 1), tone(main, -0.35));
+    fill(band(0.97, 1, 1), tone(main, -0.35));
+    const [l0, l1] = lengthwise ? [band(0.02, 0.06, 1), band(0.94, 0.98, 1)] : [band(0.02, 0.06, 1), band(0.94, 0.98, 1)];
+    const corners = (b: Box, colour: string) => {
+      if (lengthwise) {
+        rect(c, b[0], b[1], 3, b[3], colour);
+        rect(c, b[0] + b[2] - 3, b[1], 3, b[3], colour);
+      } else {
+        rect(c, b[0], b[1], b[2], 3, colour);
+        rect(c, b[0], b[1] + b[3] - 3, b[2], 3, colour);
+      }
+    };
+    corners(l0, "#f5e6a0");
+    corners(l1, "#d0312d");
     const [c0, c1] = { hatchback: [0.36, 0.86], sedan: [0.35, 0.72], estate: [0.35, 0.93], suv: [0.33, 0.93], van: [0.16, 0.96] }[body];
-    const rise = 3;
-    const [gx, gy, gw, gh] = band(c0, c1, 2);
-    rect(c, gx, gy - rise, gw, gh + rise, "#2b3540");
-    const [sx, sy, sw, sh] = band(c0, c0 + 0.1, 2);
-    rect(c, sx, sy - rise, sw, sh, "#5f7d95");
-    const [rx, ry, rw, rh] = band(c0 + 0.12, c1 - 0.06, 3);
-    rect(c, rx, ry - rise, rw, rh, tone(main, 0.15));
-    rect(c, rx, ry - rise, rw, 1, tone(main, 0.35));
-    // Lights on the face towards the viewer: headlights when the front is there, tail lights when the back is.
-    const face = by + bh - h + 2;
+    // A crease down the middle of the bonnet.
+    const bonnet = band(0.05, c0 - 0.01, 0);
+    if (lengthwise) rect(c, bx + Math.round(bw / 2), bonnet[1], 1, bonnet[3], tone(main, 0.18));
+    else rect(c, bonnet[0], top + Math.round(bh / 2), bonnet[2], 1, tone(main, 0.18));
+    // The cabin: side windows round it, the windscreen at its front, the rear window behind, the roof on top.
+    fill(band(c0, c1, 2), "#26303a");
+    // Side windows: a lighter strip of glass inside the dark frame along both sides of the cabin.
+    fill(band(c0 + 0.1, c1 - 0.07, 3), "#3d4f60");
+    const screen = band(c0, c0 + 0.09, 2);
+    fill(screen, "#6f8fa8");
+    if (lengthwise) rect(c, screen[0] + 2, screen[1] + 1, 2, Math.max(1, screen[3] - 2), "#a9c3d6");
+    else rect(c, screen[0] + 1, screen[1] + 2, Math.max(1, screen[2] - 2), 2, "#a9c3d6");
+    fill(band(c1 - 0.06, c1, 3), "#4d6478");
+    const roof = band(c0 + 0.11, c1 - 0.08, 5);
+    fill(roof, tone(main, 0.12));
+    if (lengthwise) rect(c, roof[0], roof[1], 1, roof[3], tone(main, 0.3));
+    else rect(c, roof[0], roof[1], roof[2], 1, tone(main, 0.3));
+    // Mirrors beside the windscreen.
     if (lengthwise) {
-      const colour = front === "bottom" ? "#f5e6a0" : "#d0312d";
-      rect(c, bx + 2, face, 3, 2, colour);
-      rect(c, bx + bw - 5, face, 3, 2, colour);
+      rect(c, bx - 1, screen[1], 1, 2, tone(main, -0.2));
+      rect(c, bx + bw, screen[1], 1, 2, tone(main, -0.2));
     } else {
-      rect(c, front === "left" ? bx + 1 : bx + bw - 3, face, 2, 2, "#f5e6a0");
-      rect(c, front === "left" ? bx + bw - 3 : bx + 1, face, 2, 2, "#d0312d");
+      rect(c, screen[0], top - 1, 2, 1, tone(main, -0.2));
+      rect(c, screen[0], top + bh, 2, 1, tone(main, -0.2));
     }
   }
 
-  /** The place of a car that is away: a dashed outline on the ground. */
+  /** The place of a car that is away: a faint darker patch on the ground where it stands. */
   drawParking(c: CanvasRenderingContext2D, g: { item: Item; points: Point[]; box: Box }): void {
     const [bx, by, bw, bh] = this.pxBox(g.box);
-    const line = "rgba(255,255,255,.45)";
-    for (let x = bx; x < bx + bw; x += 5) {
-      rect(c, x, by, Math.min(3, bx + bw - x), 1, line);
-      rect(c, x, by + bh - 1, Math.min(3, bx + bw - x), 1, line);
-    }
-    for (let y = by; y < by + bh; y += 5) {
-      rect(c, bx, y, 1, Math.min(3, by + bh - y), line);
-      rect(c, bx + bw - 1, y, 1, Math.min(3, by + bh - y), line);
-    }
+    rect(c, bx + 1, by, bw - 2, bh, "rgba(0,0,0,.07)");
+    rect(c, bx, by + 1, bw, bh - 2, "rgba(0,0,0,.07)");
+    rect(c, bx + 2, by + 2, bw - 4, bh - 4, "rgba(0,0,0,.04)");
   }
 
   /** Each wall as strips for the drawing order; walls running down the screen in short strips, so a person beside one is not covered by all of it. */

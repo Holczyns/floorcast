@@ -1111,7 +1111,7 @@ function carProperties(p: FloorCastPanel, item: Item) {
       ></floorcast-entity-picker>
     </div>
     ${p.stateLine(item.presence)}
-    <p class="muted">${t("The car shows while this entity is home or on; otherwise only its parking space is outlined.")}</p>`;
+    <p class="muted">${t("The car shows while this entity is home or on; otherwise a faint shadow marks its place.")}</p>`;
 }
 
 export function itemProperties(p: FloorCastPanel, item?: Item) {
