@@ -1,5 +1,5 @@
 // Characters and robots of the pixel look, drawn with their feet (or their middle) at x, y.
-import { disc, rect } from "./art";
+import { canvas, disc, rect, tone } from "./art";
 
 export type Facing = "up" | "down" | "left" | "right";
 
@@ -38,81 +38,199 @@ function shadow(c: CanvasRenderingContext2D, x: number, y: number, w: number, h:
 
 /** A person standing or walking; step counts frames of the walk, zero standing still. Without its shadow when ghost. */
 export function person(c: CanvasRenderingContext2D, x: number, y: number, facing: Facing, step: number, o: Outfit, ghost = false): void {
-  const f = step % 4;
-  const bob = f === 1 || f === 3 ? 1 : 0;
-  if (!ghost) rect(c, x - 6, y - 1, 12, 2, "rgba(0,0,0,.2)");
-  if (facing === "left" || facing === "right") {
-    const s = f === 1 ? -2 : f === 3 ? 2 : 0;
-    rect(c, x - 1 + s, y - 6, 3, 5, o.trousers);
-    rect(c, x - 1 - s, y - 6, 3, 5, o.trousers);
-    rect(c, x - 1 + s, y - 1, 3, 1, "#2a2a2e");
-    rect(c, x - 1 - s, y - 1, 3, 1, "#2a2a2e");
-  } else {
-    const l = f === 1 ? 1 : 0;
-    const r = f === 3 ? 1 : 0;
-    rect(c, x - 4, y - 6 - l, 3, 5, o.trousers);
-    rect(c, x + 1, y - 6 - r, 3, 5, o.trousers);
-    rect(c, x - 4, y - 1 - l, 3, 1, "#2a2a2e");
-    rect(c, x + 1, y - 1 - r, 3, 1, "#2a2a2e");
+  if (!ghost) {
+    rect(c, x - 6, y - 1, 13, 2, "rgba(0,0,0,.2)");
+    rect(c, x - 5, y - 2, 11, 1, "rgba(0,0,0,.1)");
   }
-  const by = y - 14 - bob;
-  rect(c, x - 5, by, 10, 8, o.shirt);
-  rect(c, x - 5, by + 7, 10, 1, o.shade);
-  const swing = f === 1 ? 1 : f === 3 ? -1 : 0;
-  if (facing === "left" || facing === "right") {
-    rect(c, x - 1 + swing, by + 1, 2, 5, o.shade);
-    rect(c, x - 1 + swing, by + 6, 2, 2, o.skin);
-  } else {
-    rect(c, x - 7, by + 1 + swing, 2, 5, o.shirt);
-    rect(c, x + 5, by + 1 - swing, 2, 5, o.shirt);
-    rect(c, x - 7, by + 6 + swing, 2, 2, o.skin);
-    rect(c, x + 5, by + 6 - swing, 2, 2, o.skin);
-  }
-  head(c, x, by - 9, facing, o);
+  c.drawImage(figure(o, "stand", facing, step % 4), x - FIGURE_X, y - FIGURE_Y);
 }
 
-/** A head of eight by eight pixels with its top at hy; hair and eyes by the way it faces. */
-function head(c: CanvasRenderingContext2D, x: number, hy: number, facing: Facing, o: Outfit): void {
-  rect(c, x - 4, hy + 1, 8, 8, o.skin);
-  if (facing === "up") {
-    rect(c, x - 4, hy, 8, 8, o.hair);
-    if (o.long) rect(c, x - 4, hy + 8, 8, 3, o.hair);
-  } else if (facing === "down") {
-    rect(c, x - 4, hy, 8, 3, o.hair);
-    rect(c, x - 5, hy + 1, 1, o.long ? 9 : 4, o.hair);
-    rect(c, x + 4, hy + 1, 1, o.long ? 9 : 4, o.hair);
-    rect(c, x - 2, hy + 5, 1, 2, "#2a2a2e");
-    rect(c, x + 1, hy + 5, 1, 2, "#2a2a2e");
-  } else {
-    const s = facing === "left" ? -1 : 1;
-    rect(c, x - 4, hy, 8, 3, o.hair);
-    rect(c, s > 0 ? x - 4 : x + 1, hy + 1, 3, o.long ? 9 : 5, o.hair);
-    rect(c, s > 0 ? x + 2 : x - 3, hy + 5, 1, 2, "#2a2a2e");
-  }
-}
-
-/** A person sitting: the upper body over the seat, the legs hidden by it. */
+/** A person sitting: the upper body over the seat, the knees in front of it. */
 export function sitting(c: CanvasRenderingContext2D, x: number, y: number, facing: Facing, o: Outfit): void {
-  const by = y - 10;
-  rect(c, x - 5, by, 10, 8, o.shirt);
-  rect(c, x - 5, by + 7, 10, 1, o.shade);
-  rect(c, x - 7, by + 1, 2, 5, o.shirt);
-  rect(c, x + 5, by + 1, 2, 5, o.shirt);
-  rect(c, x - 7, by + 6, 2, 2, o.skin);
-  rect(c, x + 5, by + 6, 2, 2, o.skin);
-  head(c, x, by - 9, facing === "up" ? "up" : "down", o);
+  c.drawImage(figure(o, "sit", facing === "up" ? "up" : facing === "down" ? "down" : facing, 0), x - FIGURE_X, y - FIGURE_Y);
 }
 
 /** A person lying in bed: the head on the pillow side, a hump under the blanket. */
 export function lying(c: CanvasRenderingContext2D, x: number, y: number, o: Outfit): void {
-  rect(c, x - 4, y - 11, 8, 7, o.skin);
-  rect(c, x - 4, y - 12, 8, 3, o.hair);
-  if (o.long) rect(c, x - 5, y - 11, 1, 6, o.hair);
-  rect(c, x - 2, y - 7, 1, 1, "#2a2a2e");
-  rect(c, x + 1, y - 7, 1, 1, "#2a2a2e");
-  rect(c, x - 6, y - 4, 12, 9, "#5b7fbf");
-  rect(c, x - 6, y - 4, 12, 2, "#7d9bd2");
-  rect(c, x - 5, y + 1, 10, 3, "#4f72b0");
+  c.drawImage(figure(o, "lie", "down", 0), x - FIGURE_X, y - FIGURE_Y);
+}
+
+// Figures are drawn once per outfit, pose, facing and frame into a small picture with the feet at FIGURE_X,
+// FIGURE_Y, then given a dark line round them.
+const FIGURE_W = 19;
+const FIGURE_H = 32;
+const FIGURE_X = 9;
+const FIGURE_Y = 30;
+const figures = new WeakMap<Outfit, Map<string, HTMLCanvasElement>>();
+
+function figure(o: Outfit, pose: "stand" | "sit" | "lie", facing: Facing, frame: number): HTMLCanvasElement {
+  let mine = figures.get(o);
+  if (!mine) {
+    mine = new Map();
+    figures.set(o, mine);
+  }
+  const key = `${pose}|${facing}|${frame}`;
+  let picture = mine.get(key);
+  if (!picture) {
+    const [element, fc] = canvas(FIGURE_W, FIGURE_H);
+    if (facing === "left") {
+      // The left view is the right one in a mirror; the feet stay at FIGURE_X.
+      fc.translate(FIGURE_X * 2 + 1, 0);
+      fc.scale(-1, 1);
+    }
+    if (pose === "lie") drawLying(fc, o);
+    else drawFigure(fc, o, pose === "sit", facing === "left" ? "right" : facing, frame);
+    fc.setTransform(1, 0, 0, 1, 0, 0);
+    outline(fc, FIGURE_W, FIGURE_H, "#1e1a24");
+    mine.set(key, element);
+    picture = element;
+  }
+  return picture;
+}
+
+/** A dark line round everything drawn on a small picture. */
+function outline(c: CanvasRenderingContext2D, w: number, h: number, colour: string): void {
+  const image = c.getImageData(0, 0, w, h);
+  const filled = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && image.data[(y * w + x) * 4 + 3] > 0;
+  const edge: [number, number][] = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!filled(x, y) && (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1))) edge.push([x, y]);
+  for (const [x, y] of edge) rect(c, x, y, 1, 1, colour);
+}
+
+/**
+ * A figure in the proportions of small game sprites: a big head of a third of its height, a short body and
+ * legs. Lit from the upper left: lighter on the left of the shirt and hair, darker on the right. Four frames
+ * of walking: standing, left foot forward, standing, right foot forward, the body a pixel lower on a step.
+ */
+function drawFigure(c: CanvasRenderingContext2D, o: Outfit, seated: boolean, facing: "up" | "down" | "right", frame: number): void {
+  const x = FIGURE_X;
+  const y = FIGURE_Y;
+  const shoe = "#3a2a22";
+  const trouserShade = tone(o.trousers, -0.25);
+  const shirtLight = tone(o.shirt, 0.2);
+  const hairLight = tone(o.hair, 0.3);
+  const eye = "#2a2a2e";
+  const bob = frame === 1 || frame === 3 ? 1 : 0;
+  // The body ends at the hips: on its legs standing, on the seat sitting.
+  const by = seated ? y - 11 : y - 16 + bob;
+  const side = facing === "right";
+  // Legs and shoes.
+  if (seated) {
+    if (!side) {
+      rect(c, x - 4, by + 9, 8, 2, o.trousers);
+      rect(c, x - 4, by + 10, 8, 1, trouserShade);
+      if (facing === "down") {
+        rect(c, x - 4, by + 11, 3, 2, shoe);
+        rect(c, x + 1, by + 11, 3, 2, shoe);
+      }
+    } else {
+      rect(c, x - 1, by + 8, 6, 3, o.trousers);
+      rect(c, x + 4, by + 10, 2, 3, o.trousers);
+      rect(c, x + 4, by + 13, 3, 1, shoe);
+    }
+  } else if (side) {
+    const stride = frame === 1 ? -2 : frame === 3 ? 2 : 0;
+    rect(c, x - 1 - stride, y - 7, 3, 5, trouserShade);
+    rect(c, x - 1 - stride, y - 2, 4, 2, tone(shoe, -0.2));
+    rect(c, x - 1 + stride, y - 7, 3, 5, o.trousers);
+    rect(c, x - 1 + stride, y - 2, 4, 2, shoe);
+  } else {
+    const left = frame === 1 ? 1 : 0;
+    const right = frame === 3 ? 1 : 0;
+    rect(c, x - 4, y - 8 - left, 3, 6, o.trousers);
+    rect(c, x + 1, y - 8 - right, 3, 6, o.trousers);
+    rect(c, x + 3, y - 8 - right, 1, 6, trouserShade);
+    rect(c, x - 4, y - 2 - left, 3, 2, shoe);
+    rect(c, x + 1, y - 2 - right, 3, 2, shoe);
+  }
+  // Body: shirt lit on the left, shaded on the right, a belt at the hips.
+  const swing = frame === 1 ? 1 : frame === 3 ? -1 : 0;
+  if (side) {
+    rect(c, x - 3, by, 7, 9, o.shirt);
+    rect(c, x - 3, by, 1, 9, o.shade);
+    rect(c, x + 3, by + 1, 1, 6, shirtLight);
+    rect(c, x - 3, by + 8, 7, 1, tone(o.trousers, -0.35));
+    // The near arm swings forward and back.
+    const reach = seated ? 2 : swing * 2;
+    rect(c, x - 1 + reach, by + 1, 2, 6, o.shade);
+    rect(c, x - 1 + reach, by + 7, 2, 2, o.skin);
+  } else {
+    rect(c, x - 5, by, 10, 9, o.shirt);
+    rect(c, x + 3, by, 2, 9, o.shade);
+    rect(c, x - 5, by + 1, 1, 6, shirtLight);
+    rect(c, x - 5, by + 8, 10, 1, tone(o.trousers, -0.35));
+    if (facing === "down") {
+      rect(c, x - 2, by, 4, 1, o.skin);
+      rect(c, x - 1, by + 1, 2, 1, o.skin);
+      rect(c, x - 3, by + 1, 1, 1, shirtLight);
+      rect(c, x + 2, by + 1, 1, 1, shirtLight);
+    }
+    const arm = seated ? 0 : swing;
+    rect(c, x - 7, by + 1 + arm, 2, 6, o.shirt);
+    rect(c, x + 5, by + 1 - arm, 2, 6, o.shade);
+    rect(c, x - 7, by + 7 + arm, 2, 2, o.skin);
+    rect(c, x + 5, by + 7 - arm, 2, 2, tone(o.skin, -0.1));
+  }
+  // Head: a third of the figure, hair with a shine, eyes with a glint, cheeks and a mouth.
+  const hy = by - 10;
+  if (facing === "up") {
+    rect(c, x - 4, hy + 2, 8, 8, o.skin);
+    rect(c, x - 5, hy, 10, 9, o.hair);
+    rect(c, x - 4, hy + 9, 8, 1, o.hair);
+    rect(c, x - 3, hy + 1, 3, 1, hairLight);
+    rect(c, x - 4, hy + 2, 1, 2, hairLight);
+    if (o.long) rect(c, x - 5, hy + 9, 10, 4, o.hair);
+    else rect(c, x - 2, hy + 10, 4, 1, tone(o.skin, -0.1));
+    return;
+  }
+  if (facing === "down") {
+    rect(c, x - 4, hy + 2, 8, 8, o.skin);
+    rect(c, x - 5, hy, 10, 4, o.hair);
+    rect(c, x - 3, hy + 1, 3, 1, hairLight);
+    rect(c, x - 4, hy + 4, 2, 1, o.hair);
+    rect(c, x + 1, hy + 4, 1, 1, o.hair);
+    rect(c, x - 5, hy + 3, 1, o.long ? 10 : 4, o.hair);
+    rect(c, x + 4, hy + 3, 1, o.long ? 10 : 4, o.hair);
+    rect(c, x - 3, hy + 5, 1, 2, eye);
+    rect(c, x + 2, hy + 5, 1, 2, eye);
+    rect(c, x - 3, hy + 5, 1, 1, "#ffffff");
+    rect(c, x + 2, hy + 5, 1, 1, "#ffffff");
+    rect(c, x - 4, hy + 7, 1, 1, "#ef9a9a");
+    rect(c, x + 3, hy + 7, 1, 1, "#ef9a9a");
+    rect(c, x - 1, hy + 8, 2, 1, tone(o.skin, -0.3));
+    return;
+  }
+  rect(c, x - 3, hy + 2, 7, 8, o.skin);
+  rect(c, x - 4, hy, 8, 4, o.hair);
+  rect(c, x - 2, hy + 1, 3, 1, hairLight);
+  rect(c, x - 4, hy + 2, 4, o.long ? 11 : 6, o.hair);
+  rect(c, x - 3, hy + 3, 1, 2, hairLight);
+  rect(c, x + 4, hy + 6, 1, 1, o.skin);
+  rect(c, x + 2, hy + 5, 1, 2, eye);
+  rect(c, x + 2, hy + 5, 1, 1, "#ffffff");
+  rect(c, x + 1, hy + 7, 1, 1, "#ef9a9a");
+  rect(c, x + 2, hy + 8, 2, 1, tone(o.skin, -0.3));
+}
+
+/** In bed: the head on the pillow, eyes shut, the blanket over the rest. */
+function drawLying(c: CanvasRenderingContext2D, o: Outfit): void {
+  const x = FIGURE_X;
+  const y = FIGURE_Y;
+  rect(c, x - 4, y - 13, 8, 8, o.skin);
+  rect(c, x - 5, y - 14, 10, 4, o.hair);
+  rect(c, x - 3, y - 13, 3, 1, tone(o.hair, 0.3));
+  if (o.long) {
+    rect(c, x - 6, y - 12, 1, 6, o.hair);
+    rect(c, x + 5, y - 12, 1, 6, o.hair);
+  }
+  rect(c, x - 3, y - 9, 2, 1, "#2a2a2e");
+  rect(c, x + 1, y - 9, 2, 1, "#2a2a2e");
+  rect(c, x - 4, y - 7, 1, 1, "#ef9a9a");
+  rect(c, x + 3, y - 7, 1, 1, "#ef9a9a");
+  rect(c, x - 7, y - 5, 14, 10, "#5b7fbf");
+  rect(c, x - 7, y - 5, 14, 2, "#7d9bd2");
+  rect(c, x - 6, y + 1, 12, 3, "#4f72b0");
+  rect(c, x - 7, y - 5, 1, 10, "#4f72b0");
 }
 
 /** A robot vacuum; its light blinks blue while it cleans, green on the dock. */
