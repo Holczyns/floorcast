@@ -22,28 +22,46 @@ The plan is not only to look at. A tap on a room switches its lights, a tap on a
 camera opens what it sees. People counted on the plan become entities for your automations, so a light can follow
 someone to the kitchen counter.
 
+## One switch, and your home moves into a retro world
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/vector.png" alt="The example house as a plan"></td>
+    <td width="50%"><img src="docs/images/pixel.png" alt="The same house in the pixel look"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Plan</b>: clear and exact</td>
+    <td align="center"><b>Pixel house</b>: the same home, alive like an old game</td>
+  </tr>
+</table>
+
+You draw nothing twice. Set **Look → Pixel house** in the card editor, or one line in YAML, and the very same plan
+becomes a little house seen from above:
+
+```yaml
+type: custom:floorcast-card
+look: pixel
+```
+
+Walls rise from your plan, furniture stands where you drew it, lamps light up the floor, the sun shines through the
+windows from where it really is and nights get dark. The weather of Home Assistant brings rain with puddles, snow, fog
+and lightning. People walk, sit on the sofa and lie in bed, your cat and dog wander around, the car leaves the
+driveway when you do, the gate slides open and the mower leaves stripes on the lawn. Every tap, label and entity works
+just as on the plan, so you can switch back and forth at any time, or show one look on the phone and the other on the
+wall panel.
+
 **[Try the demo](https://holczyns.github.io/floorcast/)**: the card and the editor with an example house, in your browser.
-Switch between the plan and the pixel look, change the weather and the time of day, and try the lights, blinds, gate,
+Switch between the plan and the pixel house, change the weather and the time of day, and try the lights, blinds, gate,
 car, sprinklers, a visitor at the door or a water leak.
-
-![The card on a dashboard](docs/images/card.png)
-
-The same house in the pixel look: a little home seen from above, alive like an old game.
-
-![The pixel look](docs/images/pixel.png)
 
 ## Features
 
+### Draw
+
 - **Plan editor** in the sidebar: walls with wall types, doors, windows, rooms, several levels, garden objects and
   furniture, with snapping, typed wall lengths, undo, import and export.
-- **Dashboard card** that draws the saved plan with live states and follows every save. It fits phones, tablets and
-  wall panels, with levels side by side or in tabs and an optional crop. Zoom and pan on the dashboard can be allowed;
-  levels side by side move as one picture, past the crop as far as their drawings reach, and the card starts from its
-  default view each time. Its background can be the plan's, the theme's or transparent.
-- **Pixel look**: the plan drawn as a little house seen from above. Walls rise from the plan, lamps glow on the floor
-  and stop at the walls, the sun shines through the windows from where it really is, nights are dark, and the weather
-  of Home Assistant brings rain with puddles, snow, fog, clouds and lightning. People walk, sit and lie down, the mower
-  leaves stripes on the lawn, doors, windows and gates swing and slide as their sensors say.
+- **Rooms linked to areas** and levels to floors: a room offers the lights, sensors, blinds and contacts of its Home
+  Assistant area, and **Place all** puts them in at once.
 - **Furniture and garden**: more than thirty kinds of furniture drawn by their size and shape (an armchair, a corner
   sofa, a corner kitchen), with a colour and the side of their back; lawns, paving, beds, hedges, trees, a greenhouse,
   a garden house and shelters with a slatted or polycarbonate roof.
@@ -52,34 +70,48 @@ The same house in the pixel look: a little home seen from above, alive like an o
 - **Cars** with a body, colour and direction, shown while their presence entity is home and leaving a faint shadow on
   their parking place otherwise.
 - **Pets**: a cat or a dog of your choice living its own life on the card, the same on every screen.
-- **Lights** as points or strips, glowing in their colour and brightness; a tap on a room switches all its lights.
-- **Doors, windows and blinds** following their contact sensors and covers; **gates and garage doors** and **door
-  locks** that open, close, lock and unlock on a tap after a question.
+- **Built-in guide** in the editor, explaining every part with examples.
+
+### See
+
+- **Dashboard card** that draws the saved plan with live states and follows every save. It fits phones, tablets and
+  wall panels, with levels side by side or in tabs and an optional crop. Zoom and pan on the dashboard can be allowed;
+  levels side by side move as one picture, past the crop as far as their drawings reach, and the card starts from its
+  default view each time. Its background can be the plan's, the theme's or transparent.
+- **Two looks**, the plan and the pixel house, switched with one option.
+- **Lights** as points or strips, glowing in their colour and brightness.
+- **Doors, windows and blinds** following their contact sensors and covers.
 - **Sensors** written where they stand: a header, the main value and up to two secondary values.
 - **Thermostats**: the target under the room name, the room glowing while it heats or cools.
 - **Indicators**: any entity as a dot with its state that glows while the device runs, such as a washer by its power
   or a pump by its switch.
-- **Screens** (projector, TV) with the light they throw and a remote control on the card.
-- **Sprinklers** with their throw and arc, showing the water while the valve is open; a tap opens or closes the
-  valve after a question.
-- **People** from HLK-LD2450 radars and Frigate cameras, joined by one tracker, with entrance, ignore and resting place
-  zones and the paths they walked during the last day.
-- **Counting**: a count and an occupancy entity for every room and counting zone, ready for automations; motion and
-  presence sensors keep a room occupied too.
 - **Mower and vacuum** placed on the plan from their maps, with their tracks and battery.
 - **Camera stills** beside the camera, refreshed while shown, opening by themselves and turning the view red when the
   camera's person or motion sensor sees someone.
 - **Ground view** (experimental): the camera image laid on the plan, also ahead of the moving mower.
-- **Rooms linked to areas** and levels to floors: a room offers the lights, sensors, blinds and contacts of its Home
-  Assistant area, and **Place all** puts them in at once.
 - **Alarms**: smoke, gas, carbon monoxide and water sensors pulse their room red and name it at the top of the card.
 - **Heat map**: rooms coloured by temperature, humidity or CO₂, with a switch on the card.
-- **Ask before switching** for a pump, a server or a gate.
 - **Dark and light**: the plan follows the theme of Home Assistant, and every colour can be changed in the editor.
-- **Built-in guide** in the editor, explaining every part with examples.
+
+### Control
+
+- **Taps**: a room switches all its lights, a window moves its blind, a screen (projector, TV) switches on and offers a
+  remote control, a sprinkler opens or closes its valve.
+- **Gates, garage doors and door locks** that open, close, lock and unlock on a tap after a question.
+- **Ask before switching** for a pump, a server or a gate.
+- **Service `floorcast.press`** doing what a tap does, for automations and buttons.
+
+### Count
+
+- **People** from HLK-LD2450 radars and Frigate cameras, joined by one tracker, with entrance, ignore and resting place
+  zones and the paths they walked during the last day.
+- **Counting**: a count and an occupancy entity for every room and counting zone, ready for automations; motion and
+  presence sensors keep a room occupied too.
+
+### Everywhere
+
 - **English and Polish**, as each user's language in Home Assistant or one chosen for the plan; more languages can be
   added.
-- **Service `floorcast.press`** doing what a tap does, for automations and buttons.
 - **Local**: everything is computed inside Home Assistant, the card only draws. No extra Python packages, no
   resources to add by hand.
 
