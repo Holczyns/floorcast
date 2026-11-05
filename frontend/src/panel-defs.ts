@@ -301,7 +301,6 @@ export const SPECIES_LABELS: Record<PetSpecies, string> = {
   cat: N_("Cat"),
   dog: N_("Dog"),
   rabbit: N_("Rabbit"),
-  hamster: N_("Hamster"),
   tiger: N_("Tiger"),
 };
 

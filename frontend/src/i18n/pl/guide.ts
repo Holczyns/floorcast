@@ -214,7 +214,7 @@ export const sections: GuideSection[] = [
           <b>Zwierzęta</b> (⚙ Ustawienia: zwierzę, umaszczenie i poziom) żyją własnym życiem, tak samo na każdym ekranie.
           Kot ugniata posłanie przed snem, przeciąga się i ziewa po przebudzeniu, poluje na muchy, bawi się włóczką i drapie
           drapak; pies węszy na spacerach, aportuje, kopie w ogrodzie i goni własny ogon; królik skacze, skubie i podskakuje
-          z radości; chomik biega w kołowrotku w klatce przy ścianie; tygrys to duży, leniwy kot. Dotknięcie je głaszcze:
+          z radości; tygrys to duży, leniwy kot. Dotknięcie je głaszcze:
           przewracają się na plecy i bawią się w tym miejscu, także na kanapie, jeśli na niej leżą.
         </li>
         <li>Kosiarka zostawia pasy na trawniku, a odkurzacz świeższą podłogę tam, gdzie przejechały.</li>

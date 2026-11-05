@@ -547,9 +547,8 @@ const editor: Dictionary = {
   "Dutch": "Holenderski",
   "Orange": "Pomarańczowy",
   "Rabbit": "Królik",
-  "Hamster": "Chomik",
   "Tiger": "Tygrys",
-  "Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them. A hamster lives in a cage by a wall.": "Maskotki wyglądu pikselowego: żyją własnym życiem na karcie, tak samo na każdym ekranie, i schodzą ludziom z drogi. Dotknięcie je głaszcze. Chomik mieszka w klatce przy ścianie.",
+  "Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them.": "Maskotki wyglądu pikselowego: żyją własnym życiem na karcie, tak samo na każdym ekranie, i schodzą ludziom z drogi. Dotknięcie je głaszcze.",
 };
 
 export default editor;

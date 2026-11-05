@@ -1,11 +1,11 @@
-// Animals of the pixel look: cats, dogs, tigers, rabbits and a hamster in its cage, drawn with their feet at x, y.
+// Animals of the pixel look: cats, dogs, tigers and rabbits, drawn with their feet at x, y.
 //
 // Every species, coat, pose and frame is drawn once into a small picture facing right, given a dark line round it
 // like the people, and mirrored for the left. Lit from the upper left: the back lighter, the belly and the far legs
 // darker. Frames are counted by the caller from the time or the steps walked.
 import { canvas, disc, rect, tone } from "./art";
 
-export type Species = "cat" | "dog" | "rabbit" | "hamster" | "tiger";
+export type Species = "cat" | "dog" | "rabbit" | "tiger";
 export type AnimalPose =
   | "walk"
   | "run"
@@ -80,11 +80,6 @@ export const COATS: Record<Species, Record<string, Coat>> = {
     brown: coat("#9a7050", "#d8bfa0"),
     dutch: coat("#4a4a52", "#f4f4f4", "dutch", "#f4f4f4"),
   },
-  hamster: {
-    golden: coat("#d89a50", "#f8ead0"),
-    white: coat("#f4f2ee", "#ffffff", "none", "#d8d0c8", "#c83a4a"),
-    grey: coat("#9a9aa0", "#e4e4e8"),
-  },
 };
 
 /** Size of the picture of each species, and where its feet stand in it. */
@@ -93,10 +88,10 @@ const SIZE: Record<Species, { w: number; h: number; x: number; y: number }> = {
   dog: { w: 38, h: 30, x: 18, y: 28 },
   tiger: { w: 54, h: 38, x: 26, y: 36 },
   rabbit: { w: 26, h: 26, x: 12, y: 24 },
-  hamster: { w: 12, h: 10, x: 6, y: 9 },
 };
 
 const pictures = new Map<string, HTMLCanvasElement>();
+const MOVING = new Set<AnimalPose>(["walk", "run", "stalk", "sniff", "carry", "hop"]);
 const PINK = "#e88a9a";
 const NOSE = "#1e1a1c";
 
@@ -108,7 +103,7 @@ export function animal(
   x: number,
   y: number,
   pose: AnimalPose,
-  facing: "left" | "right",
+  facing: "left" | "right" | "up" | "down",
   frame: number,
 ): void {
   const size = SIZE[species];
@@ -121,7 +116,9 @@ export function animal(
       fc.scale(-1, 1);
     }
     const look = COATS[species][coatName] ?? Object.values(COATS[species])[0];
-    draw(fc, species, look, size.x, size.y, pose, frame);
+    // Up and down the screen an animal on the move shows its back or its face; staying, it shows its side.
+    if ((facing === "up" || facing === "down") && MOVING.has(pose)) frontBack(fc, species, look, size.x, size.y, pose, frame, facing === "down");
+    else draw(fc, species, look, size.x, size.y, pose, frame);
     fc.setTransform(1, 0, 0, 1, 0, 0);
     outline(fc, size.w, size.h, "#1e1a24");
     if (pictures.size > 600) pictures.clear();
@@ -133,7 +130,7 @@ export function animal(
 
 /** How tall an animal stands, in pixels: where hearts and a z go over it. */
 export function animalHeight(species: Species): number {
-  return { cat: 14, dog: 18, tiger: 26, rabbit: 16, hamster: 6 }[species];
+  return { cat: 14, dog: 18, tiger: 26, rabbit: 16 }[species];
 }
 
 function outline(c: CanvasRenderingContext2D, w: number, h: number, colour: string): void {
@@ -154,15 +151,14 @@ function blob(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
 }
 
 function draw(c: CanvasRenderingContext2D, species: Species, k: Coat, x: number, y: number, pose: AnimalPose, frame: number): void {
-  if (species === "hamster") return hamster(c, k, x, y, pose, frame);
   if (species === "rabbit") return rabbit(c, k, x, y, pose, frame);
   const big = species === "tiger";
   const dog = species === "dog";
   // Body length and height, leg length and head size, in pixels.
-  const L = big ? 22 : dog ? 14 : 12;
-  const H = big ? 9 : dog ? 6 : 5;
-  const G = big ? 7 : dog ? 5 : 4;
-  const shape: Shape = { L, H, G, head: big ? 10 : dog ? 7 : 6, legW: big ? 3 : 2, dog, big };
+  const L = big ? 22 : dog ? 14 : 10;
+  const H = big ? 9 : dog ? 6 : 6;
+  const G = big ? 7 : dog ? 5 : 5;
+  const shape: Shape = { L, H, G, head: big ? 10 : dog ? 7 : 8, legW: big ? 3 : 2, dog, big };
   if (pose === "sleep") return curled(c, shape, k, x, y, frame);
   if (pose === "roll") return rolled(c, shape, k, x, y, frame);
   if (pose === "sit" || pose === "wash" || pose === "yawn" || pose === "knead" || pose === "play" || pose === "eat")
@@ -276,8 +272,8 @@ function tail(c: CanvasRenderingContext2D, s: Shape, k: Coat, back: number, y: n
   const length = s.big ? 9 : 6;
   if (run || pose === "pounce") {
     // Straight out behind.
-    rect(c, back - length, y, length, s.big ? 2 : 1, colour);
-    rect(c, back - length, y, 2, s.big ? 2 : 1, tip);
+    rect(c, back - length, y, length, 2, colour);
+    rect(c, back - length, y, 2, 2, tip);
     return;
   }
   if (pose === "stalk" || pose === "crouch") {
@@ -288,8 +284,8 @@ function tail(c: CanvasRenderingContext2D, s: Shape, k: Coat, back: number, y: n
   }
   // Up in a curve, swaying.
   const sway = frame % 2;
-  rect(c, back - 2, y, 2, s.big ? 2 : 1, colour);
-  rect(c, back - 3 - sway, y - length + 2, s.big ? 2 : 1, length - 2, colour);
+  rect(c, back - 2, y, 2, 2, colour);
+  rect(c, back - 3 - sway, y - length + 2, 2, length - 2, colour);
   rect(c, back - 2 - sway * 2, y - length + 1, 2, 1, tip);
 }
 
@@ -358,8 +354,8 @@ function head(c: CanvasRenderingContext2D, s: Shape, k: Coat, x: number, y: numb
 /** Sitting up: haunches, an upright chest, the tail round the feet; washing, yawning, kneading or batting a paw. */
 function seated(c: CanvasRenderingContext2D, s: Shape, k: Coat, x: number, y: number, pose: AnimalPose, frame: number): void {
   const { G, legW } = s;
-  const w = s.big ? 12 : s.dog ? 8 : 7;
-  const h = s.big ? 15 : s.dog ? 11 : 9;
+  const w = s.big ? 12 : s.dog ? 8 : 8;
+  const h = s.big ? 15 : s.dog ? 11 : 10;
   const back = x - Math.floor(w / 2);
   // The tail on the ground round the feet, its tip lifting.
   const tailColour = k.pattern === "points" ? k.mark : k.dark;
@@ -509,82 +505,159 @@ function rabbit(c: CanvasRenderingContext2D, k: Coat, x: number, y: number, pose
   if (pose === "eat" && f) rect(c, hx + 5, hy + 4, 1, 1, tone(k.main, -0.3));
 }
 
-/** A hamster, tiny and round: running, nibbling or asleep in a ball. */
-function hamster(c: CanvasRenderingContext2D, k: Coat, x: number, y: number, pose: AnimalPose, frame: number): void {
-  const f = frame % 4;
-  if (pose === "sleep") {
-    disc(c, x, y - 3, 3, k.main);
-    rect(c, x - 2, y - 6, 3, 1, k.light);
-    rect(c, x + 1, y - 2, 2, 1, k.belly);
-    return;
-  }
-  const bob = pose === "run" && f % 2 ? 1 : 0;
-  blob(c, x - 4, y - 5 - bob, 8, 5, k.main);
-  rect(c, x - 3, y - 5 - bob, 6, 1, k.light);
-  rect(c, x - 2, y - 1 - bob, 5, 1, k.belly);
-  rect(c, x + 2, y - 4 - bob, 2, 2, k.belly);
-  rect(c, x - 2, y - 6 - bob, 1, 1, PINK);
-  rect(c, x + 1, y - 6 - bob, 1, 1, PINK);
-  rect(c, x + 2, y - 4 - bob, 1, 1, "#101012");
-  rect(c, x + 4, y - 3 - bob, 1, 1, PINK);
-  if (pose === "run") {
-    rect(c, x - 3 + (f % 2), y - 1, 1, 1, PINK);
-    rect(c, x + 1 - (f % 2), y - 1, 1, 1, PINK);
-  }
-  if (pose === "eat") rect(c, x + 4, y - 2 - (f % 2), 2, 2, "#d8b060");
-}
 
 /**
- * The cage of a hamster with its feet at x, y: a tray, wire, a little house, a water bottle and a wheel turning
- * while the hamster runs in it. The hamster is drawn by the caller where cagePlace puts it.
+ * Seen from the front, coming down the screen, or from behind, going up: the body short in perspective, the near
+ * legs stepping in turn, the head over the chest from the front, the tail up over the back from behind.
  */
-export function cage(c: CanvasRenderingContext2D, x: number, y: number, running: boolean, time: number, shadows: boolean): void {
-  const w = 26;
-  const h = 18;
-  const left = x - w / 2;
-  if (shadows) rect(c, left, y - 1, w + 2, 3, "rgba(0,0,0,.22)");
-  // Tray and bedding.
-  rect(c, left, y - 5, w, 5, "#3a8ac8");
-  rect(c, left, y - 5, w, 1, "#5aa8e0");
-  rect(c, left + 1, y - 6, w - 2, 2, "#e8d4a0");
-  // The little house at the back.
-  rect(c, left + 2, y - 11, 7, 5, "#d84a4a");
-  rect(c, left + 2, y - 12, 7, 1, "#f06a5a");
-  rect(c, left + 4, y - 9, 3, 3, "#5a2a2a");
-  // The wheel, its spokes turning while it runs.
-  const wx = left + w - 8;
-  const wy = y - 11;
-  disc(c, wx, wy, 5, "#c8c8d0");
-  disc(c, wx, wy, 4, "#f4f4f6");
-  const a = running ? time * 10 : 0.6;
-  for (let i = 0; i < 3; i++) {
-    const ang = a + (i * Math.PI) / 3;
-    rect(c, Math.round(wx + Math.cos(ang) * 3), Math.round(wy + Math.sin(ang) * 3), 1, 1, "#9a9aa4");
-    rect(c, Math.round(wx - Math.cos(ang) * 3), Math.round(wy - Math.sin(ang) * 3), 1, 1, "#9a9aa4");
+function frontBack(c: CanvasRenderingContext2D, species: Species, k: Coat, x: number, y: number, pose: AnimalPose, frame: number, front: boolean): void {
+  if (species === "rabbit") return rabbitFrontBack(c, k, x, y, pose, frame, front);
+  const big = species === "tiger";
+  const dog = species === "dog";
+  // From the front a big head over a narrow chest; from behind a broad rump with the head small beyond it.
+  const W = front ? (big ? 11 : dog ? 8 : 6) : big ? 14 : dog ? 10 : 9;
+  const G = big ? 7 : dog ? 5 : 5;
+  const n = front ? (big ? 13 : dog ? 9 : 9) : big ? 10 : dog ? 7 : 7;
+  const f = frame % 4;
+  const run = pose === "run" || pose === "carry";
+  const low = pose === "stalk" ? 2 : 0;
+  const sniff = pose === "sniff";
+  const left = x - Math.floor(W / 2);
+  const bodyTop = y - G - 5 + low;
+  const legColour = k.pattern === "blacktan" ? k.mark : k.main;
+  const paw = k.pattern === "tuxedo" || k.pattern === "husky" ? "#f4f4f4" : k.pattern === "points" ? k.mark : tone(legColour, -0.1);
+  const legW = big ? 3 : 2;
+  // The far pair of legs, darker, peeking out at the sides.
+  for (const [lx, phase] of [[left, 1], [left + W - legW, 0]] as [number, number][]) {
+    const lift = (f + phase) % 2 && (pose === "walk" || run || sniff || pose === "stalk") ? 1 : 0;
+    rect(c, lx, bodyTop + 3, legW, y - bodyTop - 3 - lift, k.dark);
   }
-  rect(c, wx, y - 6, 1, 1, "#9a9aa4");
-  // The water bottle on the side and the bowl.
-  rect(c, left + w - 2, y - 16, 2, 6, "#a8d8f0");
-  rect(c, left + w - 2, y - 10, 1, 2, "#7a7a84");
-  rect(c, left + 11, y - 7, 4, 1, "#e8a040");
+  const tailColour = k.pattern === "points" ? k.mark : k.dark;
+  const tip = k.pattern === "tiger" || k.pattern === "stripes" ? k.mark : k.pattern === "husky" ? "#f4f4f4" : tailColour;
+  const sway = Math.floor(frame / 2) % 2;
+  if (front) {
+    // The tail behind, its tip showing over a shoulder.
+    rect(c, left + W - 1 + sway, bodyTop - (dog ? 2 : 5), dog ? 2 : 2, dog ? 4 : 6, tailColour);
+    rect(c, left + W - 1 + sway, bodyTop - (dog ? 3 : 6), 2, 1, tip);
+  }
+  // The body, short from the front or behind.
+  blob(c, left, bodyTop, W, 7, k.main);
+  rect(c, left + 1, bodyTop, W - 2, 1, k.light);
+  if (front) rect(c, x - 2, bodyTop + 2, 4, 5, k.belly);
+  else marks(c, k, left + 1, bodyTop + 1, W - 2, 3, W);
+  // The near legs stepping in turn; from behind they are the hind legs.
+  for (const [lx, phase] of [[x - legW - 1, 0], [x + 1, 1]] as [number, number][]) {
+    const stepping = pose === "walk" || run || sniff || pose === "stalk";
+    const lift = stepping && (f + phase) % 2 ? (run ? 2 : 1) : 0;
+    const top = bodyTop + 4;
+    rect(c, lx, top, legW, y - top - lift, front ? legColour : k.dark);
+    rect(c, lx, y - 1 - lift, legW, 1, paw);
+  }
+  // The head: the face from the front, the back of it from behind, lower when sniffing or creeping.
+  const hx = x - Math.floor(n / 2);
+  const hy = bodyTop - n + (front ? 4 : 3) + (sniff ? 4 : 0) + low;
+  const face = k.pattern === "points" ? k.mark : k.main;
+  if (!front) {
+    // From behind: the back of the head beyond the shoulders, then the tail up from the rump beside it, swaying.
+    blob(c, hx, hy, n, n - 4, face);
+    rect(c, hx + 1, hy, n - 2, 1, k.light);
+    if (k.pattern === "tiger") for (const dx of [2, 5, 8]) rect(c, hx + dx, hy + 1, 1, 2, k.mark);
+    const side = Math.floor(W / 2) + 1;
+    if (dog) {
+      const wag = f % 2;
+      rect(c, x - 1 + (wag ? 2 : -2), bodyTop - 3, 2, 5, tailColour);
+      rect(c, x - 1 + (wag ? 2 : -2), bodyTop - 4, 2, 1, tip);
+    } else {
+      rect(c, x - 1, bodyTop + 1, 2, 2, tailColour);
+      rect(c, x + side - 1 + sway, bodyTop - (big ? 7 : 5), 2, big ? 9 : 7, tailColour);
+      rect(c, x + side - 1 + sway, bodyTop - (big ? 8 : 6), 2, 1, tip);
+      rect(c, x, bodyTop + 1, side, 1, tailColour);
+    }
+  }
+  if (dog) {
+    if (front) {
+      blob(c, hx, hy, n, n - 1, k.main);
+      rect(c, hx + 1, hy, n - 2, 1, k.light);
+      const snout = k.pattern === "husky" || k.pattern === "blacktan" ? k.belly : tone(k.main, 0.15);
+      if (k.pattern === "husky") rect(c, hx + 2, hy + 2, n - 4, n - 3, k.belly);
+      blob(c, x - 2, hy + n - 5, 4, 4, snout);
+      rect(c, x - 1, hy + n - 5, 2, 1, NOSE);
+      rect(c, hx + 2, hy + 3, 1, 2, k.eye);
+      rect(c, hx + n - 3, hy + 3, 1, 2, k.eye);
+      if (k.pattern === "spots") rect(c, hx + 1, hy + 1, 2, 2, k.mark);
+      if (run) rect(c, x - 1, hy + n - 1, 2, 2, PINK);
+    }
+    // Floppy ears both sides.
+    rect(c, hx - 1, hy + 1, 2, n - 3, k.dark);
+    rect(c, hx + n - 1, hy + 1, 2, n - 3, k.dark);
+    return;
+  }
+  // A cat or a tiger: pointed or round ears at the corners, from the front a face with eyes, nose and whiskers.
+  const ear = big ? 3 : 3;
+  const earColour = k.pattern === "points" ? k.mark : k.main;
+  rect(c, hx, hy - ear + 1, ear, ear, earColour);
+  rect(c, hx + n - ear, hy - ear + 1, ear, ear, earColour);
+  if (!big) {
+    rect(c, hx, hy - ear, 1, 1, earColour);
+    rect(c, hx + n - 1, hy - ear, 1, 1, earColour);
+  }
+  if (!front) return;
+  blob(c, hx, hy, n, n - 1, face);
+  rect(c, hx + 1, hy, n - 2, 1, k.pattern === "points" ? tone(k.main, 0.1) : k.light);
+  if (k.pattern === "points") blob(c, hx + 2, hy + 2, n - 4, n - 3, k.mark);
+  if (!big) {
+    rect(c, hx + 1, hy - 1, 1, 1, PINK);
+    rect(c, hx + n - 2, hy - 1, 1, 1, PINK);
+  }
+  if (big) {
+    rect(c, hx + 1, hy + n - 5, n - 2, 3, k.belly);
+    for (const dx of [3, 5, 7]) rect(c, hx + dx, hy, 1, 2, k.mark);
+  } else if (k.pattern === "stripes") {
+    rect(c, x - 1, hy, 1, 2, k.mark);
+    rect(c, x + 1, hy, 1, 2, k.mark);
+  }
+  if (k.pattern === "tuxedo") rect(c, x - 2, hy + n - 4, 4, 3, k.belly);
+  const ey = hy + Math.floor(n / 2) - 2;
+  rect(c, hx + 2, ey, big ? 2 : 1, 2, k.eye);
+  rect(c, hx + n - (big ? 4 : 3), ey, big ? 2 : 1, 2, k.eye);
+  rect(c, hx + 2, ey, 1, 1, "#101012");
+  rect(c, hx + n - 3, ey, 1, 1, "#101012");
+  rect(c, x, ey + 2, 1, 1, PINK);
+  rect(c, x - 1, ey + 3, 3, 1, tone(face, -0.35));
+  rect(c, hx - 2, ey + 2, 3, 1, "rgba(255,255,255,.75)");
+  rect(c, hx + n - 1, ey + 2, 3, 1, "rgba(255,255,255,.75)");
 }
 
-/** The wire of the cage, drawn over the hamster. */
-export function cageWire(c: CanvasRenderingContext2D, x: number, y: number): void {
-  const w = 26;
-  const h = 18;
-  const left = x - w / 2;
-  const wire = "rgba(210,215,225,.55)";
-  for (let dx = 0; dx <= w; dx += 3) rect(c, left + dx, y - h, 1, h - 5, wire);
-  rect(c, left, y - h, w + 1, 1, "rgba(220,225,235,.85)");
-  rect(c, left, y - h - 1, w + 1, 1, "#7a7a84");
-}
-
-/** Where the hamster stands in its cage, from the cage foot at x, y. */
-export function cagePlace(x: number, y: number, pose: AnimalPose): [number, number] {
-  const left = x - 13;
-  if (pose === "run") return [left + 26 - 8, y - 7];
-  if (pose === "eat") return [left + 13, y - 6];
-  if (pose === "sleep") return [left + 6, y - 6];
-  return [left + 10, y - 6];
+/** A rabbit from the front or from behind: a round body, feet below, long ears up; the cotton tail from behind. */
+function rabbitFrontBack(c: CanvasRenderingContext2D, k: Coat, x: number, y: number, pose: AnimalPose, frame: number, front: boolean): void {
+  const flying = (pose === "hop" || pose === "run" || pose === "walk") && frame % 2 === 1;
+  const lift = flying ? 3 : 0;
+  const W = 8;
+  const left = x - W / 2;
+  const top = y - 8 - lift;
+  rect(c, left, y - 2 - lift + (flying ? 1 : 0), 3, 2, k.dark);
+  rect(c, left + W - 3, y - 2 - lift + (flying ? 1 : 0), 3, 2, k.dark);
+  blob(c, left, top, W, 7, k.main);
+  rect(c, left + 1, top, W - 2, 1, k.light);
+  if (front) rect(c, x - 2, top + 3, 4, 4, k.belly);
+  else rect(c, x - 1, top + 3, 3, 3, "#ffffff");
+  const face = k.pattern === "dutch" ? "#f4f4f4" : k.main;
+  const hx = x - 3;
+  const hy = top - 4;
+  blob(c, hx, hy, 7, 6, face);
+  if (k.pattern === "dutch") {
+    rect(c, hx, hy, 3, 3, k.main);
+    rect(c, hx + 4, hy, 3, 3, k.main);
+  }
+  rect(c, hx + 1, hy - 5, 2, 6, k.main);
+  rect(c, hx + 4, hy - 5, 2, 6, k.main);
+  if (front) {
+    rect(c, hx + 1, hy - 4, 1, 4, PINK);
+    rect(c, hx + 5, hy - 4, 1, 4, PINK);
+    rect(c, hx + 1, hy + 2, 1, 2, k.eye);
+    rect(c, hx + 5, hy + 2, 1, 2, k.eye);
+    rect(c, x, hy + 4, 1, 1, PINK);
+  } else {
+    rect(c, hx + 1, hy, 5, 1, k.light);
+  }
 }

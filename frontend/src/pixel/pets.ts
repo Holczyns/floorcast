@@ -1,4 +1,4 @@
-// Pets of the pixel look: a cat, a dog, a tiger, a rabbit or a hamster living on a level. Nothing measures them;
+// Pets of the pixel look: a cat, a dog, a tiger or a rabbit living on a level. Nothing measures them;
 // what they do comes from the clock and their id alone, so every screen showing the card shows the same pet at the
 // same spot.
 //
@@ -8,10 +8,9 @@
 //    sharpens its claws on a cat tree. A tiger is a lazy cat with a big ball.
 // 2. A dog sleeps, sits, sniffs along its walks, fetches a ball, digs in the garden by day and chases its tail.
 // 3. A rabbit hops instead of walking, nibbles grass or a carrot, grooms its ears, jumps for joy and dozes.
-// 4. A hamster stays in its cage: it runs in its wheel, eats and sleeps.
-// 5. Waking from a sleep a pet stretches and yawns before it goes.
-// 6. Sleep may go on into the next slot. Paths go round walls and the furniture it cannot climb.
-// 7. A stroked pet rolls on its back, then plays where it was touched, on the furniture it lies on if any.
+// 4. Waking from a sleep a pet stretches and yawns before it goes.
+// 5. Sleep may go on into the next slot. Paths go round walls and the furniture it cannot climb.
+// 6. A stroked pet rolls on its back, then plays where it was touched, on the furniture it lies on if any.
 import { type FurnitureKind, type Pet, type Point, pointInPolygon } from "../model";
 import { hash } from "./art";
 import type { AnimalPose } from "./animals";
@@ -51,15 +50,14 @@ export interface PetPlace {
   x: number;
   y: number;
   state: PetState;
-  facing: "left" | "right";
+  /** Up and down only on the move: the pet shows its back or its face. */
+  facing: "left" | "right" | "up" | "down";
   /** Metres walked so far, for the steps of the walk. */
   walked: number;
   /** Height of a jump over the ground, in metres. */
   hop: number;
   on?: Furniture;
   toy?: Toy;
-  /** A hamster: where its cage stands; x, y is the cage too. */
-  cage?: boolean;
 }
 
 type Activity = "sleep" | "sit" | "wash" | "stroll" | "zoomies" | "play" | "hunt" | "fetch" | "scratch" | "dig" | "eat";
@@ -76,7 +74,7 @@ interface Plan {
   ball?: Point;
 }
 
-type Kind = "feline" | "dog" | "rabbit" | "hamster";
+type Kind = "feline" | "dog" | "rabbit";
 
 function seed(text: string): number {
   let h = 2166136261;
@@ -90,7 +88,6 @@ const WEIGHTS: Record<Pet["species"], [Activity, number][]> = {
   tiger: [["sleep", 0.38], ["sit", 0.1], ["wash", 0.1], ["stroll", 0.2], ["zoomies", 0.02], ["play", 0.08], ["hunt", 0.12]],
   dog: [["sleep", 0.2], ["sit", 0.08], ["stroll", 0.27], ["zoomies", 0.1], ["fetch", 0.27], ["dig", 0.08]],
   rabbit: [["sleep", 0.25], ["sit", 0.12], ["wash", 0.1], ["stroll", 0.18], ["zoomies", 0.1], ["eat", 0.25]],
-  hamster: [["sleep", 0.4], ["play", 0.35], ["eat", 0.25]],
 };
 
 export class PetLife {
@@ -105,22 +102,15 @@ export class PetLife {
   private readonly garden: Spot[] = [];
   private readonly trees: Spot[] = [];
   private readonly plans = new Map<number, Plan>();
-  // A hamster's cage: one floor spot by a wall, the same on every screen.
-  private readonly cage?: Point;
 
   constructor(scene: Scene, pet: Pet) {
     this.scene = scene;
     this.pet = pet;
     this.seed = seed(pet.id) % 100000;
     const species = pet.species;
-    this.kind = species === "cat" || species === "tiger" ? "feline" : species === "dog" ? "dog" : species === "rabbit" ? "rabbit" : "hamster";
+    this.kind = species === "cat" || species === "tiger" ? "feline" : species === "dog" ? "dog" : "rabbit";
     this.grid = new Grid(scene, (p) => this.walkable(p));
     this.findSpots();
-    if (this.kind === "hamster") {
-      const byWall = this.floor.filter((spot) => !this.grid.isOpen([spot.at[0], spot.at[1] - 0.4]) || !this.grid.isOpen([spot.at[0] - 0.4, spot.at[1]]));
-      const choice = byWall.length ? byWall : this.floor;
-      this.cage = choice.length ? choice[Math.floor(hash(this.seed, 1, 2) * choice.length)].at : undefined;
-    }
   }
 
   private walkable(p: Point): boolean {
@@ -183,7 +173,7 @@ export class PetLife {
     let plan: Plan | undefined;
     if (depth < 12) {
       const before = this.plan(slot - 1, depth + 1);
-      // Rule 6: sleep may go on into the next slot, a cat's more often than a dog's.
+      // Rule 5: sleep may go on into the next slot, a cat's more often than a dog's.
       if (before.activity === "sleep" && r(1) < (dog ? 0.3 : 0.45)) plan = { spot: before.spot, activity: "sleep", via: [] };
     }
     if (!plan) {
@@ -196,8 +186,7 @@ export class PetLife {
       let roll = r(2) * weights.reduce((sum, [, w]) => sum + w, 0);
       const activity = weights.find(([, w]) => (roll -= w) < 0)?.[0] ?? "sit";
       const fallback = { at: this.grid.centre(Math.floor(this.grid.cols / 2), Math.floor(this.grid.rows / 2)), kind: "floor" as const };
-      if (this.kind === "hamster") plan = { spot: fallback, activity, via: [] };
-      else if (!anywhere.length) plan = { spot: fallback, activity: "sit", via: [] };
+      if (!anywhere.length) plan = { spot: fallback, activity: "sit", via: [] };
       else if (activity === "sleep") plan = { spot: pick(this.rest.length ? this.rest : anywhere, 3), activity, via: [] };
       else if (activity === "sit") plan = { spot: pick(this.windows.length ? this.windows : anywhere, 4), activity, via: [] };
       else if (activity === "wash") plan = { spot: pick(anywhere, 5), activity, via: [] };
@@ -242,12 +231,11 @@ export class PetLife {
     const slot = Math.floor(time / SLOT);
     const plan = this.plan(slot);
     const before = this.plan(slot - 1);
-    if (this.kind === "hamster") return this.inCage(plan, time - slot * SLOT);
     const dog = this.kind === "dog";
     const rabbit = this.kind === "rabbit";
     const facing = hash(this.seed, slot, 20) < 0.5 ? "left" : "right";
     let elapsed = time - slot * SLOT;
-    // Rule 5: waking up, a stretch and a yawn where it slept before it goes.
+    // Rule 4: waking up, a stretch and a yawn where it slept before it goes.
     if (before.activity === "sleep" && plan.activity !== "sleep") {
       if (elapsed < WAKE) {
         const at = before.spot.at;
@@ -274,7 +262,10 @@ export class PetLife {
       if (left <= d) {
         const k = d > 0 ? left / d : 0;
         const done = walked + left;
-        const way = b[0] < a[0] ? "left" : "right";
+        // Mostly up or down the screen it walks away from us or towards us, otherwise sideways.
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const way = Math.abs(dy) > Math.abs(dx) * 1.2 ? (dy > 0 ? "down" : "up") : dx < 0 ? "left" : "right";
         // A rabbit hops; a dog on a stroll keeps its nose down now and then.
         if (rabbit) {
           const hop = Math.abs(Math.sin((done * Math.PI) / (running ? 0.5 : 0.32)));
@@ -320,16 +311,8 @@ export class PetLife {
     }
   }
 
-  /** Rule 4: a hamster in its cage, running in the wheel, eating at its bowl or asleep in its house. */
-  private inCage(plan: Plan, elapsed: number): PetPlace {
-    const at = this.cage ?? plan.spot.at;
-    const state: PetState = plan.activity === "play" ? (elapsed % 14 < 10 ? "run" : "sit") : plan.activity === "eat" ? "eat" : "sleep";
-    return { x: at[0], y: at[1], state, facing: "right", walked: elapsed * 4, hop: 0, cage: true };
-  }
-
-  /** Rule 7: rolling on its back where it was touched, then playing there, on its furniture if it lies on one. */
+  /** Rule 6: rolling on its back where it was touched, then playing there, on its furniture if it lies on one. */
   playHere(at: Point, since: number, on?: Furniture): PetPlace {
-    if (this.kind === "hamster") return { ...this.inCage({ spot: { at, kind: "floor" }, activity: "eat", via: [] }, since), x: at[0], y: at[1] };
     if (since < ROLL && this.kind !== "rabbit") return { x: at[0], y: at[1], state: "roll", facing: "right", walked: 0, hop: 0, on };
     const playing = since - ROLL;
     if (this.kind === "dog") return { ...this.bow(at, playing, "right"), on };

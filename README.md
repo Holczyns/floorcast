@@ -69,8 +69,8 @@ the lights, blinds, gate, car, sprinklers, a visitor at the door or a water leak
   gates and wickets.
 - **Cars** with a body, colour and direction, shown while their presence entity is home and leaving a faint shadow on
   their parking place otherwise.
-- **Pets**: a cat, a dog, a rabbit, a hamster in its cage or a tiger, each living its own life on the card, the same on
-  every screen: sleeping, washing, hunting, fetching, hopping, running in its wheel, and rolling over when stroked.
+- **Pets**: a cat, a dog, a rabbit or a tiger, each living its own life on the card, the same on every screen:
+  sleeping, washing, hunting, fetching, hopping, and rolling over when stroked.
 - **Built-in guide** in the editor, explaining every part with examples.
 
 ### See

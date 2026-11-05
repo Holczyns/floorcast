@@ -1034,7 +1034,7 @@ function petProperties(p: FloorCastPanel) {
   return html`
     <h3>${t("Pets")}</h3>
     <p class="muted">
-      ${t("Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them. A hamster lives in a cage by a wall.")}
+      ${t("Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them.")}
     </p>
     ${pets.map(
       (pet) => html`
