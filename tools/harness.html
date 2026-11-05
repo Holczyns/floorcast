@@ -319,13 +319,12 @@
           person.trail = trail.map(([x, y]) => [x, y]);
         }
         peopleListeners.forEach((callback) => callback({ people: { [ground.id]: people }, raw }));
-        // A car on the paving, or on the parked car of the plan while it is home, and a person on the lawn, as the
-        // cameras place them.
+        // A car on the paving, unless the plan draws its own car there, and a person on the lawn, as the cameras
+        // place them.
         const objects = [];
-        const car = (ground.items ?? []).find((i) => i.type === "car");
-        const carHome = car && (!car.presence || states[car.presence]?.state === "home");
-        if (car ? carHome : paving) {
-          const [x, y, w, h] = itemBox(car ?? paving);
+        const car = (ground.items ?? []).some((i) => i.type === "car");
+        if (paving && !car) {
+          const [x, y, w, h] = itemBox(paving);
           objects.push({ id: "o1", x: x + w / 2, y: y + h / 2, label: "car", camera: cameras[0]?.frigate ?? "front", stationary: true });
         }
         if (lawn) {
