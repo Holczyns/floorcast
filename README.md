@@ -51,8 +51,8 @@ just as on the plan, so you can switch back and forth at any time, or show one l
 wall panel.
 
 **[Try the demo](https://holczyns.github.io/floorcast/)**: the card and the editor with an example house, in your browser.
-Switch between the plan and the pixel house, change the weather and the time of day, and try the lights, blinds, gate,
-car, sprinklers, a visitor at the door or a water leak.
+Switch between the plan and the pixel house, show or hide the garden, change the weather and the time of day, and try
+the lights, blinds, gate, car, sprinklers, a visitor at the door or a water leak.
 
 ## Features
 
@@ -115,11 +115,11 @@ car, sprinklers, a visitor at the door or a water leak.
 - **Local**: everything is computed inside Home Assistant, the card only draws. No extra Python packages, no
   resources to add by hand.
 
-![The editor](docs/images/editor.png)
+![The editor with the pixel look under the plan](docs/images/editor.png)
 
 ![The garden with a sprinkler and the mower](docs/images/example-garden.png)
 
-![Built-in guide](docs/images/guide.png)
+![The built-in guide](docs/images/guide.png)
 
 ## Requirements
 

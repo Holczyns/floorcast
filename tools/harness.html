@@ -543,6 +543,10 @@
           redraw();
         },
         call: (...args) => callService(...args),
+        // Changes options of every card on the page, such as the garden.
+        configure: (options) => {
+          for (const element of elements) if (element.localName === "floorcast-card") element.setConfig({ ...element._config, ...options });
+        },
       };
       // More info opens in HA as a dialog; here it only names the entity.
       window.addEventListener("hass-more-info", (event) => console.log("more info", event.detail.entityId));

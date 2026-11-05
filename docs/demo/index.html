@@ -122,6 +122,11 @@
         <button data-param="look" data-value="plan">Plan</button>
         <button data-param="look" data-value="pixel">Pixel</button>
       </div>
+      <div class="group" id="garden-group">
+        <span>Garden</span>
+        <button data-garden="show" aria-pressed="true">Show</button>
+        <button data-garden="hide" aria-pressed="false">Hide</button>
+      </div>
       <div class="group">
         <span>Theme</span>
         <button data-param="theme" data-value="dark">Dark</button>
@@ -182,8 +187,9 @@
 
       const controls = document.getElementById("controls");
       controls.hidden = false;
-      // Look only changes the card; the editor has its own Pixels switch.
+      // Look and garden only change the card; the editor has its own Pixels and Garden switches.
       document.getElementById("look-group").hidden = editor;
+      document.getElementById("garden-group").hidden = editor;
       for (const button of controls.querySelectorAll("[data-param]")) {
         button.setAttribute("aria-pressed", String(chosen[button.dataset.param] === button.dataset.value));
         button.addEventListener("click", () => {
@@ -194,6 +200,13 @@
       }
 
       const demo = () => frame.contentWindow && frame.contentWindow.demo;
+      const gardenButtons = controls.querySelectorAll("[data-garden]");
+      for (const button of gardenButtons)
+        button.addEventListener("click", () => {
+          if (!demo()) return;
+          demo().configure({ garden: button.dataset.garden });
+          for (const other of gardenButtons) other.setAttribute("aria-pressed", String(other === button));
+        });
       const state = (id) => demo().states[id]?.state;
       const all = (prefix) => Object.keys(demo().states).filter((id) => id.startsWith(prefix));
       const flip = (id, on, off) => demo().set(id, state(id) === on ? off : on);
