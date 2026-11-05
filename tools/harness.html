@@ -277,10 +277,36 @@
         }
       }, 500);
       let walk = 0;
+      // The demo page can send the walker running to the lit lamp of the game (demo.gameRun); it stays there until
+      // it is sent again or the game ends.
+      let walker = walkFrom;
+      let runner = null;
+      const RUN_SPEED = 1.8;
+      const gameRun = () => {
+        const lamp = game.target && plan.levels.flatMap((l) => l.devices ?? []).find((d) => d.kind === "light" && d.entity === game.target);
+        if (!lamp) return;
+        const to = lamp.to ? [(lamp.at[0] + lamp.to[0]) / 2, (lamp.at[1] + lamp.to[1]) / 2] : lamp.at;
+        runner = { from: walker, to: [to[0], to[1] + 0.3], start: Date.now(), done: false };
+      };
       setInterval(() => {
         walk += 1;
-        const t = (Math.sin(walk / 12) + 1) / 2;
-        const px = walkFrom[0] + (walkTo[0] - walkFrom[0]) * t, py = walkFrom[1] + (walkTo[1] - walkFrom[1]) * t;
+        if (runner?.done && !game.running) runner = null;
+        let px, py;
+        if (runner) {
+          const length = Math.hypot(runner.to[0] - runner.from[0], runner.to[1] - runner.from[1]);
+          const k = length > 0 ? Math.min(1, ((Date.now() - runner.start) / 1000) * RUN_SPEED / length) : 1;
+          px = runner.from[0] + (runner.to[0] - runner.from[0]) * k;
+          py = runner.from[1] + (runner.to[1] - runner.from[1]) * k;
+          if (k >= 1 && !runner.done) {
+            runner.done = true;
+            gameHit();
+          }
+        } else {
+          const t = (Math.sin(walk / 12) + 1) / 2;
+          px = walkFrom[0] + (walkTo[0] - walkFrom[0]) * t;
+          py = walkFrom[1] + (walkTo[1] - walkFrom[1]) * t;
+        }
+        walker = [px, py];
         // The walker in the coordinates of each radar, in millimetres.
         for (const radar of radars) {
           const h = ((radar.heading ?? 0) * Math.PI) / 180;
@@ -628,8 +654,9 @@
           redraw();
         },
         call: (...args) => callService(...args),
-        // Someone reached the lit lamp of the game.
+        // Someone reached the lit lamp of the game, at once or by running there.
         gameHit: () => gameHit(),
+        gameRun: () => gameRun(),
         // Changes options of every card on the page, such as the garden.
         configure: (options) => {
           for (const element of elements) if (element.localName === "floorcast-card") element.setConfig({ ...element._config, ...options });

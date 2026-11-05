@@ -256,7 +256,7 @@
         },
         visitor: () => flip("binary_sensor.front_person", "on", "off"),
         leak: () => flip("binary_sensor.bathroom_leak", "on", "off"),
-        hit: () => demo().gameHit(),
+        hit: () => demo().gameRun(),
       };
       for (const button of controls.querySelectorAll("[data-act]"))
         button.addEventListener("click", () => {
