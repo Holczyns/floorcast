@@ -549,6 +549,7 @@ const editor: Dictionary = {
   "Rabbit": "Królik",
   "Tiger": "Tygrys",
   "Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them.": "Maskotki wyglądu pikselowego: żyją własnym życiem na karcie, tak samo na każdym ekranie, i schodzą ludziom z drogi. Dotknięcie je głaszcze.",
+  "Hungry tiger: now and then it eats another pet, which comes back a few minutes later": "Głodny tygrys: co jakiś czas zjada inne zwierzę, które wraca po kilku minutach",
 };
 
 export default editor;

@@ -221,7 +221,7 @@ const SECTIONS: GuideSection[] = [
           <b>Pets</b> (⚙ Settings: animal, coat and level) live their own life, the same on every screen. A cat kneads its
           bed before it sleeps, stretches and yawns after, hunts flies, plays with yarn and sharpens its claws on a cat
           tree; a dog sniffs along its walks, fetches, digs in the garden and chases its tail; a rabbit hops, nibbles and
-          jumps for joy; a tiger is a big lazy cat. A tap strokes them:
+          jumps for joy; a tiger is a big lazy cat, and a hungry one now and then eats another pet, which comes back a few minutes later. A tap strokes them:
           they roll on their back and play there, on the sofa if they lie on it.
         </li>
         <li>The mower leaves stripes on the lawn and the vacuum a fresher floor where they went.</li>

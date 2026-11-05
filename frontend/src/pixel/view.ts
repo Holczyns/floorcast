@@ -10,8 +10,8 @@ import { type Level, type Opening, type Plan, type Point, type TrackedPerson, PE
 import { PPM, canvas, hash, rect } from "./art";
 import { FACE, type Furniture, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
-import { PetLife, type PetPlace, type PetState } from "./pets";
-import { type Facing, OUTFITS, type Outfit, drop, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
+import { type Hunt, PetLife, type PetPlace, type PetState, hunt } from "./pets";
+import { type Facing, OUTFITS, type Outfit, bone, drop, dust, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
 import { animal, animalHeight } from "./animals";
 
 /**
@@ -635,11 +635,38 @@ class LevelPicture {
     const now = Date.now() / 1000;
     const overhead: (() => void)[] = [];
     this.drawnPets = [];
+    // Hungry tigers hunting now, by tiger, and the pets they catch, by pet; a pet is caught by one tiger at a time.
+    const hunting = new Map<string, Hunt>();
+    const caught = new Map<string, Hunt>();
+    for (const life of this.pets) {
+      if (life.pet.species !== "tiger" || !life.pet.hungry) continue;
+      const found = hunt(life, this.pets.filter((other) => other.pet.species !== "tiger"), now);
+      if (!found || caught.has(found.victim)) continue;
+      hunting.set(life.pet.id, found);
+      caught.set(found.victim, found);
+    }
     for (const life of this.pets) {
       const pet = life.pet;
+      const prey = caught.get(pet.id);
+      if (prey?.gone) {
+        // Eaten: a bone where it was, in a cloud of dust at first.
+        const [bx, by] = s.px(prey.spot);
+        items.push({ y: by + 0.2, draw: () => bone(c, bx, by) });
+        if (prey.dust !== undefined) {
+          const progress = prey.dust;
+          overhead.push(() => dust(c, bx, by, progress));
+        }
+        continue;
+      }
       const touch = this.touched.get(pet.id);
       const since = touch ? now - touch.time : 99;
-      const place = touch && since < PLAY ? life.playHere(touch.at, since, touch.on) : life.placeAt(now);
+      // A hungry tiger does not roll over to be stroked: it roars.
+      const fierce = pet.species === "tiger" && !!pet.hungry;
+      let place = touch && since < PLAY && !fierce ? life.playHere(touch.at, since, touch.on) : life.placeAt(now);
+      if (prey?.prey) place = prey.prey;
+      const chase = hunting.get(pet.id)?.tiger;
+      if (chase) place = chase;
+      if (fierce && since < 3 && !chase) place = { ...place, state: "yawn" };
       // Step aside from the nearest person closer than a metre, less when the pet lies on furniture.
       let push: Point = [0, 0];
       for (const w of this.walkers.values()) {
@@ -654,7 +681,7 @@ class LevelPicture {
       this.aside.set(pet.id, aside);
       const at: Point = [place.x + aside[0], place.y + aside[1]];
       this.drawnPets.push({ id: pet.id, at, on: place.on });
-      const fond = since < 2.5;
+      const fond = since < 2.5 && !fierce;
       const pose = place.state;
       const species = pet.species;
       const coat = pet.coat ?? PET_COATS[species]?.[0] ?? "ginger";

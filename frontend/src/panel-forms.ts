@@ -1063,6 +1063,12 @@ function petProperties(p: FloorCastPanel) {
             ${plan.levels.map((level) => html`<option value=${level.id} ?selected=${(pet.level ?? plan.levels[0]?.id) === level.id}>${level.name}</option>`)}
           </select>
         </label>
+        ${pet.species === "tiger"
+          ? html`<label class="check"
+              ><input type="checkbox" .checked=${!!pet.hungry} @change=${(e: Event) => p.change(() => (pet.hungry = (e.target as HTMLInputElement).checked || undefined))} />
+              ${t("Hungry tiger: now and then it eats another pet, which comes back a few minutes later")}</label
+            >`
+          : nothing}
         <div class="row">
           <button class="small" @click=${() => p.change(() => (plan.pets = pets.filter((other) => other !== pet)))}>${t("Remove")}</button>
         </div>

@@ -11,6 +11,7 @@
 // 4. Waking from a sleep a pet stretches and yawns before it goes.
 // 5. Sleep may go on into the next slot. Paths go round walls and the furniture it cannot climb.
 // 6. A stroked pet rolls on its back, then plays where it was touched, on the furniture it lies on if any.
+// 7. A hungry tiger eats another pet now and then (hunt below); the pet comes back a few minutes later.
 import { type FurnitureKind, type Pet, type Point, pointInPolygon } from "../model";
 import { hash } from "./art";
 import type { AnimalPose } from "./animals";
@@ -215,6 +216,11 @@ export class PetLife {
     return plan;
   }
 
+  /** The way round walls and furniture from one point to another, for a hunting tiger. */
+  route(from: Point, to: Point): Point[] {
+    return this.grid.path(from, to);
+  }
+
   /** A point at one of the distances from a spot, in a free straight line from it; the first direction tried is turn of a full circle. */
   private reachable(from: Point, distances: number[], turn: number): Point | undefined {
     for (const distance of distances)
@@ -411,4 +417,96 @@ export class PetLife {
     }
     return { x: at[0], y: at[1], state: "sit", facing, walked: 0, hop: 0, toy: { kind: "ball", at: [at[0] + (facing === "right" ? 0.25 : -0.25), at[1] + 0.05], height: 0 } };
   }
+}
+
+/**
+ * The hungry tiger, an easter egg: once in each CYCLE it creeps up on another pet of its level, pounces, a cloud
+ * of dust goes up and a bone is left where the pet was. The tiger licks its chops a while, then goes on with its
+ * day; the pet comes back whole GONE seconds later. Which pet and when come from the clock and the ids, so every
+ * screen shows the same hunt.
+ */
+export const HUNT_CYCLE = 600;
+const STALK = 8;
+const POUNCE = 0.5;
+const DUST = 2;
+const LICK = 20;
+const GONE = 240;
+// Metres a second of a fed tiger walking back.
+const WALK_BACK = 0.6;
+
+export interface Hunt {
+  /** The pet caught in this cycle. */
+  victim: string;
+  /** Where it is caught, where the bone lies. */
+  spot: Point;
+  /** Where the tiger is and what it does while it hunts; its own day without it. */
+  tiger?: PetPlace;
+  /** The pet waiting where it will be caught, unaware. */
+  prey?: PetPlace;
+  /** The pet is gone; a bone lies at the spot. */
+  gone: boolean;
+  /** How far the cloud of dust has gone, 0 to 1, while it shows. */
+  dust?: number;
+}
+
+export function hunt(tiger: PetLife, others: PetLife[], now: number): Hunt | undefined {
+  if (!others.length) return undefined;
+  const cycle = Math.floor(now / HUNT_CYCLE);
+  const t = now - cycle * HUNT_CYCLE;
+  if (t >= STALK + POUNCE + GONE) return undefined;
+  const start = cycle * HUNT_CYCLE;
+  const victim = others[Math.floor(hash(cycle, 7, seed(tiger.pet.id) % 1000) * others.length)];
+  const caught = victim.placeAt(start + STALK);
+  const spot: Point = [caught.x, caught.y];
+  const from = tiger.placeAt(start);
+  // The tiger creeps along the way round walls and stops just short of the pet before it pounces.
+  const way = tiger.route([from.x, from.y], spot);
+  const length = way.reduce((sum, p, i) => (i ? sum + Math.hypot(p[0] - way[i - 1][0], p[1] - way[i - 1][1]) : 0), 0);
+  const along = (d: number): [Point, "left" | "right"] => {
+    let left = Math.max(0, d);
+    for (let i = 1; i < way.length; i++) {
+      const a = way[i - 1];
+      const b = way[i];
+      const step = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (left <= step) return [[a[0] + (b[0] - a[0]) * (step ? left / step : 0), a[1] + (b[1] - a[1]) * (step ? left / step : 0)], b[0] < a[0] ? "left" : "right"];
+      left -= step;
+    }
+    return [way[way.length - 1] ?? spot, spot[0] < from.x ? "left" : "right"];
+  };
+  const stop = Math.max(0, length - 0.6);
+  const [near, facing] = along(stop);
+  const away = stop;
+  const prey: PetPlace = { x: spot[0], y: spot[1], state: "sit", facing: caught.facing === "left" ? "left" : "right", walked: 0, hop: 0, on: caught.on };
+  const base = { victim: victim.pet.id, spot };
+  if (t < STALK) {
+    const k = t / STALK;
+    const [[x, y], heading] = along(stop * k);
+    return { ...base, gone: false, prey, tiger: { x, y, state: "stalk", facing: heading, walked: away * k, hop: 0 } };
+  }
+  if (t < STALK + POUNCE) {
+    const k = (t - STALK) / POUNCE;
+    const x = near[0] + (spot[0] - near[0]) * k;
+    const y = near[1] + (spot[1] - near[1]) * k;
+    return { ...base, gone: false, prey, tiger: { x, y, state: "pounce", facing, walked: 0, hop: 0.3 * Math.sin(k * Math.PI) } };
+  }
+  const after = t - STALK - POUNCE;
+  const dust = after < DUST ? after / DUST : undefined;
+  const there: PetPlace = { x: spot[0], y: spot[1], state: after < DUST ? "crouch" : after < LICK - 4 ? "wash" : "yawn", facing, walked: 0, hop: 0 };
+  if (after < LICK) return { ...base, gone: true, dust, tiger: there };
+  // Fed, it walks back at its ease to where its day has got to.
+  const own = tiger.placeAt(now);
+  const back = tiger.route(spot, [own.x, own.y]);
+  let left = (after - LICK) * WALK_BACK;
+  for (let i = 1; i < back.length; i++) {
+    const a = back[i - 1];
+    const b = back[i];
+    const step = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (left <= step) {
+      const k = step ? left / step : 0;
+      const walking: PetPlace = { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, state: "walk", facing: b[0] < a[0] ? "left" : "right", walked: (after - LICK) * WALK_BACK, hop: 0 };
+      return { ...base, gone: true, tiger: walking };
+    }
+    left -= step;
+  }
+  return { ...base, gone: true };
 }

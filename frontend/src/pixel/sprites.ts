@@ -316,3 +316,28 @@ export function toy(c: CanvasRenderingContext2D, kind: "yarn" | "ball" | "fly" |
   }
   c.restore();
 }
+
+/** A gnawed bone left on the floor, its middle at x and its foot at y. */
+export function bone(c: CanvasRenderingContext2D, x: number, y: number): void {
+  const white = "#f2eee2";
+  rect(c, x - 5, y, 11, 1, "rgba(0,0,0,.2)");
+  rect(c, x - 3, y - 2, 6, 2, white);
+  rect(c, x - 5, y - 3, 2, 2, white);
+  rect(c, x - 5, y - 1, 2, 2, white);
+  rect(c, x + 3, y - 3, 2, 2, white);
+  rect(c, x + 3, y - 1, 2, 2, white);
+  rect(c, x - 3, y - 1, 6, 1, "#c8c0a8");
+  rect(c, x - 1, y - 2, 1, 1, "#d8a8a0");
+}
+
+/** A cloud of dust bursting out from x, y; progress runs from 0 to 1 as it spreads and fades. */
+export function dust(c: CanvasRenderingContext2D, x: number, y: number, progress: number): void {
+  const alpha = Math.max(0, 1 - progress);
+  const spread = 3 + progress * 10;
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + progress;
+    const r = Math.max(1, Math.round(3 - progress * 2 + (i % 2)));
+    disc(c, x + Math.cos(a) * spread, y - 5 + Math.sin(a) * spread * 0.6, r, `rgba(232,222,200,${alpha.toFixed(2)})`);
+  }
+  if (progress < 0.5) for (const [dx, dy] of [[-6, -10], [7, -8], [0, -13]]) rect(c, x + dx, y + dy, 1, 1, `rgba(255,240,150,${(1 - progress * 2).toFixed(2)})`);
+}

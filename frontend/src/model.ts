@@ -838,6 +838,8 @@ export interface Pet {
   coat?: string;
   /** Level it lives on; the first level without it. */
   level?: string;
+  /** A tiger: now and then it eats another pet of its level, which comes back a few minutes later. */
+  hungry?: boolean;
 }
 
 export const PET_COATS: Record<PetSpecies, string[]> = {
