@@ -224,10 +224,13 @@ export const sections: GuideSection[] = [
           pokoju. Obrócone obiekty obracają się o ćwierć obrotu, samochody dowolnie.
         </li>
         <li>
-          <b>Gra w chodzenie</b>: na pełnym ekranie (opcja karty Przycisk pełnego ekranu) <b>Graj</b> stawia w domu postać z
-          żółtym znacznikiem. Joystick w prawym dolnym rogu albo strzałki prowadzą ją naokoło ścian i mebli, a widok idzie
-          za nią; <b>A</b> albo spacja głaszcze zwierzaka obok albo przełącza najbliższe światło, prawdziwe. Osoby widziane
-          przez radary dalej chodzą po planie.
+          <b>Gra w chodzenie</b>: na pełnym ekranie (opcja karty Przycisk pełnego ekranu) <b>Graj</b> pozwala wybrać postać
+          (przeglądarka ją zapamiętuje) i stawia ją z żółtym znacznikiem w domu. Joystick w prawym dolnym rogu albo strzałki
+          prowadzą ją naokoło ścian i mebli, a widok idzie za nią. Na poziomie leży dziesięć gwiazdek; licznik u góry je
+          liczy, a ostatnia pokazuje czas. Na pokoju oznaczonym jako schody postać przechodzi na następny poziom karty.
+          <b>A</b> albo spacja wstaje, gdy postać siedzi, głaszcze zwierzaka obok (potem idzie on za nią przez minutę),
+          sadza ją na kanapie, krześle lub ławce albo kładzie do łóżka, albo przełącza najbliższe światło, prawdziwe. Na
+          trampolinie skacze. Osoby widziane przez radary dalej chodzą po planie.
         </li>
         <li>W edytorze przełącznik <b>Piksele</b> obok <b>Ogród</b> i <b>Na żywo</b> pokazuje plan w widoku pikselowym pod jego obrysami.</li>
       </ul>

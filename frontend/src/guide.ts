@@ -231,10 +231,13 @@ const SECTIONS: GuideSection[] = [
           kind of room. Rotated objects turn by quarters; cars turn freely.
         </li>
         <li>
-          <b>Walking game</b>: on the whole screen (card option Full screen button) <b>Play</b> puts a character with a
-          yellow marker in the home. The joystick at the bottom right, or the arrow keys, walk it round walls and furniture
-          and the view follows it; <b>A</b>, or the space bar, strokes a pet next to it or switches the nearest light, the
-          real one. People the radars see keep walking about.
+          <b>Walking game</b>: on the whole screen (card option Full screen button) <b>Play</b> lets you choose a character
+          (the browser remembers it) and puts it with a yellow marker in the home. The joystick at the bottom right, or the
+          arrow keys, walk it round walls and furniture and the view follows it. Ten stars lie about the level; the counter
+          at the top counts them and the last one shows the time. On a room marked as stairs it goes to the next level the
+          card shows. <b>A</b>, or the space bar, gets it up when it sits, strokes a pet next to it (the pet then follows
+          it for a minute), sits it on a sofa, chair or bench or lays it in a bed, or switches the nearest light, the real
+          one. On the trampoline it jumps. People the radars see keep walking about.
         </li>
         <li>In the editor, the <b>Pixels</b> switch beside <b>Garden</b> and <b>Live</b> shows the plan in the pixel look under its outlines.</li>
       </ul>

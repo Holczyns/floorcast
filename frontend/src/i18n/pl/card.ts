@@ -137,6 +137,8 @@ const card: Dictionary = {
   "Play": "Graj",
   "Stop playing": "Zakończ grę",
   "Stroke a pet or switch a light": "Pogłaszcz zwierzaka albo przełącz światło",
+  "Choose your character": "Wybierz postać",
+  "All {goal} stars collected.": "Zebrane wszystkie gwiazdki: {goal}.",
 };
 
 export default card;

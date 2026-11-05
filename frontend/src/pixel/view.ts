@@ -11,7 +11,7 @@ import { PPM, canvas, hash, rect } from "./art";
 import { FACE, type Furniture, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
 import { type Hunt, PetLife, type PetPlace, type PetState, hunt } from "./pets";
-import { type Player, marker, playGrid } from "./play";
+import { type Player, marker, playGrid, star } from "./play";
 import { type Facing, OUTFITS, type Outfit, bone, drop, fightCloud, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
 import { animal, animalHeight, coatColour } from "./animals";
 
@@ -123,6 +123,8 @@ export interface PixelSource {
   track(id: string): Point[];
   /** The character of the walking game on a level, while it is played there. */
   player?(level: Level): Player | undefined;
+  /** Stars of the walking game still to pick up on a level. */
+  stars?(level: Level): Point[];
 }
 
 interface Walker {
@@ -155,8 +157,6 @@ function petFrame(place: PetPlace, time: number): number {
   return Math.floor(time * (POSE_RATE[place.state] ?? 0));
 }
 const SEATS = new Set(["sofa", "chair", "bench", "garden_sofa"]);
-// The outfit of the character of the walking game.
-const PLAYER_OUTFIT: Outfit = { shirt: "#e8503a", shade: "#b83a2a", trousers: "#2d3a55", hair: "#a0522d", skin: "#f3d0b0", long: true };
 const SETTLE = 1.5;
 // Radar points of a still person wander: within STAY metres of where they stopped they count as still.
 const STAY = 0.45;
@@ -235,8 +235,9 @@ class LevelPicture {
   private readonly pets: PetLife[];
   // Ways for people round the walls, when the tracking moves them past one.
   private readonly ways: Grid;
-  // Where the character of the walking game may stand, made when the game first asks.
+  // Where the character of the walking game may stand, made when the game first asks; where the pet following it is.
   private playCells?: Grid;
+  private readonly followers = new Map<string, { x: number; y: number; walked: number }>();
   private readonly aside = new Map<string, Point>();
   // When and where each pet was last touched; it plays there for PLAY seconds.
   private readonly touched = new Map<string, { time: number; at: Point; on?: Furniture }>();
@@ -591,18 +592,45 @@ class LevelPicture {
         if (s.insideHouse([w.x, w.y])) ghosts.push(() => person(c, x, y, w.facing, step, w.outfit, true));
       }
     }
-    // The character of the walking game: a person like the ones the radars see, with a marker over the head.
+    // The character of the walking game: a person like the ones the radars see, with a marker over the head; on a
+    // seat or in a bed it sits or lies like them, on a trampoline it jumps.
     const player = source.player?.(s.level);
-    if (player) {
+    let head: Point | undefined;
+    if (player?.seat) {
+      const { furniture, at } = player.seat;
+      const [sx, sy] = s.px(at);
+      const top = s.px([0, furniture.box[3]])[1] + 0.6;
+      const lift = Math.round((furniture.kind === "bed" ? 0.18 : 0.22) * PPM);
+      const lies = furniture.kind === "bed";
+      items.push({ y: top, draw: () => (lies ? lying(c, sx, sy - lift, player.outfit) : sitting(c, sx, sy - lift + 4, player.facing, player.outfit)) });
+      head = [sx, sy - lift - (lies ? 22 : 34)];
+    } else if (player) {
       const [x, y] = s.px([player.x, player.y]);
       const step = player.moving ? Math.floor(player.walked * 6) : 0;
-      items.push({ y: y + 0.5, draw: () => person(c, x, y, player.facing, step, PLAYER_OUTFIT) });
-      if (s.insideHouse([player.x, player.y])) ghosts.push(() => person(c, x, y, player.facing, step, PLAYER_OUTFIT, true));
+      const tramp = s.garden.find(
+        (g) => g.item.type === "trampoline" && g.item.center && Math.hypot(player.x - g.item.center[0], player.y - g.item.center[1]) < (g.item.diameter ?? 3) / 2 - 0.15,
+      );
+      const hop = tramp ? Math.round(Math.abs(Math.sin(time * 5.5)) * 16) : 0;
+      // On the trampoline it is drawn after it, as it jumps on top of it.
+      items.push({
+        y: tramp ? s.px([0, tramp.box[3]])[1] + 1 : y + 0.5,
+        draw: () => {
+          if (hop) rect(c, x - 5, y - 1, 11, 2, "rgba(0,0,0,.25)");
+          person(c, x, y - hop, player.facing, hop ? 0 : step, player.outfit);
+        },
+      });
+      if (s.insideHouse([player.x, player.y])) ghosts.push(() => person(c, x, y - hop, player.facing, step, player.outfit, true));
+      head = [x, y - hop - 42];
+    }
+    // Stars of the game still to pick up.
+    for (const [i, at] of (source.stars?.(s.level) ?? []).entries()) {
+      const [x, y] = s.px(at);
+      items.push({ y: y + 0.4, draw: () => star(c, x, y, time, i) });
     }
     const overhead = this.addPets(items, ghosts, time, player);
-    if (player) {
-      const [x, y] = s.px([player.x, player.y]);
-      overhead.push(() => marker(c, x, y - 42, time));
+    if (head) {
+      const [hx, hy] = head;
+      overhead.push(() => marker(c, hx, hy, time));
     }
     items.sort((a, b) => a.y - b.y);
     for (const item of items) item.draw();
@@ -688,6 +716,9 @@ class LevelPicture {
       // A hungry tiger does not roll over to be stroked: it roars.
       const fierce = pet.species === "tiger" && !!pet.hungry;
       let place = touch && since < PLAY && !fierce ? life.playHere(touch.at, since, touch.on) : life.placeAt(now);
+      // A pet the character of the game stroked follows it a while, a little behind.
+      if (player && player.friend === pet.id && Date.now() < (player.friendUntil ?? 0)) place = this.follow(pet.id, place, player);
+      else this.followers.delete(pet.id);
       if (prey?.prey) place = prey.prey;
       const chasing = hunting.get(pet.id);
       // A tiger in the middle of its fight is inside the cloud.
@@ -758,14 +789,41 @@ class LevelPicture {
     return overhead;
   }
 
+  /** A pet following the character of the game: it walks to a spot behind it, runs when far, sits when there. */
+  private follow(id: string, place: PetPlace, player: Player): PetPlace {
+    const was = this.followers.get(id) ?? { x: place.x, y: place.y, walked: 0 };
+    const back: Record<string, [number, number]> = { left: [1, 0], right: [-1, 0], up: [0, 1], down: [0, -1] };
+    const [bx, by] = back[player.facing] ?? [0, 0];
+    const target: Point = [player.x + bx * 0.7, player.y + by * 0.7];
+    const dx = target[0] - was.x;
+    const dy = target[1] - was.y;
+    const d = Math.hypot(dx, dy);
+    const step = Math.min(d, d > 1.5 ? 0.09 : 0.06);
+    const now = { x: was.x + (d ? (dx / d) * step : 0), y: was.y + (d ? (dy / d) * step : 0), walked: was.walked + step };
+    this.followers.set(id, now);
+    const facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : dy < 0 ? "up" : "down";
+    if (d < 0.2) return { x: now.x, y: now.y, state: "sit", facing: player.x < now.x ? "left" : "right", walked: 0, hop: 0 };
+    return { x: now.x, y: now.y, state: d > 1.5 ? "run" : "walk", facing, walked: now.walked, hop: 0 };
+  }
+
   /** Whether the character of the walking game may stand on a point of the plan. */
   canStand(p: Point): boolean {
     this.playCells ??= playGrid(this.scene);
     return this.playCells.isOpen(p);
   }
 
+  /** The seat or bed nearest to a point within reach metres, for the character of the game to sit or lie on. */
+  seatNear(p: Point, reach: number): { furniture: Furniture; at: Point } | undefined {
+    return this.scene.restNear(p, reach, (kind) => SEATS.has(kind) || kind === "bed");
+  }
+
   /** The pet drawn nearest to a point of the plan, within reach metres; it is stroked. */
   stroke(p: Point, reach: number): boolean {
+    return this.strokePet(p, reach) !== undefined;
+  }
+
+  /** Strokes the pet drawn nearest to a point within reach metres; its id, or none. */
+  strokePet(p: Point, reach: number): string | undefined {
     let best: { id: string; d: number } | undefined;
     for (const pet of this.drawnPets) {
       // Its body stands a little above its feet.
@@ -776,7 +834,7 @@ class LevelPicture {
       const drawn = this.drawnPets.find((pet) => pet.id === best!.id)!;
       this.touched.set(best.id, { time: Date.now() / 1000, at: drawn.at, on: drawn.on });
     }
-    return !!best;
+    return best?.id;
   }
 
   /**
@@ -1150,9 +1208,14 @@ export class PixelView {
     return this.pictureOf(level)?.canStand(p) ?? false;
   }
 
-  /** Strokes the pet of a level nearest to a point within reach metres, for the action button of the game. */
-  strokeAt(level: string, p: Point, reach: number): boolean {
-    return this.pictureOf(level)?.stroke(p, reach) ?? false;
+  /** Strokes the pet of a level nearest to a point within reach metres, for the action button of the game; its id. */
+  strokeAt(level: string, p: Point, reach: number): string | undefined {
+    return this.pictureOf(level)?.strokePet(p, reach);
+  }
+
+  /** The seat or bed of a level nearest to a point within reach metres. */
+  seatAt(level: string, p: Point, reach: number): { furniture: Furniture; at: Point } | undefined {
+    return this.pictureOf(level)?.seatNear(p, reach);
   }
 
   /** A touch on the card: when it lands on a pet the pet is stroked and the touch goes no further. */

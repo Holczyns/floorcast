@@ -3,7 +3,8 @@ import { defineElement } from "./define";
 import "./card-editor";
 import { type CardConfig } from "./card-config";
 import { GroundFeed } from "./ground";
-import { type Player, stepPlayer } from "./pixel/play";
+import { FRIEND_SECONDS, PLAYER_OUTFITS, type Player, STAR_REACH, placeStars, stepPlayer } from "./pixel/play";
+import { person } from "./pixel/sprites";
 import { PixelView, type PixelTarget } from "./pixel/view";
 import { N_, pickLanguage, t, useDictionary } from "./i18n";
 import { CARD_LANGUAGES } from "./i18n/card-languages";
@@ -82,6 +83,9 @@ const MIN_SIDE_WIDTH = 150;
 const HOLD_MS = 350;
 // The walking game: how near a light or a pet the action button reaches, in metres, and the keys it takes.
 const ACTION_REACH = 1.3;
+// How near a seat or bed the action button sits the character down, in metres; the character chosen last.
+const SEAT_REACH = 0.7;
+const PLAYER_KEY = "floorcast-card-player";
 const KEYS: Record<string, "up" | "down" | "left" | "right" | "act"> = {
   ArrowUp: "up",
   ArrowDown: "down",
@@ -213,6 +217,8 @@ class FloorCastCard extends LitElement {
     _gameIntro: { state: true },
     _full: { state: true },
     _play: { state: true },
+    _picker: { state: true },
+    _starsLeft: { state: true },
     _screen: { state: true },
     _showWalks: { state: true },
     _walks: { state: true },
@@ -238,7 +244,7 @@ class FloorCastCard extends LitElement {
   private _ask?: { text: string; run: () => void; top: number };
   // The end of a lamp game this card saw happen, shown until closed; and the end it saw last, so an end from
   // before the card opened is not shown.
-  private _gameEnd?: { result: string; score: number; goal: number; duration: number | null };
+  private _gameEnd?: { result: string; score: number; goal: number; duration: number | null; kind?: "lamps" | "stars" };
   private _gameEndSeen?: string | null;
   // The welcome window of the game is open.
   private _gameIntro = false;
@@ -262,6 +268,15 @@ class FloorCastCard extends LitElement {
   private _playLast = 0;
   private _cameraAt = 0;
   private _activeLevel?: Level;
+  // The window choosing the character is open; the stars still to pick up, how many there were, the level they lie
+  // on and when the round began; whether the stairs take the character to the other level when it next steps on them.
+  private _picker = false;
+  private _stars: Point[] = [];
+  private _starsLeft = 0;
+  private _starsGoal = 0;
+  private _starsLevel?: string;
+  private _starsFrom = 0;
+  private _stairsArmed = false;
   // The phase of the game last seen, when this card saw the countdown begin, until when Go shows, and the timer
   // redrawing them.
   private _gamePhase: string | null = null;
@@ -421,6 +436,7 @@ class FloorCastCard extends LitElement {
     if (this.isConnected) this.followGround();
     if (this.isConnected) this.followPixel();
     if (changed.has("hass")) this.followGame();
+    if (this._picker) this.drawFigures();
     // On the whole screen the plan takes the size left under the bar of switches; the view follows it.
     if (this._full) {
       const area = this.renderRoot.querySelector(".levels")?.getBoundingClientRect();
@@ -442,6 +458,7 @@ class FloorCastCard extends LitElement {
       people: (level) => (this._people ? (this._people[level.id] ?? []) : this.levelPeople(level)),
       robot: (id) => this._robots.get(id)?.place,
       player: (level) => (this._play && level.id === this._playLevel ? this._player : undefined),
+      stars: (level) => (this._play && level.id === this._starsLevel ? this._stars : []),
       track: (id) => this._robots.get(id)?.track ?? [],
     });
     const targets: PixelTarget[] = [];
@@ -689,7 +706,13 @@ class FloorCastCard extends LitElement {
    * The walking game: a character on the active level moved with the joystick or the keys, the view following it.
    * It starts where it may stand nearest to the middle of the view.
    */
-  private startPlay(): void {
+  private startPlay(outfit: number): void {
+    this._picker = false;
+    try {
+      localStorage.setItem(PLAYER_KEY, String(outfit));
+    } catch {
+      // A browser without storage only forgets the choice.
+    }
     const level = this._activeLevel;
     const pixel = this._pixel;
     if (!level || !pixel) return;
@@ -703,9 +726,11 @@ class FloorCastCard extends LitElement {
         if (pixel.canStand(level.id, p)) start = p;
       }
     if (!start) return;
-    this._player = { x: start[0], y: start[1], facing: "down", moving: false, walked: 0 };
+    this._player = { x: start[0], y: start[1], facing: "down", moving: false, walked: 0, outfit: PLAYER_OUTFITS[outfit] ?? PLAYER_OUTFITS[0] };
     this._playLevel = level.id;
     this._play = true;
+    this._stairsArmed = !level.rooms.some((room) => room.stairs && pointInPolygon(start!, room.points));
+    this.newStars(level, start);
     this._push = [0, 0];
     window.addEventListener("keydown", this._keyDown);
     window.addEventListener("keyup", this._keyUp);
@@ -713,8 +738,31 @@ class FloorCastCard extends LitElement {
     this._playFrame = requestAnimationFrame(this._playTick);
   }
 
+  /** A round of stars on a level, away from where the character stands. */
+  private newStars(level: Level, away: Point): void {
+    const pixel = this._pixel;
+    if (!pixel) return;
+    this._stars = placeStars(drawnBounds(level), (p) => pixel.canStand(level.id, p), away);
+    this._starsGoal = this._stars.length;
+    this._starsLeft = this._stars.length;
+    this._starsLevel = level.id;
+    this._starsFrom = Date.now();
+  }
+
+  /** The last character chosen on this browser. */
+  private chosenOutfit(): number {
+    try {
+      return Number(localStorage.getItem(PLAYER_KEY) ?? 0) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
   private stopPlay(): void {
     this._play = false;
+    this._picker = false;
+    this._stars = [];
+    this._starsLeft = 0;
     this._player = undefined;
     this._push = [0, 0];
     this._keys.clear();
@@ -737,12 +785,53 @@ class FloorCastCard extends LitElement {
     const kx = (keys.has("right") ? 1 : 0) - (keys.has("left") ? 1 : 0);
     const ky = (keys.has("down") ? 1 : 0) - (keys.has("up") ? 1 : 0);
     const push: [number, number] = kx || ky ? [kx, ky] : this._push;
-    stepPlayer(player, push, dt, (p) => pixel.canStand(level.id, p));
+    // A push gets the character up from a seat or a bed.
+    if (player.seat && Math.hypot(push[0], push[1]) > 0.3) player.seat = undefined;
+    if (!player.seat) stepPlayer(player, push, dt, (p) => pixel.canStand(level.id, p));
+    this.pickStars(player);
+    this.climbStairs(level, player);
     if (now - this._cameraAt > 50) {
       this._cameraAt = now;
       this.followPlayer(level, player);
     }
   };
+
+  /** Stars within reach are picked up; the last one ends the round with its time. */
+  private pickStars(player: Player): void {
+    if (this._playLevel !== this._starsLevel || !this._stars.length) return;
+    const left = this._stars.filter((p) => Math.hypot(p[0] - player.x, p[1] - player.y) > STAR_REACH);
+    if (left.length === this._stars.length) return;
+    this._stars = left;
+    this._starsLeft = left.length;
+    if (!left.length)
+      this._gameEnd = { result: "won", kind: "stars", score: this._starsGoal, goal: this._starsGoal, duration: Math.round((Date.now() - this._starsFrom) / 100) / 10 };
+  }
+
+  /**
+   * Stairs: stepping onto a room of stairs takes the character to the stairs of the next level the card shows, and
+   * the card shows that level. It goes again only after it stepped off the stairs it came up.
+   */
+  private climbStairs(level: Level, player: Player): void {
+    const onStairs = level.rooms.some((room) => room.stairs && pointInPolygon([player.x, player.y], room.points));
+    if (!onStairs) {
+      this._stairsArmed = true;
+      return;
+    }
+    if (!this._stairsArmed) return;
+    const all = this.levels();
+    if (all.length < 2) return;
+    const other = all[(all.findIndex((l) => l.id === level.id) + 1) % all.length];
+    const stairs = other.rooms.find((room) => room.stairs);
+    const bounds = drawnBounds(other);
+    const at: Point = stairs ? centroid(stairs.points) : [bounds.x + bounds.w / 2, bounds.y + bounds.h / 2];
+    this._stairsArmed = false;
+    player.x = at[0];
+    player.y = at[1];
+    player.seat = undefined;
+    this._active = other.id;
+    this._playLevel = other.id;
+    this._views = {};
+  }
 
   /** The view moves only when the character comes within a third of its edge, and as much as it went past. */
   private followPlayer(level: Level, player: Player): void {
@@ -757,12 +846,31 @@ class FloorCastCard extends LitElement {
     if (Math.abs(x - view.x) > 0.02 || Math.abs(y - view.y) > 0.02) this.setView(level, { x, y, w: view.w, h: view.h });
   }
 
-  /** The action button: strokes a pet near the character, otherwise switches the nearest light within reach. */
+  /**
+   * The action button: gets the character up when it sits; otherwise strokes a pet near it, which then follows it,
+   * sits it on a seat or lays it in a bed near it, or switches the nearest light within reach.
+   */
   private action(): void {
     const player = this._player;
     const level = this.levels().find((l) => l.id === this._playLevel);
     if (!player || !level) return;
-    if (this._pixel?.strokeAt(level.id, [player.x, player.y], 1.1)) return;
+    if (player.seat) {
+      player.seat = undefined;
+      return;
+    }
+    const pet = this._pixel?.strokeAt(level.id, [player.x, player.y], 1.1);
+    if (pet) {
+      // A stroked pet follows the character a while.
+      player.friend = pet;
+      player.friendUntil = Date.now() + FRIEND_SECONDS * 1000;
+      return;
+    }
+    const seat = this._pixel?.seatAt(level.id, [player.x, player.y], SEAT_REACH);
+    if (seat) {
+      player.seat = seat;
+      player.moving = false;
+      return;
+    }
     let best: { light: Device; d: number } | undefined;
     for (const device of level.devices ?? []) {
       if (device.kind !== "light" || !device.entity) continue;
@@ -817,6 +925,36 @@ class FloorCastCard extends LitElement {
     const knob = (event.currentTarget as HTMLElement).firstElementChild as HTMLElement | null;
     if (knob) knob.style.transform = "";
   };
+
+  /** The window choosing the character before the game, the last choice first in line. */
+  private renderPicker() {
+    if (!this._picker) return nothing;
+    const chosen = this.chosenOutfit();
+    return html`<div class="pad-backdrop" @click=${(e: Event) => e.target === e.currentTarget && (this._picker = false)}>
+      <div class="pad game-window" role="dialog">
+        <div class="game-title">${t("Choose your character")}</div>
+        <div class="figures">
+          ${PLAYER_OUTFITS.map(
+            (_, i) => html`<button class="figure ${i === chosen ? "chosen" : ""}" @click=${() => this.startPlay(i)}>
+              <canvas class="figure-picture" data-outfit=${i} width="24" height="34"></canvas>
+            </button>`,
+          )}
+        </div>
+        <button class="key" @click=${() => (this._picker = false)}>${t("Not now")}</button>
+      </div>
+    </div>`;
+  }
+
+  /** Draws the characters of the open picker into their small canvases. */
+  private drawFigures(): void {
+    for (const element of this.renderRoot.querySelectorAll<HTMLCanvasElement>("canvas.figure-picture")) {
+      if (element.dataset.drawn) continue;
+      const c = element.getContext("2d");
+      if (!c) continue;
+      person(c, 12, 33, "down", 0, PLAYER_OUTFITS[Number(element.dataset.outfit)] ?? PLAYER_OUTFITS[0]);
+      element.dataset.drawn = "1";
+    }
+  }
 
   /** The joystick at the bottom right and the action button beside it, while the game is played. */
   private renderPlay() {
@@ -1236,9 +1374,12 @@ class FloorCastCard extends LitElement {
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
               ${this.renderGameBar()}
               ${this._full && this._config.look === "pixel"
-                ? html`<button class="full-button ${this._play ? "on" : ""}" @click=${() => (this._play ? this.stopPlay() : this.startPlay())}>
+                ? html`<button class="full-button ${this._play ? "on" : ""}" @click=${() => (this._play ? this.stopPlay() : (this._picker = true))}>
                     ${this._play ? t("Stop playing") : t("Play")}
                   </button>`
+                : nothing}
+              ${this._play && this._starsGoal
+                ? html`<span class="game"><span class="score">${gameIcon("star", 16)}${this._starsGoal - this._starsLeft} / ${this._starsGoal}</span></span>`
                 : nothing}
               ${this._config.fullscreen
                 ? html`<button class="full-button" title=${this._full ? t("Leave full screen") : t("Full screen")} @click=${() => this.toggleFull()}>
@@ -1253,7 +1394,7 @@ class FloorCastCard extends LitElement {
           : html`<div class="levels ${side ? "side" : ""}">
               ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
             </div>`}
-        ${this.renderPad()} ${this.renderAsk()} ${this.renderPlay()} ${this.renderCountdown()} ${this.renderGameIntro()} ${this.renderGameEnd()}
+        ${this.renderPad()} ${this.renderAsk()} ${this.renderPlay()} ${this.renderPicker()} ${this.renderCountdown()} ${this.renderGameIntro()} ${this.renderGameEnd()}
       </ha-card>
     `;
   }
@@ -1628,15 +1769,24 @@ class FloorCastCard extends LitElement {
       <div class="pad game-window ${won ? "won" : ""}" role="alertdialog">
         ${gameIcon(won ? "cup" : "hourglass", 48)}
         <div class="game-title">${won ? t("Well done!") : t("Time is up")}</div>
-        <p>${won ? t("All {goal} lamps found.", { goal: String(end.goal) }) : t("Points: {score} of {goal}", { score: String(end.score), goal: String(end.goal) })}</p>
+        <p>
+          ${end.kind === "stars"
+            ? t("All {goal} stars collected.", { goal: String(end.goal) })
+            : won
+              ? t("All {goal} lamps found.", { goal: String(end.goal) })
+              : t("Points: {score} of {goal}", { score: String(end.score), goal: String(end.goal) })}
+        </p>
         ${won && time ? html`<div class="game-time">${gameIcon("clock", 24)}${time}</div>` : nothing}
         <div class="pad-row">
-          ${game
+          ${end.kind === "stars" || game
             ? html`<button
                 class="key yes big"
                 @click=${() => {
                   this._gameEnd = undefined;
-                  this.hass.callService("switch", "turn_on", { entity_id: game.entity_id });
+                  const level = this.levels().find((l) => l.id === this._playLevel);
+                  if (end.kind === "stars") {
+                    if (level && this._player) this.newStars(this._activeLevel ?? level, [this._player.x, this._player.y]);
+                  } else if (game) this.hass.callService("switch", "turn_on", { entity_id: game.entity_id });
                 }}
               >
                 ${t("Play again")}
@@ -2290,6 +2440,31 @@ class FloorCastCard extends LitElement {
       ha-card:fullscreen .level.zoomable,
       ha-card:fullscreen .level.zoomable svg {
         touch-action: none;
+      }
+      .figures {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .figure {
+        width: 72px;
+        height: 92px;
+        border-radius: 14px;
+        border: 3px solid var(--divider-color);
+        background: rgba(255, 255, 255, 0.06);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .figure.chosen {
+        border-color: #ffd65a;
+        background: rgba(255, 214, 90, 0.15);
+      }
+      .figure-picture {
+        width: 48px;
+        height: 68px;
+        image-rendering: pixelated;
       }
       .full-button.on {
         background: var(--primary-color);
