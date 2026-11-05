@@ -57,6 +57,48 @@
         border-color: var(--accent);
         color: #fff;
       }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 14px;
+        padding: 6px 16px 8px;
+        background: var(--bar);
+        border-top: 1px solid #2c3239;
+        font-size: 0.85rem;
+      }
+      .controls[hidden],
+      .group[hidden] {
+        display: none;
+      }
+      .group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .group > span {
+        color: var(--muted);
+        margin: 0 2px;
+      }
+      .controls button,
+      .controls select {
+        font: inherit;
+        color: var(--text);
+        background: transparent;
+        border: 1px solid #2c3239;
+        border-radius: 14px;
+        padding: 3px 10px;
+        cursor: pointer;
+      }
+      .controls select option {
+        background: var(--bar);
+      }
+      .controls button[aria-pressed="true"] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
       iframe {
         flex: 1;
         border: 0;
@@ -74,11 +116,124 @@
         <a href="https://github.com/Holczyns/floorcast">GitHub</a>
       </nav>
     </header>
+    <div class="controls" id="controls" hidden>
+      <div class="group" id="look-group">
+        <span>Look</span>
+        <button data-param="look" data-value="plan">Plan</button>
+        <button data-param="look" data-value="pixel">Pixel</button>
+      </div>
+      <div class="group">
+        <span>Theme</span>
+        <button data-param="theme" data-value="dark">Dark</button>
+        <button data-param="theme" data-value="light">Light</button>
+      </div>
+      <div class="group">
+        <span>Language</span>
+        <button data-param="lang" data-value="en">English</button>
+        <button data-param="lang" data-value="pl">Polski</button>
+      </div>
+      <div class="group">
+        <span>Weather</span>
+        <select id="weather" aria-label="Weather">
+          <option value="sunny">Sunny</option>
+          <option value="partlycloudy">Partly cloudy</option>
+          <option value="cloudy">Cloudy</option>
+          <option value="rainy">Rain</option>
+          <option value="pouring">Downpour</option>
+          <option value="lightning-rainy">Thunderstorm</option>
+          <option value="snowy">Snow</option>
+          <option value="fog">Fog</option>
+        </select>
+        <span>Time</span>
+        <select id="time" aria-label="Time of day">
+          <option value="200,40">Day</option>
+          <option value="275,4">Evening</option>
+          <option value="0,-25">Night</option>
+        </select>
+      </div>
+      <div class="group">
+        <span>Try</span>
+        <button data-act="lights">Lights</button>
+        <button data-act="blinds">Blinds</button>
+        <button data-act="door">Front door</button>
+        <button data-act="gate">Gate</button>
+        <button data-act="car">Car</button>
+        <button data-act="water">Sprinklers</button>
+        <button data-act="visitor">Person at the front</button>
+        <button data-act="leak">Water leak</button>
+      </div>
+    </div>
     <iframe title="FloorCast"></iframe>
     <script>
-      const editor = location.search.includes("editor");
+      // The demo runs the test page of the repository (tools/harness.html) with the example house. Look, theme and
+      // language reload it with other options; weather, time and the Try buttons change states while it runs.
+      const params = new URLSearchParams(location.search);
+      const editor = params.has("editor");
       document.getElementById(editor ? "editor" : "card").setAttribute("aria-current", "page");
-      document.querySelector("iframe").src = "tools/harness.html?example&people" + (editor ? "&mode=panel" : "");
+      const chosen = { look: params.get("look") ?? "pixel", theme: params.get("theme") ?? "dark", lang: params.get("lang") ?? "en" };
+      const options = ["example", "people"];
+      if (editor) options.push("mode=panel");
+      else options.push("look=" + chosen.look);
+      if (chosen.theme === "light") options.push("light");
+      if (chosen.lang !== "en") options.push("lang=" + chosen.lang);
+      options.push("card=" + encodeURIComponent(JSON.stringify({ zoom: true, history: true, garden: "show" })));
+      const frame = document.querySelector("iframe");
+      frame.src = "tools/harness.html?" + options.join("&");
+
+      const controls = document.getElementById("controls");
+      controls.hidden = false;
+      // Look only changes the card; the editor has its own Pixels switch.
+      document.getElementById("look-group").hidden = editor;
+      for (const button of controls.querySelectorAll("[data-param]")) {
+        button.setAttribute("aria-pressed", String(chosen[button.dataset.param] === button.dataset.value));
+        button.addEventListener("click", () => {
+          const next = new URLSearchParams(location.search);
+          next.set(button.dataset.param, button.dataset.value);
+          location.search = next.toString().replace(/=(&|$)/g, "$1");
+        });
+      }
+
+      const demo = () => frame.contentWindow && frame.contentWindow.demo;
+      const state = (id) => demo().states[id]?.state;
+      const all = (prefix) => Object.keys(demo().states).filter((id) => id.startsWith(prefix));
+      const flip = (id, on, off) => demo().set(id, state(id) === on ? off : on);
+      document.getElementById("weather").addEventListener("change", (event) => demo() && demo().set("weather.home", event.target.value));
+      document.getElementById("time").addEventListener("change", (event) => {
+        const [azimuth, elevation] = event.target.value.split(",").map(Number);
+        if (demo()) demo().set("sun.sun", elevation > 0 ? "above_horizon" : "below_horizon", { azimuth, elevation });
+      });
+      const ACTIONS = {
+        // Every light on, or every light off when some are on.
+        lights: () => {
+          const lights = all("light.");
+          const on = lights.some((id) => state(id) === "on");
+          for (const id of lights) demo().set(id, on ? "off" : "on", { brightness: on ? undefined : 255 });
+        },
+        // Every blind down, or up when all are down; the gate stays as it is.
+        blinds: () => {
+          const blinds = all("cover.").filter((id) => !demo().states[id].attributes.device_class);
+          const down = blinds.every((id) => state(id) === "closed");
+          for (const id of blinds) demo().set(id, down ? "open" : "closed", { current_position: down ? 100 : 0 });
+        },
+        door: () => flip("binary_sensor.front_door", "on", "off"),
+        gate: () => {
+          const open = state("cover.driveway_gate") === "open";
+          demo().set("cover.driveway_gate", open ? "closed" : "open", { current_position: open ? 0 : 100 });
+        },
+        car: () => flip("device_tracker.car", "not_home", "home"),
+        water: () => {
+          const valves = all("valve.");
+          const open = valves.some((id) => state(id) === "open");
+          for (const id of valves) demo().set(id, open ? "closed" : "open");
+        },
+        visitor: () => flip("binary_sensor.front_person", "on", "off"),
+        leak: () => flip("binary_sensor.bathroom_leak", "on", "off"),
+      };
+      for (const button of controls.querySelectorAll("[data-act]"))
+        button.addEventListener("click", () => {
+          if (!demo()) return;
+          ACTIONS[button.dataset.act]();
+        });
     </script>
   </body>
 </html>
