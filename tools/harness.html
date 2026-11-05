@@ -204,6 +204,7 @@
       for (const d of devices("mower")) {
         if (d.entity) set(d.entity, "mowing");
         if (d.battery) set(d.battery, "18", { device_class: "battery", unit_of_measurement: "%" });
+        if (d.camera) set(d.camera, "streaming", { entity_picture: new URL("mock_camera.svg", location.href).pathname + "?token=mock" });
         if (d.map)
           set(d.map, "idle", {
             mowing_map_api_path: "/api/dreame_lawn_mower/mowing-map/mock",
@@ -501,16 +502,23 @@
               setTimeout(() => callback({ views }), 50);
               return () => undefined;
             }
-            // Stills as the integration sends them: a 4:3 JPEG with the time, every second.
+            // Stills as the integration sends them: a 4:3 WebP with the time and rounded transparent corners
+            // (CORNER of stills.py), every second.
             if (message?.type === "floorcast/still/subscribe" && tracking) {
               const canvas = Object.assign(document.createElement("canvas"), { width: 640, height: 480 });
               const draw = () => {
                 const g = canvas.getContext("2d");
+                g.clearRect(0, 0, 640, 480);
+                g.save();
+                g.beginPath();
+                g.roundRect(0, 0, 640, 480, Math.round(480 * 0.06));
+                g.clip();
                 g.fillStyle = "#2d4b2c"; g.fillRect(0, 0, 640, 480);
                 g.fillStyle = "#7fa8c9"; g.fillRect(0, 0, 640, 160);
                 g.fillStyle = "#fff"; g.font = "40px sans-serif";
                 g.fillText(`${message.entity_id} ${new Date().toLocaleTimeString()}`, 20, 440);
-                const data = canvas.toDataURL("image/jpeg", 0.7);
+                g.restore();
+                const data = canvas.toDataURL("image/webp", 0.8);
                 callback({ image: { entity: message.entity_id, data, width: 640, height: 480, time: Date.now() / 1000 } });
               };
               setTimeout(draw, 300);

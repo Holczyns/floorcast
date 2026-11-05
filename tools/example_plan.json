@@ -110,7 +110,7 @@
     { "id": "sprinkler_2", "kind": "sprinkler", "entity": "valve.garden_zone_2", "at": [15, 20.7], "radius": 7, "heading": 270, "arc": 90, "nozzle": "rotor" },
     { "id": "sprinkler_3", "kind": "sprinkler", "entity": "valve.garden_zone_3", "at": [10.5, 12.3], "radius": 4, "heading": 90, "arc": 180, "nozzle": "spray" },
     {
-     "id": "mower", "kind": "mower", "entity": "lawn_mower.mower", "map": "camera.mower_map", "battery": "sensor.mower_battery", "at": [8, 20.4], "rotation": 0, "mirror": false,
+     "id": "mower", "kind": "mower", "entity": "lawn_mower.mower", "map": "camera.mower_map", "camera": "camera.mower", "battery": "sensor.mower_battery", "at": [8, 20.4], "rotation": 0, "mirror": false,
      "projection": { "maxX": 810, "minY": -11220, "scale": 0.12623476587556126, "padding": 40, "width": 1115, "height": 2048 }
     },
     {
