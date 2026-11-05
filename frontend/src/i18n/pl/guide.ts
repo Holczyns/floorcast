@@ -637,8 +637,8 @@ actions:
           <td><code>child_lock</code></td>
           <td><code>false</code></td>
           <td>
-            Dotknięcie tylko przełącza światła: pokój jego światła, światło samo siebie. Rolety, bramy, zamki, ekrany,
-            zraszacze, podglądy kamer i szczegóły Home Assistant pozostają zamknięte
+            Dotknięcie tylko przełącza światła: pokój jego światła, światło samo siebie, i otwiera podglądy kamer w ich
+            małym okienku. Rolety, bramy, zamki, ekrany, zraszacze i szczegóły Home Assistant pozostają zamknięte
           </td>
         </tr>
         <tr>
@@ -681,7 +681,10 @@ zoom: true</pre
       </p>
       ${steps(["⚙ Ustawienia, Gra: włącz", "Wybierz lampy i punkty do wygranej", "Opcja karty Gra w lampy", "Start"])}
       <ul>
-        <li>Start gasi tylko wybrane lampy; po chwili ciemności losowo zapala się jedna z nich.</li>
+        <li>
+          Gra w lampy na karcie otwiera okno powitalne ze Startem. Start gasi tylko wybrane lampy, karta odlicza 3, 2, 1
+          i losowo zapala się jedna z nich.
+        </li>
         <li>
           Lampa jest osiągnięta, gdy radar lub skalibrowana kamera widzi kogoś w promieniu metra od dowolnego jej punktu;
           encja światła z kilkoma punktami na planie to jedna lampa. Karta zaznacza świecącą lampę pierścieniem.
@@ -689,12 +692,13 @@ zoom: true</pre
         <li>Osiągnięta lampa gaśnie, a po chwili ciemności zapala się następna, nigdy ta sama dwa razy z rzędu.</li>
         <li>Lampa, przy której ktoś już jest, nie zapala się, więc osoba siedząca obok nie zdobywa punktu.</li>
         <li>
-          Gra kończy się wygraną po zdobyciu ustalonej liczby punktów albo po dwóch minutach bez trafienia; karta pokazuje
-          koniec z wynikiem. Lampa, której nie widzi żaden radar ani kamera, nie bierze udziału; ustawienia ją oznaczają.
+          Gra kończy się wygraną po zdobyciu ustalonej liczby punktów, z czasem od pierwszej lampy, albo po dwóch minutach
+          bez trafienia; karta pokazuje koniec z wynikiem i przyciskiem Graj ponownie. Lampa, której nie widzi żaden radar ani kamera, nie bierze udziału; ustawienia ją oznaczają.
         </li>
         <li>
           <code>switch.floorcast_game</code> uruchamia i zatrzymuje grę także z automatyzacji; jego atrybuty podają świecącą
-          lampę, wynik, cel i sposób zakończenia ostatniej gry.
+          lampę, fazę (<code>countdown</code>, <code>lit</code>, <code>dark</code>), wynik, cel, czas w sekundach i sposób
+          zakończenia ostatniej gry.
         </li>
       </ul>
       <p>

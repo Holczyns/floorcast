@@ -635,8 +635,8 @@ actions:
           <td><code>child_lock</code></td>
           <td><code>false</code></td>
           <td>
-            A tap only switches lights: a room its lights, a light itself. Blinds, gates, locks, screens, sprinklers, camera
-            previews and the details of Home Assistant stay shut
+            A tap only switches lights: a room its lights, a light itself, and opens camera previews in their small
+            window. Blinds, gates, locks, screens, sprinklers and the details of Home Assistant stay shut
           </td>
         </tr>
         <tr>
@@ -679,7 +679,10 @@ zoom: true</pre
       </p>
       ${steps(["⚙ Settings, Game: turn it on", "Choose the lamps and the points to win", "Card option Lamp game", "Start"])}
       <ul>
-        <li>The start turns off the chosen lamps only; after a moment in the dark one of them lights up at random.</li>
+        <li>
+          Lamp game on the card opens a welcome window with Start. The start turns off the chosen lamps only, the card
+          counts down 3, 2, 1, and one of them lights up at random.
+        </li>
         <li>
           A lamp is reached when a radar or a calibrated camera sees someone within a metre of any of its points; a light
           entity with several points on the plan is one lamp. The card rings the lit lamp.
@@ -687,12 +690,14 @@ zoom: true</pre
         <li>A reached lamp goes out, and after a moment in the dark the next one lights up, never the same twice in a row.</li>
         <li>A lamp with someone already at it does not light, so a person sitting by it does not score.</li>
         <li>
-          The game ends won at the points to win, or after two minutes without a hit; the card shows the end with the
-          score. A lamp no radar or camera sees cannot take part; the settings mark it.
+          The game ends won at the points to win, with the time from the first lamp, or after two minutes without a hit;
+          the card shows the end with the score and Play again. A lamp no radar or camera sees cannot take part; the
+          settings mark it.
         </li>
         <li>
           <code>switch.floorcast_game</code> starts and stops the game from automations too; its attributes give the lit
-          lamp, the score, the goal and how the last game ended.
+          lamp, the phase (<code>countdown</code>, <code>lit</code>, <code>dark</code>), the score, the goal, the time in
+          seconds and how the last game ended.
         </li>
       </ul>
       <p>

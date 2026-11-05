@@ -36,8 +36,8 @@ export interface CardConfig {
   /** Start and Stop of the lamp game add-on with its score above the plan, when the plan has the game on; off by default. */
   game?: boolean;
   /**
-   * Child lock: a tap only switches lights (a room, a light point); blinds, gates, locks, devices, camera previews
-   * and the details of Home Assistant stay shut. Off by default.
+   * Child lock: a tap only switches lights (a room, a light point) and opens camera previews in their small window;
+   * blinds, gates, locks, devices and the details of Home Assistant stay shut. Off by default.
    */
   child_lock?: boolean;
   /** Part of a level shown, by level id: x, y, width and height in metres; the whole level without it. */

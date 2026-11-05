@@ -8,6 +8,7 @@ import { N_, pickLanguage, t, useDictionary } from "./i18n";
 import { CARD_LANGUAGES } from "./i18n/card-languages";
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { repeat } from "lit/directives/repeat.js";
+import { keyed } from "lit/directives/keyed.js";
 import { type HomeAssistant, fireEvent, isOn } from "./ha";
 import { type CameraObject, type StillImage, type Device, type Level, type TrackedPerson, type Plan, type Point, type Room, DEFAULT_GLOW,
   centroid,
@@ -78,6 +79,9 @@ const DETAILS_PX_PER_M = 40;
 const MIN_SIDE_WIDTH = 150;
 // Height of the row with the name of a level over its plan, side by side.
 const HOLD_MS = 350;
+// The countdown of the lamp game in seconds, as COUNTDOWN of game.py, and how long Go shows after it.
+const GAME_COUNTDOWN = 3;
+const GO_MS = 900;
 // A still covering someone moves away at most this often.
 const STILL_MOVE_MS = 5000;
 // Near its dock, closer than this in metres, a tap on a mower goes to the dock.
@@ -157,6 +161,7 @@ class FloorCastCard extends LitElement {
     _pad: { state: true },
     _ask: { state: true },
     _gameEnd: { state: true },
+    _gameIntro: { state: true },
     _showWalks: { state: true },
     _walks: { state: true },
   };
@@ -181,8 +186,16 @@ class FloorCastCard extends LitElement {
   private _ask?: { text: string; run: () => void; top: number };
   // The end of a lamp game this card saw happen, shown until closed; and the end it saw last, so an end from
   // before the card opened is not shown.
-  private _gameEnd?: { result: string; score: number; goal: number };
+  private _gameEnd?: { result: string; score: number; goal: number; duration: number | null };
   private _gameEndSeen?: string | null;
+  // The welcome window of the game is open.
+  private _gameIntro = false;
+  // The phase of the game last seen, when this card saw the countdown begin, until when Go shows, and the timer
+  // redrawing them.
+  private _gamePhase: string | null = null;
+  private _countdownFrom?: number;
+  private _goUntil?: number;
+  private _countdownTimer?: number;
   private _askTimer?: number;
   // Where the last touch on the card was, from its top: the question stands next to it.
   private _pointerTop = 0;
@@ -968,7 +981,7 @@ class FloorCastCard extends LitElement {
           : html`<div class="levels ${side ? "side" : ""}">
               ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
             </div>`}
-        ${this.renderPad()} ${this.renderAsk()} ${this.renderGameEnd()}
+        ${this.renderPad()} ${this.renderAsk()} ${this.renderCountdown()} ${this.renderGameIntro()} ${this.renderGameEnd()}
       </ha-card>
     `;
   }
@@ -1220,7 +1233,7 @@ class FloorCastCard extends LitElement {
     return found && found.state !== "unavailable" ? (found as { entity_id: string; state: string; attributes: Record<string, any> }) : undefined;
   }
 
-  /** Start or Stop of the lamp game, with the score while it runs. */
+  /** Start or Stop of the lamp game, with the score while it runs; Start first asks in the welcome window. */
   private renderGameBar() {
     const game = this.game();
     if (!game) return nothing;
@@ -1229,7 +1242,7 @@ class FloorCastCard extends LitElement {
     return html`<span class="game">
       <button
         class=${running ? "on" : ""}
-        @click=${() => this.hass.callService("switch", running ? "turn_off" : "turn_on", { entity_id: game.entity_id })}
+        @click=${() => (running ? this.hass.callService("switch", "turn_off", { entity_id: game.entity_id }) : (this._gameIntro = true))}
       >
         <ha-icon icon=${running ? "mdi:stop" : "mdi:lightbulb-on-outline"}></ha-icon>${running ? t("Stop") : t("Lamp game")}
       </button>
@@ -1250,10 +1263,22 @@ class FloorCastCard extends LitElement {
       });
   }
 
-  /** Notes the end of a lamp game: a win or running out of time opens the end window, a stop does not. */
+  /**
+   * Follows the phase of the lamp game: the countdown starts when the card sees it begin and counts in this
+   * browser, so a clock that runs a little off does not matter; Go shows a moment when the first lamp lights. The
+   * end of a game this card saw happen opens the end window: a win or running out of time, not a stop.
+   */
   private followGame(): void {
     const game = this.game();
     if (!game) return;
+    const phase: string | null = game.state === "on" ? (game.attributes.phase ?? null) : null;
+    if (phase !== this._gamePhase) {
+      if (phase === "countdown") this._countdownFrom = Date.now();
+      if (this._gamePhase === "countdown" && phase === "lit") this._goUntil = Date.now() + GO_MS;
+      if (phase !== "countdown" && this._gamePhase === "countdown" && phase !== "lit") this._countdownFrom = undefined;
+      this._gamePhase = phase;
+      this.tickCountdown();
+    }
     const ended: string | null = game.attributes.ended ?? null;
     if (this._gameEndSeen === undefined) {
       this._gameEndSeen = ended;
@@ -1262,24 +1287,80 @@ class FloorCastCard extends LitElement {
     if (ended === this._gameEndSeen) return;
     this._gameEndSeen = ended;
     const result = game.attributes.result;
-    if (result === "won" || result === "timeout") this._gameEnd = { result, score: game.attributes.score ?? 0, goal: game.attributes.goal ?? 0 };
+    if (result === "won" || result === "timeout")
+      this._gameEnd = { result, score: game.attributes.score ?? 0, goal: game.attributes.goal ?? 0, duration: game.attributes.duration ?? null };
   }
 
-  /** The end of a game: congratulations with the score after a win, the score after running out of time. */
+  /** Redraws the card while the countdown or Go shows, then stops. */
+  private tickCountdown(): void {
+    window.clearInterval(this._countdownTimer);
+    this._countdownTimer = window.setInterval(() => {
+      const counting = this._gamePhase === "countdown" && this._countdownFrom !== undefined;
+      const going = this._goUntil !== undefined && Date.now() < this._goUntil;
+      if (!counting && !going) {
+        window.clearInterval(this._countdownTimer);
+        this._countdownFrom = this._goUntil = undefined;
+      }
+      this.requestUpdate();
+    }, 100);
+  }
+
+  /** The welcome window of the lamp game: its name, how to play and Start. */
+  private renderGameIntro() {
+    const game = this.game();
+    if (!this._gameIntro || !game) return nothing;
+    const close = () => (this._gameIntro = false);
+    return html`<div class="pad-backdrop" @click=${(e: Event) => e.target === e.currentTarget && close()}>
+      <div class="pad game-window" role="dialog">
+        <div class="game-lamps" aria-hidden="true"><span></span><span class="lit"></span><span></span></div>
+        <div class="game-title">${t("Lamp game")}</div>
+        <p>${t("When a lamp lights up, run to it! Every lamp you reach is a point.")}</p>
+        <p class="game-goal">${t("Find {goal} lamps as fast as you can.", { goal: String(game.attributes.goal ?? 0) })}</p>
+        <div class="pad-row">
+          <button
+            class="key yes big"
+            @click=${() => {
+              close();
+              this.hass.callService("switch", "turn_on", { entity_id: game.entity_id });
+            }}
+          >
+            ${t("Start!")}
+          </button>
+          <button class="key" @click=${close}>${t("Not now")}</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /** 3, 2, 1 over the plan before the first lamp, then Go for a moment. */
+  private renderCountdown() {
+    const now = Date.now();
+    if (this._gamePhase === "countdown" && this._countdownFrom !== undefined) {
+      const left = Math.max(1, GAME_COUNTDOWN - Math.floor((now - this._countdownFrom) / 1000));
+      return html`<div class="countdown" aria-live="assertive">${keyed(left, html`<span>${left}</span>`)}</div>`;
+    }
+    if (this._goUntil !== undefined && now < this._goUntil)
+      return html`<div class="countdown" aria-live="assertive">${keyed("go", html`<span class="go">${t("Go!")}</span>`)}</div>`;
+    return nothing;
+  }
+
+  /** The end of a game: congratulations with the score and the time after a win, the score after running out of time. */
   private renderGameEnd() {
     const end = this._gameEnd;
     if (!end) return nothing;
     const won = end.result === "won";
     const game = this.game();
+    const time = end.duration !== null ? `${Math.floor(end.duration / 60)}:${String(Math.round(end.duration % 60)).padStart(2, "0")}` : undefined;
     return html`<div class="pad-backdrop" @click=${(e: Event) => e.target === e.currentTarget && (this._gameEnd = undefined)}>
-      <div class="pad game-end" role="alertdialog">
+      <div class="pad game-window ${won ? "won" : ""}" role="alertdialog">
         <ha-icon icon=${won ? "mdi:trophy" : "mdi:timer-sand-complete"}></ha-icon>
-        <strong>${won ? t("Well done!") : t("Time is up")}</strong>
-        <span>${won ? t("All {goal} lamps found.", { goal: String(end.goal) }) : t("Points: {score} of {goal}", { score: String(end.score), goal: String(end.goal) })}</span>
+        <div class="game-title">${won ? t("Well done!") : t("Time is up")}</div>
+        <p>${won ? t("All {goal} lamps found.", { goal: String(end.goal) }) : t("Points: {score} of {goal}", { score: String(end.score), goal: String(end.goal) })}</p>
+        ${won && time ? html`<div class="game-time"><ha-icon icon="mdi:timer-outline"></ha-icon>${time}</div>` : nothing}
         <div class="pad-row">
           ${game
             ? html`<button
-                class="key yes"
+                class="key yes big"
                 @click=${() => {
                   this._gameEnd = undefined;
                   this.hass.callService("switch", "turn_on", { entity_id: game.entity_id });
@@ -1484,7 +1565,6 @@ class FloorCastCard extends LitElement {
             @pointerdown=${() => this.holdStart(() => this.openMoreInfo(camera.entity!))}
             @pointerup=${() =>
               this.holdEnd(() => {
-                if (this._config.child_lock) return;
                 if (still) this.closeStill(camera, level);
                 else this._stills.add(camera.id);
                 this.requestUpdate();
@@ -1525,7 +1605,6 @@ class FloorCastCard extends LitElement {
             @pointerdown=${() => this.holdStart(() => this.openMoreInfo(mower.entity!))}
             @pointerup=${() =>
               this.holdEnd(() => {
-                if (this._config.child_lock) return;
                 if (still) this.closeStill(mower, level);
                 else this._stills.add(mower.id);
                 this.requestUpdate();
@@ -1969,6 +2048,137 @@ class FloorCastCard extends LitElement {
         50% {
           opacity: 1;
           transform: scale(1);
+        }
+      }
+      .game-window {
+        width: min(320px, 92%);
+        align-items: center;
+        text-align: center;
+        gap: 8px;
+        padding: 20px 16px 16px;
+        color: var(--primary-text-color);
+      }
+      .game-window p {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+      .game-window .game-goal {
+        color: var(--secondary-text-color);
+      }
+      .game-window > ha-icon {
+        --mdc-icon-size: 56px;
+        color: #f8c838;
+        filter: drop-shadow(0 0 12px rgba(248, 200, 56, 0.6));
+      }
+      .game-window.won > ha-icon {
+        animation: fc-game-bounce 1s ease-in-out infinite;
+      }
+      .game-title {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        background: linear-gradient(180deg, #ffe680, #f8a838);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
+      }
+      .game-lamps {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 2px;
+      }
+      .game-lamps span {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #4a4f58;
+        box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+      }
+      .game-lamps span.lit {
+        background: #ffd65a;
+        box-shadow: 0 0 18px 6px rgba(255, 214, 90, 0.6);
+        animation: fc-game-glow 1.2s ease-in-out infinite;
+      }
+      .game-time {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 28px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .game-time ha-icon {
+        --mdc-icon-size: 26px;
+        color: var(--secondary-text-color);
+      }
+      .game-window .key.yes {
+        background: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+      }
+      .key.big {
+        font-size: 17px;
+        font-weight: 700;
+        padding: 10px 22px;
+      }
+      .countdown {
+        position: absolute;
+        inset: 0;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+      .countdown span {
+        font-size: 120px;
+        font-weight: 900;
+        line-height: 1;
+        color: #ffd65a;
+        -webkit-text-stroke: 4px rgba(0, 0, 0, 0.55);
+        paint-order: stroke fill;
+        text-shadow: 0 0 30px rgba(255, 214, 90, 0.7);
+        animation: fc-countdown-pop 1s ease-out both;
+      }
+      .countdown span.go {
+        font-size: 72px;
+        color: #8be27a;
+        text-shadow: 0 0 30px rgba(139, 226, 122, 0.7);
+      }
+      @keyframes fc-countdown-pop {
+        0% {
+          opacity: 0;
+          transform: scale(1.8);
+        }
+        25% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        80% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: scale(0.85);
+        }
+      }
+      @keyframes fc-game-glow {
+        0%,
+        100% {
+          opacity: 0.75;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      @keyframes fc-game-bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
         }
       }
       .game-end {

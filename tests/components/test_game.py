@@ -8,7 +8,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, async_mock_service
 
 from custom_components.floorcast.const import DOMAIN
-from custom_components.floorcast.game import IDLE, PAUSE
+from custom_components.floorcast.game import COUNTDOWN, IDLE, PAUSE
 
 GAME = "switch.floorcast_game"
 SQUARE = [[0, 0], [4, 0], [4, 4], [0, 4]]
@@ -80,7 +80,10 @@ async def test_a_game_lights_one_lamp_after_the_dark_and_counts_hits_to_the_goal
     await hass.async_block_till_done()
     assert turn_off[0].data["entity_id"] == ["light.a", "light.b"]
     assert not turn_on
-    await advance(hass, freezer, PAUSE + 0.1)
+    assert hass.states.get(GAME).attributes["phase"] == "countdown"
+    await advance(hass, freezer, COUNTDOWN - 1)
+    assert not turn_on
+    await advance(hass, freezer, 1.1)
     first = hass.states.get(GAME).attributes["target"]
     assert first in LAMPS and turn_on[-1].data["entity_id"] == [first]
 
@@ -89,6 +92,7 @@ async def test_a_game_lights_one_lamp_after_the_dark_and_counts_hits_to_the_goal
     await advance(hass, freezer, 0.6)
     state = hass.states.get(GAME)
     assert state.attributes["score"] == 1 and state.attributes["target"] is None
+    assert state.attributes["phase"] == "dark"
     assert turn_off[-1].data["entity_id"] == [first]
     calls = len(turn_on)
     await advance(hass, freezer, PAUSE + 0.1)
@@ -101,6 +105,9 @@ async def test_a_game_lights_one_lamp_after_the_dark_and_counts_hits_to_the_goal
     state = hass.states.get(GAME)
     assert state.state == "off"
     assert state.attributes["result"] == "won" and state.attributes["score"] == 2
+    # From the first lamp: two runs of 0.6 s and the dark pause between them.
+    assert state.attributes["duration"] == pytest.approx(0.6 + PAUSE + 0.1 + 0.6, abs=0.2)
+    assert state.attributes["phase"] is None
     assert turn_off[-1].data["entity_id"] == [second]
 
 
@@ -108,7 +115,7 @@ async def test_a_game_without_a_hit_ends_after_the_idle_time(hass: HomeAssistant
     await setup(hass, hass_storage, plan())
     stand(hass, (2, 3.5))
     await hass.services.async_call("switch", "turn_on", {"entity_id": GAME}, blocking=True)
-    await advance(hass, freezer, PAUSE + 0.1)
+    await advance(hass, freezer, COUNTDOWN + 0.1)
     assert hass.states.get(GAME).state == "on"
     await advance(hass, freezer, IDLE)
     state = hass.states.get(GAME)
@@ -120,7 +127,10 @@ async def test_a_lamp_with_someone_at_it_does_not_light_first(hass: HomeAssistan
     await setup(hass, hass_storage, plan())
     await advance(hass, freezer, 0.6)
     await hass.services.async_call("switch", "turn_on", {"entity_id": GAME}, blocking=True)
-    await advance(hass, freezer, PAUSE + 0.1)
+    # The radar keeps sending the person, as it does while someone moves.
+    await advance(hass, freezer, COUNTDOWN - 1)
+    stand(hass, (1.0, 1.05))
+    await advance(hass, freezer, 1.1)
     assert hass.states.get(GAME).attributes["target"] == "light.b"
 
 
@@ -128,7 +138,7 @@ async def test_a_stop_ends_the_game_and_puts_the_lamp_out(hass: HomeAssistant, h
     _turn_on, turn_off = services
     await setup(hass, hass_storage, plan())
     await hass.services.async_call("switch", "turn_on", {"entity_id": GAME}, blocking=True)
-    await advance(hass, freezer, PAUSE + 0.1)
+    await advance(hass, freezer, COUNTDOWN + 0.1)
     lit = hass.states.get(GAME).attributes["target"]
     await hass.services.async_call("switch", "turn_off", {"entity_id": GAME}, blocking=True)
     await hass.async_block_till_done()

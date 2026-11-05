@@ -125,7 +125,12 @@ const card: Dictionary = {
   "Time is up": "Koniec czasu",
   "All {goal} lamps found.": "Znalezione wszystkie lampy: {goal}.",
   "Points: {score} of {goal}": "Punkty: {score} z {goal}",
-  "Play again": "Zagraj jeszcze raz",
+  "Play again": "Graj ponownie",
+  "When a lamp lights up, run to it! Every lamp you reach is a point.": "Gdy zapali się lampa, biegnij do niej! Każda lampa, do której dobiegniesz, to punkt.",
+  "Find {goal} lamps as fast as you can.": "Znajdź {goal} lamp jak najszybciej.",
+  "Start!": "Start!",
+  "Not now": "Nie teraz",
+  "Go!": "Biegnij!",
 };
 
 export default card;

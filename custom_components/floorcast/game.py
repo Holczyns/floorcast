@@ -2,34 +2,39 @@
 
 1. The game runs only while the plan turns it on (Settings, Game) and some chosen lamp is seen by a radar or a
    camera (engine/game.py rules 1 and 2).
-2. A start turns off every chosen lamp, waits PAUSE and lights a random target (engine rule 3); while every
-   target has someone at it, the next people update tries again.
+2. A start turns off every chosen lamp, counts down COUNTDOWN seconds, which the cards show, and lights a random
+   target (engine rule 3); while every target has someone at it, the next people update tries again.
 3. When someone seen stands within a metre of the lit target, it goes off, the score grows by one and after
    PAUSE in the dark the next target lights up.
 4. The game ends won at the goal of the plan, after IDLE seconds without a hit, on a stop, or when a saved plan
-   turns it off or drops the lit lamp; the lit target goes off. The result and the time it ended stay for the
-   cards, which show the end.
+   turns it off or drops the lit lamp; the lit target goes off. The result, the time it ended and how long it took
+   from the first lamp stay for the cards, which show the end.
 5. Only the chosen lamps are switched; every call runs with the context of the start, so the logbook names who
    started the game.
+6. The phase tells the cards what happens now: countdown before the first lamp, lit while a lamp waits, dark
+   between a hit and the next lamp, none while no game runs.
 
-State kept between people updates: whether it runs, the target, the score, the timers, and the last result.
+State kept between people updates: whether it runs, its phase, the target, the score, when the first lamp lit, the
+timers, and the last result.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from homeassistant.core import Context, HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
 from homeassistant.helpers.event import async_call_later
+from homeassistant.util import dt as dt_util
 
 from .const import SIGNAL_GAME, SIGNAL_PLAN_UPDATED, SIGNAL_POSITIONS
 from .engine.game import Target, Viewer, pick, reached, settings, targets
 from .people import PeopleTracking
 
 PAUSE = 1.5
+COUNTDOWN = 3.0
 IDLE = 120.0
 
 
@@ -46,6 +51,9 @@ class LampGame:
         self.target: Target | None = None
         self.previous: str | None = None
         self.score = 0
+        self.phase: str | None = None
+        self.started: datetime | None = None
+        self.duration: float | None = None
         self.result: str | None = None
         self.ended: str | None = None
         self._context: Context | None = None
@@ -100,11 +108,14 @@ class LampGame:
         self.score = 0
         self.previous = None
         self.target = None
+        self.phase = "countdown"
+        self.started = None
+        self.duration = None
         self.result = None
         self.ended = None
         self._switch("turn_off", self.lights)
         self._restart_idle()
-        self._after_pause()
+        self._after_pause(COUNTDOWN)
         self._changed()
 
     def stop(self) -> None:
@@ -120,10 +131,13 @@ class LampGame:
             if cancel:
                 cancel()
         self._pause = self._idle = None
+        now = dt_util.utcnow()
         self.running = False
         self.target = None
+        self.phase = None
+        self.duration = round((now - self.started).total_seconds(), 1) if self.started else None
         self.result = result
-        self.ended = datetime.now(UTC).isoformat()
+        self.ended = now.isoformat()
         self._changed()
 
     def _switch(self, service: str, entities: list[str]) -> None:
@@ -145,12 +159,15 @@ class LampGame:
         if self.running:
             self.finish("timeout")
 
-    def _after_pause(self) -> None:
-        self._pause = async_call_later(self.hass, PAUSE, self._paused)
+    def _after_pause(self, seconds: float = PAUSE) -> None:
+        self._pause = async_call_later(self.hass, seconds, self._paused)
 
     @callback
     def _paused(self, _now: Any) -> None:
         self._pause = None
+        if self.running and self.phase == "countdown":
+            self.phase = "dark"
+            self._changed()
         self._light_next()
 
     @callback
@@ -162,6 +179,9 @@ class LampGame:
         if target is None:
             return
         self.target = target
+        self.phase = "lit"
+        if self.started is None:
+            self.started = dt_util.utcnow()
         self._switch("turn_on", [target.entity])
         self._changed()
 
@@ -182,6 +202,7 @@ class LampGame:
         if self.score >= self.goal:
             self.finish("won")
             return
+        self.phase = "dark"
         self._restart_idle()
         self._after_pause()
         self._changed()

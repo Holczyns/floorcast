@@ -51,10 +51,12 @@ class GameSwitch(SwitchEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return {
             "floorcast": "game",
+            "phase": self.game.phase,
             "target": self.game.target.entity if self.game.target else None,
             "score": self.game.score,
             "goal": self.game.goal,
             "lights": [target.entity for target in self.game.targets],
+            "duration": self.game.duration,
             "result": self.game.result,
             "ended": self.game.ended,
         }
