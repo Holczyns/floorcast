@@ -828,7 +828,7 @@ export type FloorFinish = "wood" | "lightwood" | "darkwood" | "herringbone" | "c
 
 export const FLOOR_FINISHES: FloorFinish[] = ["wood", "lightwood", "darkwood", "herringbone", "checker", "bathtile", "tiles", "concrete", "carpet", "carpet2"];
 
-export type PetSpecies = "cat" | "dog";
+export type PetSpecies = "cat" | "dog" | "rabbit" | "hamster" | "tiger";
 
 export interface Pet {
   id: string;
@@ -841,8 +841,11 @@ export interface Pet {
 }
 
 export const PET_COATS: Record<PetSpecies, string[]> = {
-  cat: ["ginger", "grey", "black", "white", "tabby", "calico"],
-  dog: ["brown", "golden", "black", "white", "spotted"],
+  cat: ["ginger", "grey", "black", "white", "tabby", "calico", "siamese", "tuxedo"],
+  dog: ["brown", "golden", "black", "white", "spotted", "husky", "blacktan"],
+  rabbit: ["white", "grey", "brown", "dutch"],
+  hamster: ["golden", "white", "grey"],
+  tiger: ["orange", "white"],
 };
 
 /** Surroundings of the house that the card can hide; the terrace stays with the house. */

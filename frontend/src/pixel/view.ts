@@ -6,12 +6,13 @@
 // the drops of water in the air, how wet the lawn is, and the last light and sun pictures with the
 // states they were worked out from, so they are worked out again only when one of those changes.
 import type { HomeAssistant } from "../ha";
-import { type Level, type Opening, type Plan, type Point, type TrackedPerson, carPresent, deviceCentre, isPowered, pointInPolygon } from "../model";
+import { type Level, type Opening, type Plan, type Point, type TrackedPerson, PET_COATS, carPresent, deviceCentre, isPowered, pointInPolygon } from "../model";
 import { PPM, canvas, hash, rect } from "./art";
-import { FACE, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
+import { FACE, type Furniture, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
-import { PetLife } from "./pets";
-import { type Facing, OUTFITS, type Outfit, cat, dog, drop, heart, lying, mower, person, sitting, snore, toy, vacuum, withoutShadows } from "./sprites";
+import { PetLife, type PetPlace, type PetState } from "./pets";
+import { type Facing, OUTFITS, type Outfit, drop, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
+import { animal, animalHeight, cage, cagePlace, cageWire } from "./animals";
 
 /**
  * How far a door, gate or wicket should stand open, 0 shut to 1 open, and how fast it gets there per second:
@@ -140,6 +141,16 @@ interface Walker {
 
 // Seconds a touched pet plays where it was touched before it goes back to its day.
 const PLAY = 25;
+// Frames a second of the poses that move in place; a pose not here holds still.
+const POSE_RATE: Partial<Record<PetState, number>> = { sleep: 0.7, sit: 1.5, wash: 3, play: 6, knead: 4, scratch: 7, roll: 5, crouch: 8, eat: 5, dig: 7 };
+
+/** The frame of a pet: counted by its steps while it moves, by the clock while it stays. */
+function petFrame(place: PetPlace, time: number): number {
+  if (place.state === "hop") return place.hop > 0.02 ? 1 : 0;
+  if (place.state === "walk" || place.state === "run" || place.state === "stalk" || place.state === "sniff" || place.state === "carry")
+    return Math.floor(place.walked * (place.state === "run" || place.state === "carry" ? 5 : 8));
+  return Math.floor(time * (POSE_RATE[place.state] ?? 0));
+}
 const SEATS = new Set(["sofa", "chair", "bench", "garden_sofa"]);
 const SETTLE = 1.5;
 // Radar points of a still person wander: within STAY metres of where they stopped they count as still.
@@ -221,8 +232,8 @@ class LevelPicture {
   private readonly ways: Grid;
   private readonly aside = new Map<string, Point>();
   // When and where each pet was last touched; it plays there for PLAY seconds.
-  private readonly touched = new Map<string, { time: number; at: Point }>();
-  private drawnPets: { id: string; at: Point }[] = [];
+  private readonly touched = new Map<string, { time: number; at: Point; on?: Furniture }>();
+  private drawnPets: { id: string; at: Point; on?: Furniture }[] = [];
 
   constructor(level: Level, plan: Plan | undefined) {
     this.scene = new Scene(level, plan);
@@ -628,50 +639,81 @@ class LevelPicture {
       const pet = life.pet;
       const touch = this.touched.get(pet.id);
       const since = touch ? now - touch.time : 99;
-      const place = touch && since < PLAY ? life.playHere(touch.at, since) : life.placeAt(now);
-      // Step aside from the nearest person closer than a metre, less when the pet lies on furniture.
+      const place = touch && since < PLAY ? life.playHere(touch.at, since, touch.on) : life.placeAt(now);
+      // Step aside from the nearest person closer than a metre, less when the pet lies on furniture; a hamster
+      // stays in its cage.
       let push: Point = [0, 0];
-      for (const w of this.walkers.values()) {
-        const dx = place.x - w.x;
-        const dy = place.y - w.y;
-        const d = Math.hypot(dx, dy);
-        const reach = place.on ? 0.4 : 0.9;
-        if (d < reach && d > 0.01) push = [push[0] + (dx / d) * (reach - d), push[1] + (dy / d) * (reach - d)];
-      }
+      if (!place.cage)
+        for (const w of this.walkers.values()) {
+          const dx = place.x - w.x;
+          const dy = place.y - w.y;
+          const d = Math.hypot(dx, dy);
+          const reach = place.on ? 0.4 : 0.9;
+          if (d < reach && d > 0.01) push = [push[0] + (dx / d) * (reach - d), push[1] + (dy / d) * (reach - d)];
+        }
       const old = this.aside.get(pet.id) ?? [0, 0];
       const aside: Point = [old[0] + (push[0] - old[0]) * 0.1, old[1] + (push[1] - old[1]) * 0.1];
       this.aside.set(pet.id, aside);
       const at: Point = [place.x + aside[0], place.y + aside[1]];
-      this.drawnPets.push({ id: pet.id, at });
+      this.drawnPets.push({ id: pet.id, at, on: place.on });
       const fond = since < 2.5;
       const pose = place.state;
-      const hop = Math.round(place.hop * PPM) + (fond ? Math.round(Math.max(0, Math.sin(since * 9)) * 3) : 0);
+      const species = pet.species;
+      const coat = pet.coat ?? PET_COATS[species]?.[0] ?? "ginger";
+      const tall = animalHeight(species);
+      const hop = Math.round(place.hop * PPM) + (fond && pose !== "roll" ? Math.round(Math.max(0, Math.sin(since * 9)) * 3) : 0);
       const seat = place.on ? Math.round((place.on.kind === "bed" ? 0.18 : 0.22) * PPM) : 0;
       const [x, y] = s.px(at);
       const top = place.on ? s.px([0, place.on.box[3]])[1] + 0.7 : y + 0.4;
-      const step = Math.floor(place.walked * (place.state === "run" ? 5 : 8));
-      const coat = pet.coat ?? (pet.species === "dog" ? "brown" : "ginger");
-      const draw = () =>
-        pet.species === "dog" ? dog(c, x, y - seat - hop, pose, place.facing, step, coat, time, since < PLAY) : cat(c, x, y - seat - hop, pose, place.facing, step, coat, time);
-      items.push({ y: top, draw });
-      if (s.insideHouse(at)) ghosts.push(() => withoutShadows(draw));
+      const frame = petFrame(place, time);
+      if (place.cage) {
+        // A hamster in its cage: the cage stands like furniture, the wire in front of the hamster.
+        items.push({
+          y: y + 0.4,
+          draw: () => {
+            cage(c, x, y, pose === "run", time, true);
+            const [hx, hy] = cagePlace(x, y, pose);
+            animal(c, species, coat, hx, hy, pose, "right", frame);
+            cageWire(c, x, y);
+          },
+        });
+      } else {
+        // A soft shadow under the feet, smaller while the pet is up in the air.
+        const width = species === "tiger" ? 20 : species === "dog" ? 14 : 10;
+        const shade = (ghost: boolean) => {
+          if (ghost) return;
+          const w = Math.max(4, width - Math.round(hop / 2));
+          rect(c, x - Math.round(w / 2), y - seat - 1, w, 2, "rgba(0,0,0,.2)");
+        };
+        const draw = (ghost = false) => {
+          shade(ghost);
+          animal(c, species, coat, x, y - seat - hop, pose, place.facing, frame);
+        };
+        items.push({ y: top, draw: () => draw() });
+        if (s.insideHouse(at)) ghosts.push(() => draw(true));
+      }
       const plaything = place.toy;
       if (plaything) {
         const [tx, ty] = s.px(plaything.at);
-        items.push({ y: ty + 0.3, draw: () => toy(c, plaything.kind, tx, ty, Math.round(plaything.height * PPM), time, plaything.fade ?? 1) });
+        // A toy on the furniture the pet lies on is lifted to its top and drawn with the pet, in front of it or
+        // behind as it lies; on the floor it stands where it lies.
+        const lift = place.on ? seat : 0;
+        const key = place.on ? top + (ty >= y ? 0.02 : -0.02) : ty + 0.3;
+        items.push({ y: key, draw: () => toy(c, plaything.kind, tx, ty - lift, Math.round(plaything.height * PPM), time, plaything.fade ?? 1) });
       }
+      const [ox, oy] = place.cage ? cagePlace(x, y, pose) : [x, y - seat];
       if (pose === "sleep")
         overhead.push(() => {
           for (let k = 0; k < 2; k++) {
             const phase = (time * 0.45 + k * 0.5) % 1;
-            snore(c, x + 3 + Math.round(phase * 4), y - seat - 12 - Math.round(phase * 10), 1 - phase);
+            snore(c, ox + 3 + Math.round(phase * 4), oy - tall - Math.round(phase * 10), 1 - phase);
           }
         });
       if (fond)
         overhead.push(() => {
           for (let k = 0; k < 3; k++) {
             const rise = since * 8 + k * 4;
-            heart(c, x - 5 + k * 5, y - seat - 16 - Math.round(rise), Math.max(0, 1 - since / 2.5));
+            heart(c, ox - 5 + k * 5, oy - tall - 4 - Math.round(rise), Math.max(0, 1 - since / 2.5));
           }
         });
     }
@@ -687,8 +729,8 @@ class LevelPicture {
       if (d < reach && (!best || d < best.d)) best = { id: pet.id, d };
     }
     if (best) {
-      const at = this.drawnPets.find((pet) => pet.id === best!.id)!.at;
-      this.touched.set(best.id, { time: Date.now() / 1000, at });
+      const drawn = this.drawnPets.find((pet) => pet.id === best!.id)!;
+      this.touched.set(best.id, { time: Date.now() / 1000, at: drawn.at, on: drawn.on });
     }
     return !!best;
   }

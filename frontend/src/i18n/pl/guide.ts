@@ -209,8 +209,13 @@ export const sections: GuideSection[] = [
         </li>
         <li>
           Osoby chodzą, siadają na sofach i krzesłach i kładą się w łóżkach obok nich; za meblami prześwitują przez nie.
-          <b>Zwierzęta</b> (⚙ Ustawienia: kot lub pies, umaszczenie i poziom) żyją własnym życiem, tak samo na każdym ekranie;
-          dotknięcie je głaszcze.
+        </li>
+        <li>
+          <b>Zwierzęta</b> (⚙ Ustawienia: zwierzę, umaszczenie i poziom) żyją własnym życiem, tak samo na każdym ekranie.
+          Kot ugniata posłanie przed snem, przeciąga się i ziewa po przebudzeniu, poluje na muchy, bawi się włóczką i drapie
+          drapak; pies węszy na spacerach, aportuje, kopie w ogrodzie i goni własny ogon; królik skacze, skubie i podskakuje
+          z radości; chomik biega w kołowrotku w klatce przy ścianie; tygrys to duży, leniwy kot. Dotknięcie je głaszcze:
+          przewracają się na plecy i bawią się w tym miejscu, także na kanapie, jeśli na niej leżą.
         </li>
         <li>Kosiarka zostawia pasy na trawniku, a odkurzacz świeższą podłogę tam, gdzie przejechały.</li>
         <li>Drzwi, okna i bramy otwierają się i zamykają według swoich czujników i coverów, bramy przesuwają się wzdłuż płotu.</li>

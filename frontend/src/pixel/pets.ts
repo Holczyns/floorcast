@@ -1,34 +1,47 @@
-// Pets of the pixel look: a cat or a dog living on a level. Nothing measures them; what they do comes from
-// the clock and their id alone, so every screen showing the card shows the same pet at the same spot.
+// Pets of the pixel look: a cat, a dog, a tiger, a rabbit or a hamster living on a level. Nothing measures them;
+// what they do comes from the clock and their id alone, so every screen showing the card shows the same pet at the
+// same spot.
 //
-// Time is cut into slots of SLOT seconds. In each slot the pet goes from the spot of the slot before to the
-// spot of this one, on a walk round the house or in a burst of running, and then sleeps, sits, washes,
-// plays (a cat with a ball of yarn, a dog fetching a ball) or hunts (a cat after a fly or a butterfly).
-// Sleep may go on into the next slot. Paths go round walls and the furniture it cannot climb.
+// Time is cut into slots of SLOT seconds. In each slot the pet goes from the spot of the slot before to the spot of
+// this one, on a walk round the house or in a burst of running, and then does what its kind does there:
+// 1. A cat sleeps (kneading its bed first), sits, washes, plays with a ball of yarn, hunts a fly or a butterfly or
+//    sharpens its claws on a cat tree. A tiger is a lazy cat with a big ball.
+// 2. A dog sleeps, sits, sniffs along its walks, fetches a ball, digs in the garden by day and chases its tail.
+// 3. A rabbit hops instead of walking, nibbles grass or a carrot, grooms its ears, jumps for joy and dozes.
+// 4. A hamster stays in its cage: it runs in its wheel, eats and sleeps.
+// 5. Waking from a sleep a pet stretches and yawns before it goes.
+// 6. Sleep may go on into the next slot. Paths go round walls and the furniture it cannot climb.
+// 7. A stroked pet rolls on its back, then plays where it was touched, on the furniture it lies on if any.
 import { type FurnitureKind, type Pet, type Point, pointInPolygon } from "../model";
 import { hash } from "./art";
+import type { AnimalPose } from "./animals";
 import { Grid } from "./grid";
 import type { Furniture, Scene } from "./scene";
 
 const SLOT = 40;
+// Seconds of stretching and yawning after a sleep, and of kneading before one.
+const WAKE = 3;
+const KNEAD = 4;
+// Seconds a stroked pet rolls on its back before it plays.
+const ROLL = 2.5;
 // Pets climb onto these or lie on them; the rest of the furniture they walk round.
 const CLIMB = new Set<FurnitureKind>(["sofa", "bed", "chair", "bench", "garden_sofa", "rug", "cat_tree", "pet_bed", "pouf"]);
-// A dog lies on these themselves, not on the floor in front of them.
-const DOG_BEDS = new Set<FurnitureKind>(["rug", "pet_bed"]);
+// A dog or a rabbit lies on these themselves, not on the floor in front of them.
+const LOW_BEDS = new Set<FurnitureKind>(["rug", "pet_bed"]);
 const LOW_GARDEN = new Set(["lawn", "paving", "terrace", "bed", "vegetable", "manhole"]);
 
-export type PetState = "walk" | "run" | "stalk" | "sleep" | "sit" | "wash" | "crouch" | "pounce" | "play" | "carry";
+export type PetState = AnimalPose;
 
 export interface Spot {
   at: Point;
   /** The piece of furniture the spot lies on, for drawing the pet at its height. */
   on?: Furniture;
-  kind: "rest" | "floor" | "window" | "garden";
+  kind: "rest" | "floor" | "window" | "garden" | "tree";
 }
 
-/** A ball of yarn, a ball or a prey by the pet, how high over the ground (m) and how faded (1 to 0) it is. */
+/** A ball of yarn, a ball, a prey or a carrot by the pet, how high over the ground (m) and how faded (1 to 0) it is. */
 export interface Toy {
-  kind: "yarn" | "ball" | "fly" | "butterfly";
+  kind: "yarn" | "ball" | "fly" | "butterfly" | "carrot";
   at: Point;
   height: number;
   fade?: number;
@@ -45,9 +58,11 @@ export interface PetPlace {
   hop: number;
   on?: Furniture;
   toy?: Toy;
+  /** A hamster: where its cage stands; x, y is the cage too. */
+  cage?: boolean;
 }
 
-type Activity = "sleep" | "sit" | "wash" | "stroll" | "zoomies" | "play" | "hunt" | "fetch";
+type Activity = "sleep" | "sit" | "wash" | "stroll" | "zoomies" | "play" | "hunt" | "fetch" | "scratch" | "dig" | "eat";
 
 interface Plan {
   spot: Spot;
@@ -61,29 +76,51 @@ interface Plan {
   ball?: Point;
 }
 
+type Kind = "feline" | "dog" | "rabbit" | "hamster";
+
 function seed(text: string): number {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
   return h >>> 0;
 }
 
+/** What a kind of pet does how often, by weight. */
+const WEIGHTS: Record<Pet["species"], [Activity, number][]> = {
+  cat: [["sleep", 0.28], ["sit", 0.08], ["wash", 0.08], ["stroll", 0.15], ["zoomies", 0.06], ["play", 0.13], ["hunt", 0.14], ["scratch", 0.08]],
+  tiger: [["sleep", 0.38], ["sit", 0.1], ["wash", 0.1], ["stroll", 0.2], ["zoomies", 0.02], ["play", 0.08], ["hunt", 0.12]],
+  dog: [["sleep", 0.2], ["sit", 0.08], ["stroll", 0.27], ["zoomies", 0.1], ["fetch", 0.27], ["dig", 0.08]],
+  rabbit: [["sleep", 0.25], ["sit", 0.12], ["wash", 0.1], ["stroll", 0.18], ["zoomies", 0.1], ["eat", 0.25]],
+  hamster: [["sleep", 0.4], ["play", 0.35], ["eat", 0.25]],
+};
+
 export class PetLife {
   readonly pet: Pet;
   private readonly scene: Scene;
   private readonly seed: number;
+  private readonly kind: Kind;
   private readonly grid: Grid;
   private readonly rest: Spot[] = [];
   private readonly floor: Spot[] = [];
   private readonly windows: Spot[] = [];
   private readonly garden: Spot[] = [];
+  private readonly trees: Spot[] = [];
   private readonly plans = new Map<number, Plan>();
+  // A hamster's cage: one floor spot by a wall, the same on every screen.
+  private readonly cage?: Point;
 
   constructor(scene: Scene, pet: Pet) {
     this.scene = scene;
     this.pet = pet;
     this.seed = seed(pet.id) % 100000;
+    const species = pet.species;
+    this.kind = species === "cat" || species === "tiger" ? "feline" : species === "dog" ? "dog" : species === "rabbit" ? "rabbit" : "hamster";
     this.grid = new Grid(scene, (p) => this.walkable(p));
     this.findSpots();
+    if (this.kind === "hamster") {
+      const byWall = this.floor.filter((spot) => !this.grid.isOpen([spot.at[0], spot.at[1] - 0.4]) || !this.grid.isOpen([spot.at[0] - 0.4, spot.at[1]]));
+      const choice = byWall.length ? byWall : this.floor;
+      this.cage = choice.length ? choice[Math.floor(hash(this.seed, 1, 2) * choice.length)].at : undefined;
+    }
   }
 
   private walkable(p: Point): boolean {
@@ -100,17 +137,22 @@ export class PetLife {
 
   private findSpots(): void {
     const s = this.scene;
-    const dog = this.pet.species === "dog";
+    // A dog and a rabbit lie on the floor in front of a sofa or a bed; a cat and a tiger on it.
+    const onFloor = this.kind === "dog" || this.kind === "rabbit";
     for (const f of s.furniture) {
       if (!CLIMB.has(f.kind) || (f.room && !f.room.indoor && f.kind !== "garden_sofa")) continue;
       const [x0, y0, x1, y1] = f.box;
       const wide = x1 - x0 >= y1 - y0;
       const length = wide ? x1 - x0 : y1 - y0;
+      if (f.kind === "cat_tree") {
+        // Claws are sharpened standing on the floor beside the post.
+        const side: Point = [x0 - 0.25, (y0 + y1) / 2];
+        if (this.grid.isOpen(side)) this.trees.push({ at: side, kind: "tree" });
+      }
       for (let d = 0.35; d < length - 0.2; d += 0.6) {
         const at: Point = wide ? [x0 + d, (y0 + y1) / 2] : [(x0 + x1) / 2, y0 + d];
         if (!pointInPolygon(at, f.points)) continue;
-        if (dog && !DOG_BEDS.has(f.kind)) {
-          // A dog lies on the floor in front of the sofa or the bed.
+        if (onFloor && !LOW_BEDS.has(f.kind)) {
           const front: Point = wide ? [at[0], y1 + 0.35] : [x1 + 0.35, at[1]];
           if (this.grid.isOpen(front)) this.rest.push({ at: front, kind: "rest" });
         } else this.rest.push({ at, on: f, kind: "rest" });
@@ -137,11 +179,11 @@ export class PetLife {
     const known = this.plans.get(slot);
     if (known) return known;
     const r = (n: number) => hash(this.seed, slot, n);
-    const dog = this.pet.species === "dog";
+    const dog = this.kind === "dog";
     let plan: Plan | undefined;
     if (depth < 12) {
       const before = this.plan(slot - 1, depth + 1);
-      // Sleep may go on into the next slot, a cat's more often than a dog's.
+      // Rule 6: sleep may go on into the next slot, a cat's more often than a dog's.
       if (before.activity === "sleep" && r(1) < (dog ? 0.3 : 0.45)) plan = { spot: before.spot, activity: "sleep", via: [] };
     }
     if (!plan) {
@@ -150,19 +192,21 @@ export class PetLife {
       const pick = (spots: Spot[], n: number) => spots[Math.floor(r(n) * spots.length)];
       const anywhere = this.floor.length ? this.floor : this.rest;
       const outside = day && this.garden.length ? [...anywhere, ...this.garden] : anywhere;
-      const weights: [Activity, number][] = dog
-        ? [["sleep", 0.22], ["sit", 0.08], ["stroll", 0.3], ["zoomies", 0.1], ["fetch", 0.3]]
-        : [["sleep", 0.3], ["sit", 0.1], ["wash", 0.08], ["stroll", 0.17], ["zoomies", 0.06], ["play", 0.14], ["hunt", 0.15]];
+      const weights = WEIGHTS[this.pet.species].filter(([a]) => (a !== "scratch" || this.trees.length) && (a !== "dig" || (day && this.garden.length)));
       let roll = r(2) * weights.reduce((sum, [, w]) => sum + w, 0);
       const activity = weights.find(([, w]) => (roll -= w) < 0)?.[0] ?? "sit";
       const fallback = { at: this.grid.centre(Math.floor(this.grid.cols / 2), Math.floor(this.grid.rows / 2)), kind: "floor" as const };
-      if (!anywhere.length) plan = { spot: fallback, activity: "sit", via: [] };
+      if (this.kind === "hamster") plan = { spot: fallback, activity, via: [] };
+      else if (!anywhere.length) plan = { spot: fallback, activity: "sit", via: [] };
       else if (activity === "sleep") plan = { spot: pick(this.rest.length ? this.rest : anywhere, 3), activity, via: [] };
       else if (activity === "sit") plan = { spot: pick(this.windows.length ? this.windows : anywhere, 4), activity, via: [] };
       else if (activity === "wash") plan = { spot: pick(anywhere, 5), activity, via: [] };
       else if (activity === "stroll") plan = { spot: pick(outside, 6), activity, via: [pick(outside, 7), pick(outside, 8), pick(outside, 9)] };
       else if (activity === "zoomies") plan = { spot: pick(anywhere, 10), activity, via: [pick(anywhere, 11), pick(anywhere, 12)] };
       else if (activity === "play") plan = { spot: pick(anywhere, 13), activity, via: [] };
+      else if (activity === "scratch") plan = { spot: pick(this.trees, 19), activity, via: [] };
+      else if (activity === "dig") plan = { spot: pick(this.garden, 21), activity, via: [] };
+      else if (activity === "eat") plan = { spot: pick(day && this.garden.length && r(22) < 0.6 ? this.garden : anywhere, 23), activity, via: [] };
       else if (activity === "hunt") {
         // The prey: a fly by a window inside, a butterfly in the garden by day. The cat creeps up from a metre away.
         const garden = day && this.garden.length && r(14) < 0.6;
@@ -198,7 +242,20 @@ export class PetLife {
     const slot = Math.floor(time / SLOT);
     const plan = this.plan(slot);
     const before = this.plan(slot - 1);
-    const dog = this.pet.species === "dog";
+    if (this.kind === "hamster") return this.inCage(plan, time - slot * SLOT);
+    const dog = this.kind === "dog";
+    const rabbit = this.kind === "rabbit";
+    const facing = hash(this.seed, slot, 20) < 0.5 ? "left" : "right";
+    let elapsed = time - slot * SLOT;
+    // Rule 5: waking up, a stretch and a yawn where it slept before it goes.
+    if (before.activity === "sleep" && plan.activity !== "sleep") {
+      if (elapsed < WAKE) {
+        const at = before.spot.at;
+        const state: PetState = rabbit ? "wash" : elapsed < WAKE / 2 ? "stretch" : "yawn";
+        return { x: at[0], y: at[1], state, facing, walked: 0, hop: 0, on: before.spot.on };
+      }
+      elapsed -= WAKE;
+    }
     const stops = [before.spot.at, ...plan.via.map((v) => v.at), plan.approach ?? plan.spot.at];
     const route: Point[] = [];
     for (let i = 1; i < stops.length; i++) {
@@ -206,8 +263,9 @@ export class PetLife {
       route.push(...(route.length ? leg.slice(1) : leg));
     }
     const running = plan.activity === "zoomies";
-    const speed = running ? 2.4 : plan.activity === "stroll" ? (dog ? 0.9 : 0.5) : dog ? 1.1 : 0.7;
-    let left = (time - slot * SLOT) * speed;
+    const big = this.pet.species === "tiger";
+    const speed = running ? (big ? 2 : 2.4) : plan.activity === "stroll" ? (dog ? 0.9 : rabbit ? 0.6 : big ? 0.45 : 0.5) : dog ? 1.1 : rabbit ? 0.8 : 0.7;
+    let left = elapsed * speed;
     let walked = 0;
     for (let i = 1; i < route.length; i++) {
       const a = route[i - 1];
@@ -215,52 +273,101 @@ export class PetLife {
       const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
       if (left <= d) {
         const k = d > 0 ? left / d : 0;
-        return { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, state: running ? "run" : "walk", facing: b[0] < a[0] ? "left" : "right", walked: walked + left, hop: 0 };
+        const done = walked + left;
+        const way = b[0] < a[0] ? "left" : "right";
+        // A rabbit hops; a dog on a stroll keeps its nose down now and then.
+        if (rabbit) {
+          const hop = Math.abs(Math.sin((done * Math.PI) / (running ? 0.5 : 0.32)));
+          return { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, state: "hop", facing: way, walked: done, hop: hop * (running ? 0.14 : 0.07) };
+        }
+        const sniffing = dog && plan.activity === "stroll" && Math.floor(done / 1.3) % 3 === 1;
+        return { x: a[0] + (b[0] - a[0]) * k, y: a[1] + (b[1] - a[1]) * k, state: running ? "run" : sniffing ? "sniff" : "walk", facing: way, walked: done, hop: 0 };
       }
       left -= d;
       walked += d;
     }
     const dwell = left / speed;
-    const facing = hash(this.seed, slot, 20) < 0.5 ? "left" : "right";
     const at = plan.spot.at;
+    const on = plan.spot.on;
     switch (plan.activity) {
       case "play":
-        return dog ? this.bow(at, dwell, facing) : this.batYarn(at, dwell);
+        return dog ? this.bow(at, dwell, facing) : rabbit ? this.binky(at, dwell, facing) : this.batYarn(at, dwell, on);
       case "hunt":
         return this.hunt(plan, dwell);
       case "fetch":
         return plan.ball ? this.fetch(at, plan.ball, dwell) : this.bow(at, dwell, facing);
-      case "stroll":
+      case "scratch":
+        return { x: at[0], y: at[1], state: dwell < 7 ? "scratch" : "sit", facing: "right", walked: 0, hop: 0 };
+      case "dig":
+        return { x: at[0], y: at[1], state: dwell % 9 < 6 ? "dig" : "sit", facing, walked: 0, hop: 0 };
+      case "eat":
+        return { x: at[0], y: at[1], state: "eat", facing, walked: 0, hop: 0, toy: plan.spot.kind === "garden" ? undefined : { kind: "carrot", at: [at[0] + (facing === "right" ? 0.22 : -0.22), at[1] + 0.02], height: 0 } };
       case "zoomies":
-        return { x: at[0], y: at[1], state: dwell < 6 || dog ? "sit" : "wash", facing, walked: 0, hop: 0, on: plan.spot.on };
+        // A dog that has run about chases its tail round and round before it sits.
+        if (dog && dwell < 3) return { x: at[0], y: at[1], state: "run", facing: Math.floor(dwell * 5) % 2 ? "left" : "right", walked: dwell * 3, hop: 0 };
+        if (rabbit && dwell < 4) return this.binky(at, dwell, facing);
+        return { x: at[0], y: at[1], state: dwell < 6 || dog ? "sit" : "wash", facing, walked: 0, hop: 0 };
+      case "stroll":
+        return { x: at[0], y: at[1], state: dwell < 6 || dog ? "sit" : "wash", facing, walked: 0, hop: 0, on };
+      case "sleep": {
+        // Rule 1: a cat kneads a soft bed before it settles, unless it slept there already.
+        const fresh = before.activity !== "sleep" || before.spot !== plan.spot;
+        const knead = this.kind === "feline" && on && fresh && dwell < KNEAD;
+        return { x: at[0], y: at[1], state: knead ? "knead" : "sleep", facing, walked: 0, hop: 0, on };
+      }
       default:
-        return { x: at[0], y: at[1], state: plan.activity, facing, walked: 0, hop: 0, on: plan.spot.on };
+        return { x: at[0], y: at[1], state: plan.activity as PetState, facing, walked: 0, hop: 0, on };
     }
   }
 
-  /** Playing where the pet was touched: a cat after a ball of yarn, a dog bowing and jumping. */
-  playHere(at: Point, since: number): PetPlace {
-    return this.pet.species === "dog" ? this.bow(at, since, "right") : this.batYarn(at, since);
+  /** Rule 4: a hamster in its cage, running in the wheel, eating at its bowl or asleep in its house. */
+  private inCage(plan: Plan, elapsed: number): PetPlace {
+    const at = this.cage ?? plan.spot.at;
+    const state: PetState = plan.activity === "play" ? (elapsed % 14 < 10 ? "run" : "sit") : plan.activity === "eat" ? "eat" : "sleep";
+    return { x: at[0], y: at[1], state, facing: "right", walked: elapsed * 4, hop: 0, cage: true };
   }
 
-  /** A cat after a ball of yarn rolling round it: it crouches, pounces and bats it on. */
-  private batYarn(at: Point, dwell: number): PetPlace {
+  /** Rule 7: rolling on its back where it was touched, then playing there, on its furniture if it lies on one. */
+  playHere(at: Point, since: number, on?: Furniture): PetPlace {
+    if (this.kind === "hamster") return { ...this.inCage({ spot: { at, kind: "floor" }, activity: "eat", via: [] }, since), x: at[0], y: at[1] };
+    if (since < ROLL && this.kind !== "rabbit") return { x: at[0], y: at[1], state: "roll", facing: "right", walked: 0, hop: 0, on };
+    const playing = since - ROLL;
+    if (this.kind === "dog") return { ...this.bow(at, playing, "right"), on };
+    if (this.kind === "rabbit") return { ...this.binky(at, since, "right"), on };
+    return this.batYarn(at, playing, on);
+  }
+
+  /**
+   * A cat after a ball of yarn rolling round it (a tiger after a big ball): it crouches, pounces and bats it on. On a
+   * piece of furniture the ball stays on its top.
+   */
+  private batYarn(at: Point, dwell: number, on?: Furniture): PetPlace {
     const angle = dwell * 1.6 + (this.seed % 7);
-    const reach = 0.3 + 0.12 * Math.sin(dwell * 0.9);
-    const toy: Point = [at[0] + Math.cos(angle) * reach, at[1] + Math.sin(angle) * reach * 0.7];
+    const reach = (on ? 0.22 : 0.3) + (on ? 0.05 : 0.12) * Math.sin(dwell * 0.9);
+    let toy: Point = [at[0] + Math.cos(angle) * reach, at[1] + Math.sin(angle) * reach * 0.7];
+    if (on) toy = [Math.min(Math.max(toy[0], on.box[0] + 0.08), on.box[2] - 0.08), Math.min(Math.max(toy[1], on.box[1] + 0.08), on.box[3] - 0.08)];
+    const kind = this.pet.species === "tiger" ? "ball" : "yarn";
     const facing = toy[0] < at[0] ? "left" : "right";
     const phase = dwell % 3.2;
-    if (phase < 2.2) return { x: at[0], y: at[1], state: phase < 1.4 ? "crouch" : "play", facing, walked: 0, hop: 0, toy: { kind: "yarn", at: toy, height: 0 } };
+    if (phase < 2.2) return { x: at[0], y: at[1], state: phase < 1.4 ? "crouch" : "play", facing, walked: 0, hop: 0, on, toy: { kind, at: toy, height: 0 } };
     const k = Math.min(1, (phase - 2.2) / 0.5);
     const x = at[0] + (toy[0] - at[0]) * 0.6 * Math.sin(k * Math.PI);
     const y = at[1] + (toy[1] - at[1]) * 0.6 * Math.sin(k * Math.PI);
-    return { x, y, state: k < 1 ? "pounce" : "play", facing, walked: 0, hop: k < 1 ? 0.15 * Math.sin(k * Math.PI) : 0, toy: { kind: "yarn", at: toy, height: 0 } };
+    return { x, y, state: k < 1 ? "pounce" : "play", facing, walked: 0, hop: k < 1 ? 0.15 * Math.sin(k * Math.PI) : 0, on, toy: { kind, at: toy, height: 0 } };
   }
 
   /** A dog asking to play: down on its front legs, then a jump, again and again. */
   private bow(at: Point, dwell: number, facing: "left" | "right"): PetPlace {
     const phase = dwell % 2;
     return { x: at[0], y: at[1], state: phase < 1.3 ? "play" : "sit", facing, walked: 0, hop: phase >= 1.3 ? 0.12 * Math.sin(((phase - 1.3) / 0.7) * Math.PI) : 0 };
+  }
+
+  /** A rabbit jumping for joy: up in the air with a twist, turning round, again and again. */
+  private binky(at: Point, dwell: number, facing: "left" | "right"): PetPlace {
+    const phase = dwell % 1.4;
+    const up = phase < 0.6 ? Math.sin((phase / 0.6) * Math.PI) : 0;
+    const turned = Math.floor(dwell / 1.4) % 2 ? (facing === "left" ? "right" : "left") : facing;
+    return { x: at[0], y: at[1], state: up > 0 ? "hop" : "sit", facing: turned, walked: up > 0.2 ? 0.16 : 0, hop: up * 0.25 };
   }
 
   /**

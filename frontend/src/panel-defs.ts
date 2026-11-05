@@ -1,7 +1,7 @@
 // Types, tables and helpers of the editor: its tools and tabs, the names and hints it shows, and small
 // functions of geometry and storage it shares between its parts.
 import { N_, t } from "./i18n";
-import { levelBounds, type AreaKind, type CarBody, type FenceStyle, type Device, type FloorFinish, type FurnitureKind, type Item, type ItemType, type Point, type Zone } from "./model";
+import { levelBounds, type AreaKind, type CarBody, type FenceStyle, type Device, type FloorFinish, type FurnitureKind, type Item, type ItemType, type PetSpecies, type Point, type Zone } from "./model";
 
 export type Tool = "select" | "wall" | "door" | "window" | "gate" | "room" | "zone" | "item" | "light" | "sprinkler" | "mower" | "vacuum" | "camera" | "radar" | "sensor" | "screen" | "indicator" | "mark" | "calibrate";
 export type Selection =
@@ -289,6 +289,20 @@ export const COAT_LABELS: Record<string, string> = {
   brown: N_("Brown"),
   golden: N_("Golden"),
   spotted: N_("Spotted"),
+  siamese: N_("Siamese"),
+  tuxedo: N_("Tuxedo"),
+  husky: N_("Husky"),
+  blacktan: N_("Black and tan"),
+  dutch: N_("Dutch"),
+  orange: N_("Orange"),
+};
+
+export const SPECIES_LABELS: Record<PetSpecies, string> = {
+  cat: N_("Cat"),
+  dog: N_("Dog"),
+  rabbit: N_("Rabbit"),
+  hamster: N_("Hamster"),
+  tiger: N_("Tiger"),
 };
 
 export const ZONE_LABELS: Record<Zone["kind"], string> = {

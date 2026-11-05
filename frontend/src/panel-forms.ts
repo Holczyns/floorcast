@@ -72,6 +72,7 @@ import {
   FURNITURE_LABELS,
   FLOOR_LABELS,
   COAT_LABELS,
+  SPECIES_LABELS,
   ZONE_LABELS,
   isNumberedLevel,
   inContext,
@@ -1033,7 +1034,7 @@ function petProperties(p: FloorCastPanel) {
   return html`
     <h3>${t("Pets")}</h3>
     <p class="muted">
-      ${t("Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them.")}
+      ${t("Mascots of the pixel look: they live their own life on the card, the same on every screen, and step aside for people. A tap strokes them. A hamster lives in a cage by a wall.")}
     </p>
     ${pets.map(
       (pet) => html`
@@ -1047,8 +1048,7 @@ function petProperties(p: FloorCastPanel) {
                 pet.coat = PET_COATS[pet.species][0];
               })}
           >
-            <option value="cat" ?selected=${pet.species === "cat"}>${t("Cat")}</option>
-            <option value="dog" ?selected=${pet.species === "dog"}>${t("Dog")}</option>
+            ${(Object.keys(PET_COATS) as PetSpecies[]).map((species) => html`<option value=${species} ?selected=${pet.species === species}>${t(SPECIES_LABELS[species])}</option>`)}
           </select>
         </label>
         <label class="field">
@@ -1069,12 +1069,14 @@ function petProperties(p: FloorCastPanel) {
       `,
     )}
     <div class="row">
-      <button @click=${() => p.change(() => (plan.pets = [...pets, { id: uid("pet"), name: t("Cat"), species: "cat", coat: "ginger", level: p.level.id }]))}>
-        ${t("Add cat")}
-      </button>
-      <button @click=${() => p.change(() => (plan.pets = [...pets, { id: uid("pet"), name: t("Dog"), species: "dog", coat: "brown", level: p.level.id }]))}>
-        ${t("Add dog")}
-      </button>
+      ${(Object.keys(PET_COATS) as PetSpecies[]).map(
+        (species) =>
+          html`<button
+            @click=${() => p.change(() => (plan.pets = [...pets, { id: uid("pet"), name: t(SPECIES_LABELS[species]), species, coat: PET_COATS[species][0], level: p.level.id }]))}
+          >
+            + ${t(SPECIES_LABELS[species])}
+          </button>`,
+      )}
     </div>
   `;
 }
