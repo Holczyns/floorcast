@@ -11,8 +11,7 @@
  "pets": [
   { "id": "pet_cat", "name": "Cat", "species": "cat", "coat": "ginger" },
   { "id": "pet_dog", "name": "Dog", "species": "dog", "coat": "golden" },
-  { "id": "pet_rabbit", "name": "Rabbit", "species": "rabbit", "coat": "dutch" },
-  { "id": "pet_hamster", "name": "Hamster", "species": "hamster", "coat": "golden" }
+  { "id": "pet_rabbit", "name": "Rabbit", "species": "rabbit", "coat": "dutch" }
  ],
  "levels": [
   {
