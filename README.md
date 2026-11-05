@@ -10,7 +10,7 @@
   <a href="https://github.com/Holczyns/floorcast/actions/workflows/validate.yml"><img src="https://github.com/Holczyns/floorcast/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/Holczyns/floorcast/actions/workflows/tests.yml"><img src="https://github.com/Holczyns/floorcast/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS custom repository"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License GPL-3.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License MIT"></a>
 </p>
 
 FloorCast shows your home as it is right now. You draw the plan once in a Home Assistant panel: walls, doors,
@@ -181,10 +181,11 @@ Translations live in `frontend/src/i18n`: a language is a folder with `card.ts` 
 translation) and `guide.ts`, registered in `card-languages.ts`, `editor-languages.ts`, `guide.ts` and `LANGUAGE_NAMES`.
 `npm run i18n` lists the texts a language does not translate yet.
 
-Issues and pull requests are welcome. By opening a pull request you agree to the contribution terms in
-[NOTICE](NOTICE).
+Issues and pull requests are welcome. Contributions are accepted under the MIT license of the project.
 
 ## License
 
-[GPL-3.0](LICENSE) with additional terms in [NOTICE](NOTICE): a changed copy must use a different name and logo and
-say "Based on FloorCast by Michal Holowko".
+[MIT](LICENSE). Code published before 5 November 2026, release 0.1.0 included, was licensed under GPL-3.0.
+
+The built card and editor in `custom_components/floorcast/www` include [Lit](https://lit.dev), Copyright Google LLC,
+under the BSD-3-Clause license; its notices are kept in the built files.

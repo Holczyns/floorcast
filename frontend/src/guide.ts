@@ -708,7 +708,7 @@ class FloorCastGuide extends LitElement {
       )}
       <footer>
         <a href="https://github.com/Holczyns/floorcast" target="_blank" rel="noreferrer">FloorCast</a> ${guide.footerBy} Michal Holowko ·
-        <a href="https://github.com/Holczyns/floorcast/blob/main/LICENSE" target="_blank" rel="noreferrer">GPL-3.0</a>
+        <a href="https://github.com/Holczyns/floorcast/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT</a>
       </footer>
     </div>`;
   }
