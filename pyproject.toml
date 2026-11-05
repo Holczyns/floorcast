@@ -1,6 +1,6 @@
 [project]
 name = "floorcast"
-version = "0.1.0"
+version = "0.2.0"
 description = "Floor plan of the home with live states for Home Assistant"
 requires-python = ">=3.13"
 license = "MIT"
