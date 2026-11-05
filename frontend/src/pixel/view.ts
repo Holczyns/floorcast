@@ -11,7 +11,7 @@ import { PPM, canvas, hash, rect } from "./art";
 import { FACE, type Furniture, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
 import { type Hunt, PetLife, type PetPlace, type PetState, hunt } from "./pets";
-import { type Player, marker, playGrid, star } from "./play";
+import { BODY, type Player, furnitureBetween, furnitureNear, marker, playGrid, star } from "./play";
 import { type Facing, OUTFITS, type Outfit, bone, drop, fightCloud, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
 import { animal, animalHeight, coatColour } from "./animals";
 
@@ -235,7 +235,8 @@ class LevelPicture {
   private readonly pets: PetLife[];
   // Ways for people round the walls, when the tracking moves them past one.
   private readonly ways: Grid;
-  // Where the character of the walking game may stand, made when the game first asks; where the pet following it is.
+  // Where the character of the walking game may stand and people walk round furniture, made when first asked; where
+  // the pet following the character is.
   private playCells?: Grid;
   private readonly followers = new Map<string, { x: number; y: number; walked: number }>();
   private readonly aside = new Map<string, Point>();
@@ -426,7 +427,7 @@ class LevelPicture {
         w = { x: p.x, y: p.y, facing: "down", moving: false, outfit: OUTFITS[this.dressed++ % OUTFITS.length], anchor: [p.x, p.y], still: 0, route: [], goal: [p.x, p.y] };
         this.walkers.set(id, w);
       }
-      const target: Point = [p.x, p.y];
+      const target = this.standAt([p.x, p.y]);
       const d = Math.hypot(target[0] - w.x, target[1] - w.y);
       if (d > JUMP) {
         w.x = target[0];
@@ -435,7 +436,7 @@ class LevelPicture {
       } else if (d > 0.04) {
         // A new place: straight to it, or round the walls between, through a door.
         if (!w.route.length || Math.hypot(w.goal[0] - target[0], w.goal[1] - target[1]) > 0.3) {
-          const way = s.wallBetween([w.x, w.y], target) ? this.ways.path([w.x, w.y], target) : [[w.x, w.y] as Point, target];
+          const way = this.wayTo([w.x, w.y], target);
           if (way.length < 2) [w.x, w.y] = target;
           w.route = way.slice(1);
         } else w.route[w.route.length - 1] = target;
@@ -806,10 +807,39 @@ class LevelPicture {
     return { x: now.x, y: now.y, state: d > 1.5 ? "run" : "walk", facing, walked: now.walked, hop: 0 };
   }
 
+  /**
+   * Where a person the radars put on a point is drawn: there, or when it falls in furniture or at its edge, the
+   * nearest point within 0.8 m clear of it on the same side of the walls. A seat or bed still takes them by the radar
+   * point, as the anchor stays on it.
+   */
+  private standAt(p: Point): Point {
+    const s = this.scene;
+    if (!furnitureNear(s, p, BODY)) return p;
+    for (let r = 0.1; r <= 0.8; r += 0.1)
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        const q: Point = [p[0] + Math.cos(a) * r, p[1] + Math.sin(a) * r];
+        if (!furnitureNear(s, q, BODY) && !s.wallBetween(p, q)) return q;
+      }
+    return p;
+  }
+
+  /**
+   * The way of a person to a new place: straight when no wall or furniture is between, round furniture and walls
+   * when there is a way, otherwise round the walls only (outside the drawn floors and lawns).
+   */
+  private wayTo(from: Point, to: Point): Point[] {
+    const s = this.scene;
+    if (!s.wallBetween(from, to) && !furnitureBetween(s, from, to)) return [from, to];
+    const round = (this.playCells ??= playGrid(s)).path(from, to);
+    if (round.length >= 2) return round;
+    return s.wallBetween(from, to) ? this.ways.path(from, to) : [from, to];
+  }
+
   /** Whether the character of the walking game may stand on a point of the plan. */
   canStand(p: Point): boolean {
     this.playCells ??= playGrid(this.scene);
-    return this.playCells.isOpen(p);
+    return this.playCells.isOpen(p) && !furnitureNear(this.scene, p, BODY);
   }
 
   /** The seat or bed nearest to a point within reach metres, for the character of the game to sit or lie on. */

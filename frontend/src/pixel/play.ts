@@ -3,6 +3,7 @@
 //
 // 1. It stands where a person can: on the floor of a room, a door, the terrace, the lawn or the paving; walls,
 //    furniture other than a rug, and garden buildings stop it. Doors are always open to it, whatever their sensors.
+//    Its body keeps BODY metres from furniture, so the drawn figure never stands in it.
 // 2. A push of the stick walks it at up to SPEED metres a second; blocked straight on, it turns a little either way
 //    to slip round corners and slide along walls.
 // 3. It faces the way it mostly goes and its steps follow the metres walked.
@@ -91,11 +92,45 @@ export function star(c: CanvasRenderingContext2D, x: number, y: number, time: nu
   }
 }
 
+/** Rule 1: how far a body keeps from furniture, in metres: about half the width of a drawn person. */
+export const BODY = 0.2;
+
+/** Distance from a point to a segment, in metres. */
+function segmentDistance(p: Point, a: Point, b: Point): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const length = dx * dx + dy * dy;
+  const t = length ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length)) : 0;
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+}
+
+/** Whether a piece of furniture, round or of corners, comes within reach metres of a point. */
+function furnitureCovers(f: Furniture, p: Point, reach: number): boolean {
+  const [x0, y0, x1, y1] = f.box;
+  if (p[0] < x0 - reach || p[0] > x1 + reach || p[1] < y0 - reach || p[1] > y1 + reach) return false;
+  const { center, diameter } = f.item;
+  if (center && diameter) return Math.hypot(p[0] - center[0], p[1] - center[1]) < diameter / 2 + reach;
+  if (pointInPolygon(p, f.points)) return true;
+  return reach > 0 && f.points.some((a, k) => segmentDistance(p, a, f.points[(k + 1) % f.points.length]) < reach);
+}
+
+/** Rule 1: whether furniture that stops a person (all but rugs and pet beds) comes within reach metres of a point. */
+export function furnitureNear(scene: Scene, p: Point, reach: number): boolean {
+  return scene.furniture.some((f) => !LOW.has(f.kind) && furnitureCovers(f, p, reach));
+}
+
+/** Whether a straight walk between two points crosses furniture that stops a person. */
+export function furnitureBetween(scene: Scene, a: Point, b: Point): boolean {
+  const steps = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.1);
+  for (let k = 1; k < steps; k++) if (furnitureNear(scene, [a[0] + ((b[0] - a[0]) * k) / steps, a[1] + ((b[1] - a[1]) * k) / steps], 0)) return true;
+  return false;
+}
+
 /** Rule 1: the cells a player may stand on, for a scene. */
 export function playGrid(scene: Scene): Grid {
   const free = (p: Point): boolean => {
     const inBox = (b: [number, number, number, number], pad = 0) => p[0] > b[0] - pad && p[0] < b[2] + pad && p[1] > b[1] - pad && p[1] < b[3] + pad;
-    if (scene.furniture.some((f) => !LOW.has(f.kind) && inBox(f.box) && pointInPolygon(p, f.points))) return false;
+    if (furnitureNear(scene, p, 0)) return false;
     if (scene.garden.some((g) => g.item.type === "tree" && g.item.center && Math.hypot(p[0] - g.item.center[0], p[1] - g.item.center[1]) < 0.3)) return false;
     if (scene.garden.some((g) => !LOW_GARDEN.has(g.item.type) && g.item.type !== "shelter" && g.item.type !== "tree" && inBox(g.box))) return false;
     if (scene.roomAt(p, false)) return true;
