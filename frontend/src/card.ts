@@ -1381,11 +1381,14 @@ class FloorCastCard extends LitElement {
   /** The button taking the card to the whole screen and back, under zoom in and out; the first level only. */
   private renderFullButton(level: Level) {
     if (!this._config.fullscreen || level.id !== this.levels()[0]?.id) return nothing;
-    return html`<button title=${this._full ? t("Leave full screen") : t("Full screen")} @click=${() => this.toggleFull()}>${this._full ? "✕" : "⛶"}</button>`;
+    return html`<button class="full-toggle" title=${this._full ? t("Leave full screen") : t("Full screen")} @click=${() => this.toggleFull()}>
+      ${this._full ? "✕" : "⛶"}
+    </button>`;
   }
 
   private renderZoomButtons(level: Level) {
-    if (this._play) return nothing;
+    // While the game is played the joystick takes the corner: only leaving the whole screen stays, above it.
+    if (this._play) return html`<div class="zoom playing">${this.renderFullButton(level)}</div>`;
     if (!this.zoomOn) return this._config.fullscreen ? html`<div class="zoom">${this.renderFullButton(level)}</div>` : nothing;
     return html`<div class="zoom">
       ${this._views[level.id]
@@ -2604,6 +2607,28 @@ class FloorCastCard extends LitElement {
         min-height: 0;
         padding: 0;
         overflow: hidden;
+      }
+      ha-card:fullscreen .zoom {
+        right: 14px;
+        bottom: 14px;
+        gap: 8px;
+      }
+      ha-card:fullscreen .zoom button {
+        width: 46px;
+        height: 46px;
+        border-radius: 23px;
+        font-size: 24px;
+        opacity: 0.92;
+      }
+      ha-card:fullscreen .zoom .full-toggle {
+        border: 2px solid rgba(255, 255, 255, 0.75);
+        background: rgba(20, 22, 28, 0.85);
+        color: #fff;
+        opacity: 1;
+      }
+      ha-card:fullscreen .zoom.playing {
+        right: 71px;
+        bottom: 176px;
       }
       ha-card:fullscreen .level.zoomable,
       ha-card:fullscreen .level.zoomable svg {
