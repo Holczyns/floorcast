@@ -232,7 +232,9 @@ export const sections: GuideSection[] = [
           sadza ją na kanapie, krześle lub ławce albo kładzie do łóżka, albo przełącza najbliższe światło, prawdziwe. Na
           trampolinie skacze. Dwa przełączniki w oknie wyboru postaci, zapamiętywane przez przeglądarkę:
           <b>Prawdziwe światła</b> (wyłączony: światła przełączają się tylko na obrazku, do końca gry) i <b>Zawsze dzień</b>
-          (obraz pokazuje dzień o każdej porze). Osoby widziane przez radary dalej chodzą po planie.
+          (obraz pokazuje dzień o każdej porze). Co jakiś czas zwierzak prosi w dymku o swoją rzecz (kłębek, piłkę,
+          marchewkę albo kość): znajdź ją, wejdź na nią, żeby podnieść, i zanieś zwierzakowi, który wtedy się bawi. Osoby
+          widziane przez radary dalej chodzą po planie i machają z serduszkiem, gdy postać do nich podejdzie.
         </li>
         <li>W edytorze przełącznik <b>Piksele</b> obok <b>Ogród</b> i <b>Na żywo</b> pokazuje plan w widoku pikselowym pod jego obrysami.</li>
       </ul>

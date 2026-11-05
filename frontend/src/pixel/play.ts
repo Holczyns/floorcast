@@ -10,12 +10,17 @@
 // 4. Stars lie about every level the card shows, each STAR_SPACING metres or more from the others and from the
 //    character; new ones keep coming, so a level always has between STAR_MIN and STAR_MAX of them.
 // 5. It may sit on a seat, lie in a bed and jump on the trampoline; a pet it strokes follows it for a while.
+// 6. Now and then a pet on its level asks for its thing in a bubble (WISHES): the thing lies somewhere on the level,
+//    the character picks it up by walking onto it and gives it by coming near the pet, which then plays happily.
+// 7. A person the radars see waves with a heart over the head when the character comes near, once until it leaves.
 // Nothing measures it and nothing in the home moves for it, except what the action button switches.
 import { type Point, pointInPolygon } from "../model";
 import { rect } from "./art";
+import { bone, toy } from "./sprites";
 import { Grid } from "./grid";
 import type { Furniture, Scene } from "./scene";
 import type { Facing, Outfit } from "./sprites";
+import type { PetSpecies } from "../model";
 
 /** Metres a second at a full push of the stick. */
 export const SPEED = 2.2;
@@ -34,6 +39,32 @@ const STAR_SPACING = 1.4;
 export const STAR_EVERY: [number, number] = [3, 8];
 /** Seconds a stroked pet follows the character. */
 export const FRIEND_SECONDS = 60;
+
+/** Rule 6: the thing each pet asks for. */
+export type Wish = "yarn" | "ball" | "carrot" | "bone";
+export const WISHES: Record<PetSpecies, Wish> = { cat: "yarn", dog: "ball", rabbit: "carrot", tiger: "bone" };
+/**
+ * Rule 6: seconds before the first task and between tasks, how near the character picks the thing up and gives it,
+ * and how many places are tried for the thing, the one farthest from the pet kept.
+ */
+export const TASK_FIRST = 8;
+export const TASK_EVERY = 15;
+export const TASK_PICK = 0.5;
+export const TASK_GIVE = 1.0;
+export const TASK_TRIES = 12;
+/** A task of the game: the pet asking, its level and thing, where the thing lies, or that the character carries it. */
+export interface Task {
+  pet: string;
+  level: string;
+  wish: Wish;
+  at: Point;
+  carried: boolean;
+}
+
+/** Rule 7: how near the character comes for a person to wave, how far it goes for them to wave again, seconds. */
+export const GREET_NEAR = 0.9;
+export const GREET_AWAY = 1.5;
+export const GREET_SECONDS = 3;
 
 /** The characters to choose from: girls and boys in the colours of the radar people and more. */
 export const PLAYER_OUTFITS: Outfit[] = [
@@ -179,6 +210,35 @@ export function stepPlayer(player: Player, push: [number, number], dt: number, c
   player.x = next[0];
   player.y = next[1];
   player.moving = true;
+}
+
+/** Rule 6: the thing a pet asks for, with its foot at x, y. */
+export function wishThing(c: CanvasRenderingContext2D, wish: Wish, x: number, y: number, time: number): void {
+  if (wish === "bone") bone(c, x, y);
+  else toy(c, wish, x, y, 0, time);
+}
+
+/** A white speech bubble with its tail at x, y and what inside draws at its middle. */
+export function bubble(c: CanvasRenderingContext2D, x: number, y: number, inside: (cx: number, cy: number) => void): void {
+  const top = y - 13;
+  rect(c, x - 8, top - 1, 17, 12, "#1e1a24");
+  rect(c, x - 9, top, 19, 10, "#1e1a24");
+  rect(c, x - 7, top, 15, 10, "#ffffff");
+  rect(c, x - 8, top + 1, 17, 8, "#ffffff");
+  rect(c, x - 1, top + 10, 3, 1, "#1e1a24");
+  rect(c, x, top + 10, 1, 2, "#ffffff");
+  rect(c, x, top + 12, 1, 1, "#1e1a24");
+  inside(x, top + 5);
+}
+
+/** Rule 7: a raised hand waving by the head of a standing person with feet at x, y. */
+export function wave(c: CanvasRenderingContext2D, x: number, y: number, time: number, o: Outfit): void {
+  const tilt = Math.floor(time * 6) % 2;
+  const ax = x + 6 + tilt;
+  rect(c, x + 5, y - 20, 2, 3, "#1e1a24");
+  rect(c, ax - 1, y - 30, 4, 11, "#1e1a24");
+  rect(c, ax, y - 22, 2, 3, o.shirt);
+  rect(c, ax, y - 29, 2, 7, o.skin);
 }
 
 /** The marker over the player's head: a yellow arrow bobbing down at it, with a dark line round it. */

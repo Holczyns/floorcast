@@ -106,10 +106,10 @@ the lights, blinds, gate, car, sprinklers, a visitor at the door or a water leak
 
 ### Play
 
-- **Full screen** button on the card: the plan alone on the whole screen, filling it, moved with one finger.
+- **Full screen** button under the zoom buttons: the plan alone on the whole screen, filling it, moved with one finger.
 - **Walking game**: on the whole screen a chosen character with a marker walks the home with a joystick or the arrow
   keys, stops at walls and furniture, collects stars that keep appearing on every level, takes the stairs to the next level, sits on
-  sofas, lies in beds, jumps on the trampoline, strokes the pets (which then follow it) and switches real lights with
+  sofas, lies in beds, jumps on the trampoline, strokes the pets (which then follow it), brings pets the things they ask for, waves to the people the radars see and switches real lights with
   its action button.
 
 - **Lamp game** for children: one of the chosen lamps lights up, whoever runs to it puts it out, and after a moment in

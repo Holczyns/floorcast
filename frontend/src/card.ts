@@ -12,6 +12,13 @@ import {
   STAR_MIN,
   STAR_REACH,
   STAR_START,
+  TASK_EVERY,
+  TASK_FIRST,
+  TASK_GIVE,
+  TASK_PICK,
+  TASK_TRIES,
+  type Task,
+  WISHES,
   placeStar,
   stepPlayer,
 } from "./pixel/play";
@@ -290,6 +297,9 @@ class FloorCastCard extends LitElement {
   private readonly _stars = new Map<string, Point[]>();
   private _starsCollected = 0;
   private _nextStarAt = 0;
+  // The task of a pet now, and when the next one comes while there is none (milliseconds of the frame clock).
+  private _task?: Task;
+  private _taskAt = 0;
   private _stairsArmed = false;
   // Picker switches, kept on this browser: the action button switches the real lights, or only the drawn ones; the
   // pixel view shows the day whatever the clock. The drawn lights the game switched (until it stops), and the home
@@ -481,6 +491,7 @@ class FloorCastCard extends LitElement {
       robot: (id) => this._robots.get(id)?.place,
       player: (level) => (this._play && level.id === this._playLevel ? this._player : undefined),
       stars: (level) => (this._play ? (this._stars.get(level.id) ?? []) : []),
+      task: () => (this._play ? this._task : undefined),
       track: (id) => this._robots.get(id)?.track ?? [],
     });
     const targets: PixelTarget[] = [];
@@ -755,6 +766,8 @@ class FloorCastCard extends LitElement {
     this._stars.clear();
     this._starsCollected = 0;
     this._nextStarAt = 0;
+    this._task = undefined;
+    this._taskAt = performance.now() + TASK_FIRST * 1000;
     this._push = [0, 0];
     window.addEventListener("keydown", this._keyDown);
     window.addEventListener("keyup", this._keyUp);
@@ -851,6 +864,7 @@ class FloorCastCard extends LitElement {
     this._play = false;
     this._picker = false;
     this._stars.clear();
+    this._task = undefined;
     this._player = undefined;
     // The drawn lights go back to the real ones.
     this._fakeLights.clear();
@@ -882,11 +896,56 @@ class FloorCastCard extends LitElement {
     this.pickStars(player);
     this.climbStairs(level, player);
     this.sowStars(now);
+    this.runTask(now, level, player);
     if (now - this._cameraAt > 50) {
       this._cameraAt = now;
       this.followPlayer(level, player);
     }
   };
+
+  /**
+   * Tasks of the pets: when one is due, a pet drawn on the level of the character asks for its thing, which lies on
+   * a free place of that level, the farthest of a few from the pet. Walking onto the thing picks it up; coming near
+   * the pet with it gives it, the pet plays, and the next task comes after TASK_EVERY seconds. A pet no longer drawn
+   * (eaten by a tiger, or gone) ends its task.
+   */
+  private runTask(now: number, level: Level, player: Player): void {
+    const pixel = this._pixel;
+    if (!pixel) return;
+    const task = this._task;
+    if (!task) {
+      if (now < this._taskAt) return;
+      this._taskAt = now + 5000;
+      const pets = pixel.petsOn(level.id);
+      const species = new Map((this._plan?.pets ?? []).map((pet) => [pet.id, pet.species]));
+      const pet = pets[Math.floor(Math.random() * pets.length)];
+      const kind = pet ? species.get(pet.id) : undefined;
+      if (!pet || !kind) return;
+      let best: { at: Point; d: number } | undefined;
+      for (let k = 0; k < TASK_TRIES; k++) {
+        const at = placeStar(drawnBounds(level), (p) => pixel.canStand(level.id, p), [], [pet.at, [player.x, player.y]]);
+        const d = at ? Math.hypot(at[0] - pet.at[0], at[1] - pet.at[1]) : 0;
+        if (at && (!best || d > best.d)) best = { at, d };
+      }
+      if (best) this._task = { pet: pet.id, level: level.id, wish: WISHES[kind], at: best.at, carried: false };
+      return;
+    }
+    if (task.level !== level.id) return;
+    const pet = pixel.petsOn(level.id).find((p) => p.id === task.pet);
+    if (!pet) {
+      this._task = undefined;
+      this._taskAt = now + TASK_EVERY * 1000;
+      return;
+    }
+    if (!task.carried) {
+      task.carried = Math.hypot(task.at[0] - player.x, task.at[1] - player.y) < TASK_PICK;
+      return;
+    }
+    if (Math.hypot(pet.at[0] - player.x, pet.at[1] - player.y) >= TASK_GIVE) return;
+    pixel.cheerPet(level.id, pet.id);
+    this._task = undefined;
+    this._taskAt = now + TASK_EVERY * 1000;
+  }
 
   /** Stars within reach on the level of the character are picked up and counted. */
   private pickStars(player: Player): void {
@@ -1319,8 +1378,15 @@ class FloorCastCard extends LitElement {
     this.zoomAt(level, Math.exp(-event.deltaY / 300), this.toPlan(view, svg.getBoundingClientRect(), event.clientX, event.clientY));
   }
 
+  /** The button taking the card to the whole screen and back, under zoom in and out; the first level only. */
+  private renderFullButton(level: Level) {
+    if (!this._config.fullscreen || level.id !== this.levels()[0]?.id) return nothing;
+    return html`<button title=${this._full ? t("Leave full screen") : t("Full screen")} @click=${() => this.toggleFull()}>${this._full ? "✕" : "⛶"}</button>`;
+  }
+
   private renderZoomButtons(level: Level) {
-    if (!this.zoomOn || this._play) return nothing;
+    if (this._play) return nothing;
+    if (!this.zoomOn) return this._config.fullscreen ? html`<div class="zoom">${this.renderFullButton(level)}</div>` : nothing;
     return html`<div class="zoom">
       ${this._views[level.id]
         ? html`<button
@@ -1335,6 +1401,7 @@ class FloorCastCard extends LitElement {
         : nothing}
       <button title=${t("Zoom in")} @click=${() => this.zoomAt(level, 1.5)}>+</button>
       <button title=${t("Zoom out")} @click=${() => this.zoomAt(level, 1 / 1.5)}>−</button>
+      ${this.renderFullButton(level)}
     </div>`;
   }
 
@@ -1493,11 +1560,6 @@ class FloorCastCard extends LitElement {
               ${this._play
                 ? html`<span class="game"><span class="score">${gameIcon("star", 16)}${this._starsCollected}</span></span>`
                 : nothing}
-              ${this._config.fullscreen
-                ? html`<button class="full-button" title=${this._full ? t("Leave full screen") : t("Full screen")} @click=${() => this.toggleFull()}>
-                    ${this._full ? "✕" : "⛶"}
-                  </button>`
-                : nothing}
 
             </div>`}
         ${this.renderAlarmBar(levels)}
@@ -1561,6 +1623,7 @@ class FloorCastCard extends LitElement {
         ${group ? html`<button title=${t("Default view")} @click=${() => (this._group = undefined)}>⌂</button>` : nothing}
         <button title=${t("Zoom in")} @click=${(e: Event) => this.groupButton(e, 1.5, maxScale)}>+</button>
         <button title=${t("Zoom out")} @click=${(e: Event) => this.groupButton(e, 1 / 1.5, maxScale)}>−</button>
+        ${levels[0] ? this.renderFullButton(levels[0]) : nothing}
       </div>
     </div>`;
   }
@@ -1611,7 +1674,7 @@ class FloorCastCard extends LitElement {
               <svg class=${svgClass} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">${plan}</svg>
             </div>`
           : html`<svg class=${svgClass} viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="xMidYMin meet">${plan}</svg>`}
-        ${own ? this.renderZoomButtons(level) : nothing}
+        ${inGroup ? nothing : this.renderZoomButtons(level)}
       </div>
     `;
   }

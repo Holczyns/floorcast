@@ -239,7 +239,9 @@ const SECTIONS: GuideSection[] = [
           it for a minute), sits it on a sofa, chair or bench or lays it in a bed, or switches the nearest light, the real
           one. On the trampoline it jumps. Two switches in the character window, kept by the browser: <b>Real lights</b>
           (off: the lights switch only in the picture until the game stops) and <b>Always day</b> (the picture shows the
-          day whatever the hour). People the radars see keep walking about.
+          day whatever the hour). Now and then a pet asks in a bubble for its thing (yarn, ball, carrot or bone): find it,
+          walk onto it to pick it up and bring it to the pet, which then plays. People the radars see keep walking about
+          and wave with a heart when the character comes to them.
         </li>
         <li>In the editor, the <b>Pixels</b> switch beside <b>Garden</b> and <b>Live</b> shows the plan in the pixel look under its outlines.</li>
       </ul>
