@@ -833,13 +833,18 @@ export function hasGarden(level: Level): boolean {
   return (
     level.items.some((item) => GARDEN_TYPES.includes(item.type)) ||
     level.rooms.some((room) => room.garden) ||
+    level.walls.some((wall) => wall.fence) ||
     (level.devices ?? []).some((device) => GARDEN_DEVICES.includes(device.kind))
   );
 }
 
 export function withoutGarden(level: Level): Level {
+  // Fences belong to the garden, with the gates and wickets on them.
+  const fences = new Set(level.walls.filter((wall) => wall.fence).map((wall) => wall.id));
   return {
     ...level,
+    walls: level.walls.filter((wall) => !fences.has(wall.id)),
+    openings: level.openings.filter((opening) => !fences.has(opening.wall)),
     items: level.items.filter((item) => !GARDEN_TYPES.includes(item.type)),
     rooms: level.rooms.filter((room) => !room.garden),
     devices: (level.devices ?? []).filter((device) => !GARDEN_DEVICES.includes(device.kind)),

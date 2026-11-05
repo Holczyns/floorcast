@@ -608,7 +608,8 @@ actions:
           <td>the plan's</td>
           <td>
             <code>auto</code> (dark or light as Home Assistant), <code>dark</code> or <code>light</code> for this card. The
-            theme and the colours of both are set in the editor, ⚙ Settings, Appearance
+            theme and the colours of both are set in the editor, ⚙ Settings, Appearance. The pixel look keeps its own colours
+            and ignores this option
           </td>
         </tr>
         <tr>

@@ -610,7 +610,8 @@ actions:
           <td>z planu</td>
           <td>
             <code>auto</code> (ciemny lub jasny jak Home Assistant), <code>dark</code> lub <code>light</code> dla tej karty.
-            Motyw i kolory obu wariantów ustawia się w edytorze: ⚙ Ustawienia, Wygląd
+            Motyw i kolory obu wariantów ustawia się w edytorze: ⚙ Ustawienia, Wygląd. Widok pikselowy ma własne kolory
+            i pomija tę opcję
           </td>
         </tr>
         <tr>

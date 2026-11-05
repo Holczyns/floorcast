@@ -314,8 +314,10 @@ class FloorCastCard extends LitElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    // The pixel look has colours of its own; its labels and switches keep the dark palette, light on the drawing.
+    const theme = this._config?.look === "pixel" ? "dark" : this._config?.theme;
     if (changed.has("hass") || changed.has("_plan") || changed.has("_config"))
-      applyPalette(this, planPalette(this._plan?.appearance, this.hass?.themes?.darkMode, this._config?.theme).colours);
+      applyPalette(this, planPalette(this._plan?.appearance, this.hass?.themes?.darkMode, theme).colours);
     if (changed.has("hass") && !this._unsubscribe && this.isConnected) this._subscribe();
     if (this.isConnected) this.followStills();
     if (this.isConnected) this.followGround();

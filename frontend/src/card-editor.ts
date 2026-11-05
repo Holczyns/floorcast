@@ -221,7 +221,9 @@ export class FloorCastCardEditor extends LitElement {
         ],
         "toggle",
       )}
-      <label>
+      ${this._config.look === "pixel"
+        ? nothing
+        : html`<label>
         <span>${t("Colours")}</span>
         <select @change=${(e: Event) => this.set("theme", (e.target as HTMLSelectElement).value || undefined, undefined)}>
           ${(
@@ -234,7 +236,7 @@ export class FloorCastCardEditor extends LitElement {
             ] as [string, string][]
           ).map(([value, label]) => html`<option value=${value} ?selected=${(this._config.theme ?? "") === value}>${label}</option>`)}
         </select>
-      </label>
+      </label>`}
       ${this.select(
         t("Background"),
         "background",
