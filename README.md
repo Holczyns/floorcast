@@ -108,7 +108,7 @@ the lights, blinds, gate, car, sprinklers, a visitor at the door or a water leak
 
 - **Full screen** button on the card: the plan alone on the whole screen, filling it, moved with one finger.
 - **Walking game**: on the whole screen a chosen character with a marker walks the home with a joystick or the arrow
-  keys, stops at walls and furniture, collects ten stars against the clock, takes the stairs to the next level, sits on
+  keys, stops at walls and furniture, collects stars that keep appearing on every level, takes the stairs to the next level, sits on
   sofas, lies in beds, jumps on the trampoline, strokes the pets (which then follow it) and switches real lights with
   its action button.
 

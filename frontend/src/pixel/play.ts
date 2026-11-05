@@ -7,7 +7,8 @@
 // 2. A push of the stick walks it at up to SPEED metres a second; blocked straight on, it turns a little either way
 //    to slip round corners and slide along walls.
 // 3. It faces the way it mostly goes and its steps follow the metres walked.
-// 4. Stars lie about the level where the game starts, each STAR_SPACING metres or more from the others.
+// 4. Stars lie about every level the card shows, each STAR_SPACING metres or more from the others and from the
+//    character; new ones keep coming, so a level always has between STAR_MIN and STAR_MAX of them.
 // 5. It may sit on a seat, lie in a bed and jump on the trampoline; a pet it strokes follows it for a while.
 // Nothing measures it and nothing in the home moves for it, except what the action button switches.
 import { type Point, pointInPolygon } from "../model";
@@ -21,10 +22,16 @@ export const SPEED = 2.2;
 // Furniture a player walks over.
 const LOW = new Set(["rug", "pet_bed"]);
 const LOW_GARDEN = new Set(["lawn", "paving", "terrace", "bed", "vegetable", "manhole", "trampoline"]);
-/** Stars of a round, how near the character picks one up, and how far apart they lie, in metres. */
-export const STAR_COUNT = 10;
+/**
+ * Stars on a level when it is first shown, the fewest and most it has, how near the character picks one up and how
+ * far apart they lie (metres), and the seconds between new stars.
+ */
+export const STAR_START = 5;
+export const STAR_MIN = 3;
+export const STAR_MAX = 8;
 export const STAR_REACH = 0.45;
 const STAR_SPACING = 1.4;
+export const STAR_EVERY: [number, number] = [3, 8];
 /** Seconds a stroked pet follows the character. */
 export const FRIEND_SECONDS = 60;
 
@@ -54,19 +61,22 @@ export interface Player {
 }
 
 /**
- * Rule 4: stars on the places the character may stand within the bounds, each far enough from the others; fewer
- * when the level has no room for all of them.
+ * Rule 4: a new star on a random place the character may stand within the bounds, far enough from the stars there
+ * and from the points to keep away from; none when no such place turns up.
  */
-export function placeStars(bounds: { x: number; y: number; w: number; h: number }, canStand: (p: Point) => boolean, away: Point): Point[] {
-  const stars: Point[] = [];
-  for (let k = 0; k < 600 && stars.length < STAR_COUNT; k++) {
+export function placeStar(
+  bounds: { x: number; y: number; w: number; h: number },
+  canStand: (p: Point) => boolean,
+  stars: Point[],
+  away: Point[],
+): Point | undefined {
+  for (let k = 0; k < 120; k++) {
     const p: Point = [bounds.x + Math.random() * bounds.w, bounds.y + Math.random() * bounds.h];
     if (!canStand(p)) continue;
-    if (Math.hypot(p[0] - away[0], p[1] - away[1]) < STAR_SPACING) continue;
-    if (stars.some((s) => Math.hypot(s[0] - p[0], s[1] - p[1]) < STAR_SPACING)) continue;
-    stars.push(p);
+    if ([...stars, ...away].some((s) => Math.hypot(s[0] - p[0], s[1] - p[1]) < STAR_SPACING)) continue;
+    return p;
   }
-  return stars;
+  return undefined;
 }
 
 /** A gold star floating over x, y, bobbing and twinkling. */

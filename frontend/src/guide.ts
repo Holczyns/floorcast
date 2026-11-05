@@ -233,8 +233,8 @@ const SECTIONS: GuideSection[] = [
         <li>
           <b>Walking game</b>: on the whole screen (card option Full screen button) <b>Play</b> lets you choose a character
           (the browser remembers it) and puts it with a yellow marker in the home. The joystick at the bottom right, or the
-          arrow keys, walk it round walls and furniture and the view follows it. Ten stars lie about the level; the counter
-          at the top counts them and the last one shows the time. On a room marked as stairs it goes to the next level the
+          arrow keys, walk it round walls and furniture and the view follows it. Stars lie on every level the card shows
+          and new ones keep appearing; the counter at the top counts the stars picked up. On a room marked as stairs it goes to the next level the
           card shows. <b>A</b>, or the space bar, gets it up when it sits, strokes a pet next to it (the pet then follows
           it for a minute), sits it on a sofa, chair or bench or lays it in a bed, or switches the nearest light, the real
           one. On the trampoline it jumps. Two switches in the character window, kept by the browser: <b>Real lights</b>

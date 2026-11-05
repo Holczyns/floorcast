@@ -140,7 +140,6 @@ const card: Dictionary = {
   "Choose your character": "Wybierz postać",
   "Real lights": "Prawdziwe światła",
   "Always day": "Zawsze dzień",
-  "All {goal} stars collected.": "Zebrane wszystkie gwiazdki: {goal}.",
 };
 
 export default card;

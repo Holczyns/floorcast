@@ -1233,6 +1233,11 @@ export class PixelView {
     return target ? this.pictures.get(target.key) : undefined;
   }
 
+  /** Whether the card shows a level now. */
+  shows(level: string): boolean {
+    return this.pictureOf(level) !== undefined;
+  }
+
   /** Whether the character of the walking game may stand on a point of a level; nowhere while it is not shown. */
   canStand(level: string, p: Point): boolean {
     return this.pictureOf(level)?.canStand(p) ?? false;
