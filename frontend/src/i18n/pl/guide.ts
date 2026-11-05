@@ -230,7 +230,9 @@ export const sections: GuideSection[] = [
           liczy, a ostatnia pokazuje czas. Na pokoju oznaczonym jako schody postać przechodzi na następny poziom karty.
           <b>A</b> albo spacja wstaje, gdy postać siedzi, głaszcze zwierzaka obok (potem idzie on za nią przez minutę),
           sadza ją na kanapie, krześle lub ławce albo kładzie do łóżka, albo przełącza najbliższe światło, prawdziwe. Na
-          trampolinie skacze. Osoby widziane przez radary dalej chodzą po planie.
+          trampolinie skacze. Dwa przełączniki w oknie wyboru postaci, zapamiętywane przez przeglądarkę:
+          <b>Prawdziwe światła</b> (wyłączony: światła przełączają się tylko na obrazku, do końca gry) i <b>Zawsze dzień</b>
+          (obraz pokazuje dzień o każdej porze). Osoby widziane przez radary dalej chodzą po planie.
         </li>
         <li>W edytorze przełącznik <b>Piksele</b> obok <b>Ogród</b> i <b>Na żywo</b> pokazuje plan w widoku pikselowym pod jego obrysami.</li>
       </ul>

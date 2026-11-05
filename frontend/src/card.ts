@@ -86,6 +86,9 @@ const ACTION_REACH = 1.3;
 // How near a seat or bed the action button sits the character down, in metres; the character chosen last.
 const SEAT_REACH = 0.7;
 const PLAYER_KEY = "floorcast-card-player";
+// Whether the action button of the game switches the real lights, and whether the game is always played by day.
+const REAL_LIGHTS_KEY = "floorcast-card-play-lights";
+const ALWAYS_DAY_KEY = "floorcast-card-play-day";
 const KEYS: Record<string, "up" | "down" | "left" | "right" | "act"> = {
   ArrowUp: "up",
   ArrowDown: "down",
@@ -219,6 +222,8 @@ class FloorCastCard extends LitElement {
     _play: { state: true },
     _picker: { state: true },
     _starsLeft: { state: true },
+    _realLights: { state: true },
+    _alwaysDay: { state: true },
     _screen: { state: true },
     _showWalks: { state: true },
     _walks: { state: true },
@@ -277,6 +282,14 @@ class FloorCastCard extends LitElement {
   private _starsLevel?: string;
   private _starsFrom = 0;
   private _stairsArmed = false;
+  // Picker switches, kept on this browser: the action button switches the real lights, or only the drawn ones; the
+  // pixel view shows the day whatever the clock. The drawn lights the game switched (until it stops), and the home
+  // the pixel view was last given with them, made again only when the states or the drawn lights change.
+  private _realLights = true;
+  private _alwaysDay = false;
+  private readonly _fakeLights = new Map<string, boolean>();
+  private _fakeVersion = 0;
+  private _pixelHass?: { from: HomeAssistant; version: number; day: boolean; hass: HomeAssistant };
   // The phase of the game last seen, when this card saw the countdown begin, until when Go shows, and the timer
   // redrawing them.
   private _gamePhase: string | null = null;
@@ -453,7 +466,7 @@ class FloorCastCard extends LitElement {
       return;
     }
     this._pixel ??= new PixelView({
-      hass: () => this.hass,
+      hass: () => this.pixelHass(),
       plan: () => this._plan,
       people: (level) => (this._people ? (this._people[level.id] ?? []) : this.levelPeople(level)),
       robot: (id) => this._robots.get(id)?.place,
@@ -749,6 +762,54 @@ class FloorCastCard extends LitElement {
     this._starsFrom = Date.now();
   }
 
+  /**
+   * The home as the pixel view sees it: while the game plays, with the lights it switched only in the picture, and
+   * the sun at noon when it is always day. Everything else of the card sees the real states.
+   */
+  private pixelHass(): HomeAssistant {
+    const hass = this.hass;
+    const day = this._play && this._alwaysDay;
+    if (!day && !this._fakeLights.size) return hass;
+    const last = this._pixelHass;
+    if (last && last.from === hass && last.version === this._fakeVersion && last.day === day) return last.hass;
+    const states = { ...hass.states };
+    for (const [id, on] of this._fakeLights) if (states[id]) states[id] = { ...states[id], state: on ? "on" : "off" };
+    const sun = states["sun.sun"];
+    if (day) {
+      states["sun.sun"] = {
+        entity_id: "sun.sun",
+        last_changed: sun?.last_changed ?? "",
+        state: "above_horizon",
+        attributes: { ...(sun?.attributes ?? {}), elevation: 40, azimuth: 180 },
+      };
+    }
+    const seen: HomeAssistant = { ...hass, states };
+    this._pixelHass = { from: hass, version: this._fakeVersion, day, hass: seen };
+    return seen;
+  }
+
+  /** Opens the window choosing the character, with the switches as last set on this browser. */
+  private openPicker(): void {
+    try {
+      this._realLights = localStorage.getItem(REAL_LIGHTS_KEY) !== "0";
+      this._alwaysDay = localStorage.getItem(ALWAYS_DAY_KEY) === "1";
+    } catch {
+      // Without storage the switches start as they are.
+    }
+    this._picker = true;
+  }
+
+  /** A switch of the picker, kept on this browser. */
+  private setPlayOption(key: string, on: boolean): void {
+    if (key === REAL_LIGHTS_KEY) this._realLights = on;
+    else this._alwaysDay = on;
+    try {
+      localStorage.setItem(key, on ? "1" : "0");
+    } catch {
+      // A browser without storage only forgets it.
+    }
+  }
+
   /** The last character chosen on this browser. */
   private chosenOutfit(): number {
     try {
@@ -764,6 +825,9 @@ class FloorCastCard extends LitElement {
     this._stars = [];
     this._starsLeft = 0;
     this._player = undefined;
+    // The drawn lights go back to the real ones.
+    this._fakeLights.clear();
+    this._fakeVersion++;
     this._push = [0, 0];
     this._keys.clear();
     if (this._playFrame !== undefined) cancelAnimationFrame(this._playFrame);
@@ -882,7 +946,15 @@ class FloorCastCard extends LitElement {
       const d = Math.hypot(player.x - (a[0] + t * dx), player.y - (a[1] + t * dy));
       if (d < ACTION_REACH && (!best || d < best.d)) best = { light: device, d };
     }
-    if (best) this.toggleLight(best.light, isOn(this.hass, best.light.entity));
+    if (!best) return;
+    const entity = best.light.entity!;
+    if (this._realLights) {
+      this.toggleLight(best.light, isOn(this.hass, entity));
+      return;
+    }
+    // Only in the picture: it starts from the real state and keeps its own until the game stops.
+    this._fakeLights.set(entity, !(this._fakeLights.get(entity) ?? isOn(this.hass, entity)));
+    this._fakeVersion++;
   }
 
   private readonly _keyDown = (event: KeyboardEvent): void => {
@@ -933,6 +1005,18 @@ class FloorCastCard extends LitElement {
     return html`<div class="pad-backdrop" @click=${(e: Event) => e.target === e.currentTarget && (this._picker = false)}>
       <div class="pad game-window" role="dialog">
         <div class="game-title">${t("Choose your character")}</div>
+        <div class="play-options">
+          <label class="switch">
+            <input type="checkbox" .checked=${this._realLights} @change=${(e: Event) => this.setPlayOption(REAL_LIGHTS_KEY, (e.target as HTMLInputElement).checked)} />
+            <span class="track"><span class="knob"></span></span>
+            ${t("Real lights")}
+          </label>
+          <label class="switch">
+            <input type="checkbox" .checked=${this._alwaysDay} @change=${(e: Event) => this.setPlayOption(ALWAYS_DAY_KEY, (e.target as HTMLInputElement).checked)} />
+            <span class="track"><span class="knob"></span></span>
+            ${t("Always day")}
+          </label>
+        </div>
         <div class="figures">
           ${PLAYER_OUTFITS.map(
             (_, i) => html`<button class="figure ${i === chosen ? "chosen" : ""}" @click=${() => this.startPlay(i)}>
@@ -1374,7 +1458,7 @@ class FloorCastCard extends LitElement {
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
               ${this.renderGameBar()}
               ${this._full && this._config.look === "pixel"
-                ? html`<button class="full-button ${this._play ? "on" : ""}" @click=${() => (this._play ? this.stopPlay() : (this._picker = true))}>
+                ? html`<button class="full-button ${this._play ? "on" : ""}" @click=${() => (this._play ? this.stopPlay() : this.openPicker())}>
                     ${this._play ? t("Stop playing") : t("Play")}
                   </button>`
                 : nothing}
@@ -2440,6 +2524,19 @@ class FloorCastCard extends LitElement {
       ha-card:fullscreen .level.zoomable,
       ha-card:fullscreen .level.zoomable svg {
         touch-action: none;
+      }
+      .play-options {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 18px;
+        margin: 4px 0;
+      }
+      .play-options .switch {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: 0;
+        color: var(--primary-text-color);
       }
       .figures {
         display: grid;

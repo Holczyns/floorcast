@@ -237,7 +237,9 @@ const SECTIONS: GuideSection[] = [
           at the top counts them and the last one shows the time. On a room marked as stairs it goes to the next level the
           card shows. <b>A</b>, or the space bar, gets it up when it sits, strokes a pet next to it (the pet then follows
           it for a minute), sits it on a sofa, chair or bench or lays it in a bed, or switches the nearest light, the real
-          one. On the trampoline it jumps. People the radars see keep walking about.
+          one. On the trampoline it jumps. Two switches in the character window, kept by the browser: <b>Real lights</b>
+          (off: the lights switch only in the picture until the game stops) and <b>Always day</b> (the picture shows the
+          day whatever the hour). People the radars see keep walking about.
         </li>
         <li>In the editor, the <b>Pixels</b> switch beside <b>Garden</b> and <b>Live</b> shows the plan in the pixel look under its outlines.</li>
       </ul>

@@ -138,6 +138,8 @@ const card: Dictionary = {
   "Stop playing": "Zakończ grę",
   "Stroke a pet or switch a light": "Pogłaszcz zwierzaka albo przełącz światło",
   "Choose your character": "Wybierz postać",
+  "Real lights": "Prawdziwe światła",
+  "Always day": "Zawsze dzień",
   "All {goal} stars collected.": "Zebrane wszystkie gwiazdki: {goal}.",
 };
 
