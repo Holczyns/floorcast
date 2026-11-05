@@ -33,6 +33,11 @@ export interface CardConfig {
   zoom?: boolean;
   /** Seconds without a touch after which a zoomed card returns to its default view; 60 by default, 0 never. */
   zoom_reset?: number;
+  /**
+   * A button that puts the card alone on the whole screen: the plan fills it, one finger moves it and two zoom it.
+   * Off by default.
+   */
+  fullscreen?: boolean;
   /** Start and Stop of the lamp game add-on with its score above the plan, when the plan has the game on; off by default. */
   game?: boolean;
   /**

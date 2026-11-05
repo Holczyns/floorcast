@@ -131,6 +131,9 @@ const card: Dictionary = {
   "Start!": "Start!",
   "Not now": "Nie teraz",
   "Go!": "Biegnij!",
+  "Full screen button: the plan alone on the whole screen, moved with one finger": "Przycisk pełnego ekranu: sam plan na całym ekranie, przesuwany jednym palcem",
+  "Leave full screen": "Wyjdź z pełnego ekranu",
+  "Full screen": "Pełny ekran",
 };
 
 export default card;

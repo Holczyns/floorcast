@@ -338,6 +338,14 @@ export class FloorCastCardEditor extends LitElement {
       <label class="check">
         <input
           type="checkbox"
+          .checked=${!!this._config.fullscreen}
+          @change=${(e: Event) => this.set("fullscreen", (e.target as HTMLInputElement).checked, false)}
+        />
+        ${t("Full screen button: the plan alone on the whole screen, moved with one finger")}
+      </label>
+      <label class="check">
+        <input
+          type="checkbox"
           .checked=${!!this._config.child_lock}
           @change=${(e: Event) => this.set("child_lock", (e.target as HTMLInputElement).checked, false)}
         />

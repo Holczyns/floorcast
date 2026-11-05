@@ -196,6 +196,8 @@ class FloorCastCard extends LitElement {
     _ask: { state: true },
     _gameEnd: { state: true },
     _gameIntro: { state: true },
+    _full: { state: true },
+    _screen: { state: true },
     _showWalks: { state: true },
     _walks: { state: true },
   };
@@ -224,6 +226,14 @@ class FloorCastCard extends LitElement {
   private _gameEndSeen?: string | null;
   // The welcome window of the game is open.
   private _gameIntro = false;
+  // The card is alone on the whole screen; the size its plan has there, for the view to fill it.
+  private _full = false;
+  private _screen?: { w: number; h: number };
+  private _fullChanged = () => {
+    this._full = !!this.shadowRoot?.fullscreenElement;
+    this._screen = undefined;
+    this._views = {};
+  };
   // The phase of the game last seen, when this card saw the countdown begin, until when Go shows, and the timer
   // redrawing them.
   private _gamePhase: string | null = null;
@@ -334,6 +344,8 @@ class FloorCastCard extends LitElement {
       this.requestUpdate();
     }, 5000);
     this._resize.observe(this);
+    document.addEventListener("fullscreenchange", this._fullChanged);
+    document.addEventListener("webkitfullscreenchange", this._fullChanged);
     if (this.hass) this._subscribe();
   }
 
@@ -342,6 +354,8 @@ class FloorCastCard extends LitElement {
     window.clearInterval(this._stillTimer);
     window.clearTimeout(this._zoomTimer);
     this._resize.disconnect();
+    document.removeEventListener("fullscreenchange", this._fullChanged);
+    document.removeEventListener("webkitfullscreenchange", this._fullChanged);
     this._unsubscribe?.then((unsubscribe) => unsubscribe());
     this._unsubscribe = undefined;
     this._unsubscribePeople?.then((unsubscribe) => unsubscribe()).catch(() => undefined);
@@ -378,6 +392,12 @@ class FloorCastCard extends LitElement {
     if (this.isConnected) this.followGround();
     if (this.isConnected) this.followPixel();
     if (changed.has("hass")) this.followGame();
+    // On the whole screen the plan takes the size left under the bar of switches; the view follows it.
+    if (this._full) {
+      const area = this.renderRoot.querySelector(".levels")?.getBoundingClientRect();
+      if (area && area.width > 0 && area.height > 0 && (!this._screen || Math.abs(this._screen.w - area.width) > 1 || Math.abs(this._screen.h - area.height) > 1))
+        this._screen = { w: area.width, h: area.height };
+    }
   }
 
   /** Pixel look: hands the canvases of the last render to the drawing, or stops it when the card draws the plan. */
@@ -617,12 +637,39 @@ class FloorCastCard extends LitElement {
   /** The default view of a level: its visible part from the card configuration, or all of it. */
   private defaultBounds(level: Level): Bounds {
     const crop = this._config.crop?.[level.id];
-    return crop ? { x: crop[0], y: crop[1], w: crop[2], h: crop[3] } : drawnBounds(level);
+    const base = crop ? { x: crop[0], y: crop[1], w: crop[2], h: crop[3] } : drawnBounds(level);
+    if (!this._full || !this._screen) return base;
+    // On the whole screen the view takes the proportions of the screen and covers it: the visible part fills the
+    // screen, cut to its middle where it is too tall or too wide, and the rest of it is a move away.
+    const ratio = this._screen.h / this._screen.w;
+    if (base.h / base.w > ratio) {
+      const h = base.w * ratio;
+      return { x: base.x, y: base.y + (base.h - h) / 2, w: base.w, h };
+    }
+    const w = base.h / ratio;
+    return { x: base.x + (base.w - w) / 2, y: base.y, w, h: base.h };
+  }
+
+  /** Zoom and move are on: by the card option, and always on the whole screen. */
+  private get zoomOn(): boolean {
+    return !!this._config.zoom || this._full;
+  }
+
+  /** Puts the card alone on the whole screen, or back. */
+  private toggleFull(): void {
+    if (this.shadowRoot?.fullscreenElement) {
+      document.exitFullscreen?.();
+      return;
+    }
+    const card = this.renderRoot.querySelector("ha-card") as (HTMLElement & { webkitRequestFullscreen?: () => void }) | null;
+    if (!card) return;
+    if (card.requestFullscreen) card.requestFullscreen().catch(() => undefined);
+    else card.webkitRequestFullscreen?.();
   }
 
   /** What the card shows of a level now: its zoomed view, or the default one. */
   private viewBounds(level: Level): Bounds {
-    return (this._config.zoom && this._views[level.id]) || this.defaultBounds(level);
+    return (this.zoomOn && this._views[level.id]) || this.defaultBounds(level);
   }
 
   /**
@@ -778,10 +825,11 @@ class FloorCastCard extends LitElement {
    * that moved the plan more than a few pixels is no tap.
    */
   private zoomDown(level: Level, event: PointerEvent): void {
-    if (!this._config.zoom) return;
+    if (!this.zoomOn) return;
     if (this._pointers.size === 0) this._dragged = false;
     this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    const touches = event.pointerType === "touch" && this._pointers.size === 2;
+    // On the whole screen one finger moves the plan too; on a dashboard it is left to the page.
+    const touches = event.pointerType === "touch" && (this._pointers.size === 2 || (this._full && this._pointers.size === 1));
     const mouse = event.pointerType === "mouse" && event.button === 0;
     if (!touches && !mouse) return;
     const svg = (event.currentTarget as HTMLElement).querySelector("svg");
@@ -834,7 +882,8 @@ class FloorCastCard extends LitElement {
 
   /** Ctrl with the mouse wheel, or a pinch on a touchpad, zooms about the pointer. */
   private zoomWheel(level: Level, event: WheelEvent): void {
-    if (!this._config.zoom || !event.ctrlKey) return;
+    // On the whole screen the wheel zooms without Ctrl.
+    if (!this.zoomOn || (!event.ctrlKey && !this._full)) return;
     event.preventDefault();
     const svg = (event.currentTarget as HTMLElement).querySelector("svg");
     if (!svg) return;
@@ -843,7 +892,7 @@ class FloorCastCard extends LitElement {
   }
 
   private renderZoomButtons(level: Level) {
-    if (!this._config.zoom) return nothing;
+    if (!this.zoomOn) return nothing;
     return html`<div class="zoom">
       ${this._views[level.id]
         ? html`<button
@@ -971,7 +1020,7 @@ class FloorCastCard extends LitElement {
     const metres = levels.map((level) => this.defaultBounds(level).w);
     const sideScale = width / metres.reduce((sum, w) => sum + w, 0);
     const fitsSide = sideScale * Math.min(...metres) >= MIN_SIDE_WIDTH;
-    const side = this._config.layout === "side" || (this._config.layout === "auto" && fitsSide && levels.length > 1);
+    const side = !this._full && (this._config.layout === "side" || (this._config.layout === "auto" && fitsSide && levels.length > 1));
     const active = levels.find((level) => level.id === this._active) ?? levels[0];
     // Filled again by renderCameras and renderMowerStills; read by followStills and followGround after the render.
     this._shownStills = new Set();
@@ -980,7 +1029,7 @@ class FloorCastCard extends LitElement {
     this._gardenShown = showGarden;
     return html`
       <ha-card class="background-${this._config.background ?? "plan"}" .header=${this._config.title} @pointerdown=${this.notePointer}>
-        ${(side || levels.length < 2) && !gardenToggle && !this._config.history && !heatConfigured && !this.game()
+        ${(side || levels.length < 2) && !gardenToggle && !this._config.history && !heatConfigured && !this.game() && !this._config.fullscreen
           ? nothing
           : html`<div class="tabs">
               ${side || levels.length < 2
@@ -1007,10 +1056,15 @@ class FloorCastCard extends LitElement {
                 : nothing}
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
               ${this.renderGameBar()}
+              ${this._config.fullscreen
+                ? html`<button class="full-button" title=${this._full ? t("Leave full screen") : t("Full screen")} @click=${() => this.toggleFull()}>
+                    ${this._full ? "✕" : "⛶"}
+                  </button>`
+                : nothing}
 
             </div>`}
         ${this.renderAlarmBar(levels)}
-        ${side && this._config.zoom
+        ${side && this.zoomOn
           ? this.renderGroup(levels, width, sideScale, metres)
           : html`<div class="levels ${side ? "side" : ""}">
               ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
@@ -1082,9 +1136,9 @@ class FloorCastCard extends LitElement {
     // A level of a group picture is as wide as the part of it drawn there.
     const style = scale ? `width:${((view ?? home).w * scale).toFixed(0)}px` : "width:100%";
     const pxPerMetre = view && scale ? scale : (scale ?? width / home.w) * (home.w / b.w);
-    const zoomed = !!this._config.zoom && !!this._views[level.id] && !inGroup;
+    const zoomed = this.zoomOn && !!this._views[level.id] && !inGroup;
     // In a group the levels zoom together; their own gestures and buttons rest.
-    const own = !!this._config.zoom && !inGroup;
+    const own = this.zoomOn && !inGroup;
     // Pixel look: the drawing is a canvas under the plan; the plan keeps its taps, labels and previews.
     const pixel = this._config.look === "pixel";
     if (pixel) this._pixelTargets.push({ level, key: `${this._planStamp}|${level.id}|${this._gardenShown ? 1 : 0}`, bounds: b });
@@ -2031,6 +2085,38 @@ class FloorCastCard extends LitElement {
       ha-card.background-transparent .tabs,
       ha-card.background-theme .tabs {
         color: var(--primary-text-color);
+      }
+      ha-card:fullscreen {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        background: var(--fc-background);
+      }
+      ha-card:fullscreen .levels {
+        flex: 1;
+        min-height: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      ha-card:fullscreen .level.zoomable,
+      ha-card:fullscreen .level.zoomable svg {
+        touch-action: none;
+      }
+      .full-button {
+        margin-left: 8px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        font-size: 16px;
+        line-height: 1;
+        padding: 4px 8px;
+        cursor: pointer;
       }
       .game {
         display: inline-flex;
