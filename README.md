@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="custom_components/floorcast/brand/logo@2x.png" alt="FloorCast" height="96">
+  <img src="https://raw.githubusercontent.com/Holczyns/floorcast/main/custom_components/floorcast/brand/logo@2x.png" alt="FloorCast" height="96">
 </p>
 
 <p align="center">
@@ -10,7 +10,7 @@
   <a href="https://github.com/Holczyns/floorcast/actions/workflows/validate.yml"><img src="https://github.com/Holczyns/floorcast/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/Holczyns/floorcast/actions/workflows/tests.yml"><img src="https://github.com/Holczyns/floorcast/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS custom repository"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License MIT"></a>
+  <a href="https://github.com/Holczyns/floorcast/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License MIT"></a>
 </p>
 
 FloorCast shows your home as it is right now. You draw the plan once in a Home Assistant panel: walls, doors,
@@ -26,8 +26,8 @@ someone to the kitchen counter.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/vector.png" alt="The example house as a plan"></td>
-    <td width="50%"><img src="docs/images/pixel.png" alt="The same house in the pixel look"></td>
+    <td width="50%"><img src="https://raw.githubusercontent.com/Holczyns/floorcast/main/docs/images/vector.png" alt="The example house as a plan"></td>
+    <td width="50%"><img src="https://raw.githubusercontent.com/Holczyns/floorcast/main/docs/images/pixel.png" alt="The same house in the pixel look"></td>
   </tr>
   <tr>
     <td align="center"><b>Plan</b>: clear and exact</td>
@@ -115,11 +115,11 @@ the lights, blinds, gate, car, sprinklers, a visitor at the door or a water leak
 - **Local**: everything is computed inside Home Assistant, the card only draws. No extra Python packages, no
   resources to add by hand.
 
-![The editor with the pixel look under the plan](docs/images/editor.png)
+![The editor with the pixel look under the plan](https://raw.githubusercontent.com/Holczyns/floorcast/main/docs/images/editor.png)
 
-![The garden with a sprinkler and the mower](docs/images/example-garden.png)
+![The garden with a sprinkler and the mower](https://raw.githubusercontent.com/Holczyns/floorcast/main/docs/images/example-garden.png)
 
-![The built-in guide](docs/images/guide.png)
+![The built-in guide](https://raw.githubusercontent.com/Holczyns/floorcast/main/docs/images/guide.png)
 
 ## Requirements
 
@@ -217,7 +217,7 @@ Issues and pull requests are welcome. Contributions are accepted under the MIT l
 
 ## License
 
-[MIT](LICENSE). Code published before 5 November 2026, release 0.1.0 included, was licensed under GPL-3.0.
+[MIT](https://github.com/Holczyns/floorcast/blob/main/LICENSE). Code published before 5 November 2026, release 0.1.0 included, was licensed under GPL-3.0.
 
 The built card and editor in `custom_components/floorcast/www` include [Lit](https://lit.dev), Copyright Google LLC,
 under the BSD-3-Clause license; its notices are kept in the built files.
