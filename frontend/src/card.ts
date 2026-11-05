@@ -145,6 +145,40 @@ function coverAction(stateObj: { state: string; attributes: Record<string, any> 
   return open ? N_("Close {name}?") : N_("Open {name}?");
 }
 
+/**
+ * Small pixel pictures of the lamp game, drawn on a grid of 16, so they need no icon set and look the same in
+ * Home Assistant and in the demo: a lamp, a star, a stop square, a cup, an hourglass and a clock.
+ */
+const GAME_ICONS: Record<string, [string, string][]> = {
+  lamp: [
+    ["#ffd65a", "M5 1h6v1h1v1h1v5h-1v1h-1v2h-6v-2h-1v-1h-1v-5h1v-1h1z"],
+    ["#fff4b8", "M6 3h2v1h-1v2h-1z"],
+    ["#9aa0aa", "M5 12h6v1h-6zM6 14h4v1h-4z"],
+  ],
+  star: [["#f8c838", "M7 1h2v4h5v2h-2v1h-1v2h1v4h-2v-1h-1v-1h-2v1h-1v1h-2v-4h1v-2h-1v-1h-2v-2h5z"]],
+  stop: [["currentColor", "M3 3h10v10h-10z"]],
+  cup: [
+    ["#f8c838", "M3 1h10v1h2v4h-1v1h-2v1h-1v2h-1v2h2v2h-8v-2h2v-2h-1v-2h-1v-1h-2v-1h-1v-4h2zM2 3v2h1v-2zM13 3v2h1v-2z"],
+    ["#fff0a0", "M5 2h2v1h-1v3h-1z"],
+    ["#c88a20", "M4 14h8v1h-8z"],
+  ],
+  hourglass: [
+    ["#c8a070", "M3 1h10v2h-10zM3 13h10v2h-10z"],
+    ["#e8e8f0", "M4 3h8v2h-1v1h-1v1h-1v2h1v1h1v1h1v2h-8v-2h1v-1h1v-1h1v-2h-1v-1h-1v-1h-1z"],
+    ["#f8c838", "M5 11h6v2h-6zM7 8h2v3h-2z"],
+  ],
+  clock: [
+    ["#e8e8f0", "M5 1h6v1h2v2h1v2h1v4h-1v2h-1v2h-2v1h-6v-1h-2v-2h-1v-2h-1v-4h1v-2h1v-2h2z"],
+    ["#2a2a2e", "M7 3h2v5h3v2h-5z"],
+  ],
+};
+
+function gameIcon(name: string, size: number) {
+  return svg`<svg class="game-icon" viewBox="0 0 16 16" width=${size} height=${size} shape-rendering="crispEdges" aria-hidden="true">
+    ${GAME_ICONS[name].map(([fill, d]) => svg`<path fill=${fill} d=${d}></path>`)}
+  </svg>`;
+}
+
 class FloorCastCard extends LitElement {
   static properties = {
     hass: { attribute: false },
@@ -1244,9 +1278,9 @@ class FloorCastCard extends LitElement {
         class=${running ? "on" : ""}
         @click=${() => (running ? this.hass.callService("switch", "turn_off", { entity_id: game.entity_id }) : (this._gameIntro = true))}
       >
-        <ha-icon icon=${running ? "mdi:stop" : "mdi:lightbulb-on-outline"}></ha-icon>${running ? t("Stop") : t("Lamp game")}
+        ${gameIcon(running ? "stop" : "lamp", 18)}${running ? t("Stop") : t("Lamp game")}
       </button>
-      ${running ? html`<span class="score"><ha-icon icon="mdi:star"></ha-icon>${score} / ${goal}</span>` : nothing}
+      ${running ? html`<span class="score">${gameIcon("star", 16)}${score} / ${goal}</span>` : nothing}
     </span>`;
   }
 
@@ -1272,6 +1306,7 @@ class FloorCastCard extends LitElement {
     const game = this.game();
     if (!game) return;
     const phase: string | null = game.state === "on" ? (game.attributes.phase ?? null) : null;
+    if (phase) this._gameIntro = false;
     if (phase !== this._gamePhase) {
       if (phase === "countdown") this._countdownFrom = Date.now();
       if (this._gamePhase === "countdown" && phase === "lit") this._goUntil = Date.now() + GO_MS;
@@ -1353,10 +1388,10 @@ class FloorCastCard extends LitElement {
     const time = end.duration !== null ? `${Math.floor(end.duration / 60)}:${String(Math.round(end.duration % 60)).padStart(2, "0")}` : undefined;
     return html`<div class="pad-backdrop" @click=${(e: Event) => e.target === e.currentTarget && (this._gameEnd = undefined)}>
       <div class="pad game-window ${won ? "won" : ""}" role="alertdialog">
-        <ha-icon icon=${won ? "mdi:trophy" : "mdi:timer-sand-complete"}></ha-icon>
+        ${gameIcon(won ? "cup" : "hourglass", 48)}
         <div class="game-title">${won ? t("Well done!") : t("Time is up")}</div>
         <p>${won ? t("All {goal} lamps found.", { goal: String(end.goal) }) : t("Points: {score} of {goal}", { score: String(end.score), goal: String(end.goal) })}</p>
-        ${won && time ? html`<div class="game-time"><ha-icon icon="mdi:timer-outline"></ha-icon>${time}</div>` : nothing}
+        ${won && time ? html`<div class="game-time">${gameIcon("clock", 24)}${time}</div>` : nothing}
         <div class="pad-row">
           ${game
             ? html`<button
@@ -2020,8 +2055,8 @@ class FloorCastCard extends LitElement {
         border-color: var(--primary-color);
         color: var(--text-primary-color, #fff);
       }
-      .game ha-icon {
-        --mdc-icon-size: 18px;
+      .game .game-icon {
+        display: block;
       }
       .game .score {
         display: inline-flex;
@@ -2066,12 +2101,10 @@ class FloorCastCard extends LitElement {
       .game-window .game-goal {
         color: var(--secondary-text-color);
       }
-      .game-window > ha-icon {
-        --mdc-icon-size: 56px;
-        color: #f8c838;
+      .game-window > .game-icon {
         filter: drop-shadow(0 0 12px rgba(248, 200, 56, 0.6));
       }
-      .game-window.won > ha-icon {
+      .game-window.won > .game-icon {
         animation: fc-game-bounce 1s ease-in-out infinite;
       }
       .game-title {
@@ -2109,9 +2142,8 @@ class FloorCastCard extends LitElement {
         font-weight: 700;
         font-variant-numeric: tabular-nums;
       }
-      .game-time ha-icon {
-        --mdc-icon-size: 26px;
-        color: var(--secondary-text-color);
+      .game-time .game-icon {
+        display: block;
       }
       .game-window .key.yes {
         background: var(--primary-color);
@@ -2180,18 +2212,6 @@ class FloorCastCard extends LitElement {
         50% {
           transform: translateY(-6px);
         }
-      }
-      .game-end {
-        align-items: center;
-        text-align: center;
-        color: var(--primary-text-color);
-      }
-      .game-end ha-icon {
-        --mdc-icon-size: 48px;
-        color: #f8c838;
-      }
-      .game-end strong {
-        font-size: 20px;
       }
       .ask {
         position: absolute;
