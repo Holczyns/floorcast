@@ -3,7 +3,7 @@
 //
 // 1. It stands where a person can: on the floor of a room, a door, the terrace, the lawn or the paving; walls,
 //    furniture other than a rug, and garden buildings stop it. Doors are always open to it, whatever their sensors.
-//    Its body keeps BODY metres from furniture, so the drawn figure never stands in it.
+//    Its body keeps BODY metres from furniture, so the drawn figure at most touches it and never hides in it.
 // 2. A push of the stick walks it at up to SPEED metres a second; blocked straight on, it turns a little either way
 //    to slip round corners and slide along walls.
 // 3. It faces the way it mostly goes and its steps follow the metres walked.
@@ -92,8 +92,9 @@ export function star(c: CanvasRenderingContext2D, x: number, y: number, time: nu
   }
 }
 
-/** Rule 1: how far a body keeps from furniture, in metres: about half the width of a drawn person. */
-export const BODY = 0.2;
+/** Rule 1: how far a body keeps from furniture, in metres: a little less than half a drawn person, which may just
+ * touch it. */
+export const BODY = 0.1;
 
 /** Distance from a point to a segment, in metres. */
 function segmentDistance(p: Point, a: Point, b: Point): number {
