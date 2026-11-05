@@ -204,6 +204,8 @@ class FloorCastCard extends LitElement {
   // Mowers and vacuums as the integration places them, with their tracks.
   // Last heading drawn for each mower, counted on past a full turn (turnedHeading).
   private _headings = new Map<string, number>();
+  // Bounds of each level drawn by the current render, set by renderLevel; read by drawnPart.
+  private _drawnParts = new Map<string, Bounds>();
   private _robots = new Map<string, { level: string; place: RobotPlace | null; track: Point[] }>();
   private _unsubscribeRobots?: Promise<() => void>;
   // Entities the levels of the card draw; undefined until the plan comes.
@@ -568,6 +570,14 @@ class FloorCastCard extends LitElement {
   }
 
   /**
+   * The part of a level drawn by the current render: its view, or in levels side by side the larger picture that
+   * reaches past it. Stills, robot tags and people stay within it.
+   */
+  private drawnPart(level: Level): Bounds {
+    return this._drawnParts.get(level.id) ?? this.viewBounds(level);
+  }
+
+  /**
    * A view of the level with the proportions of the default one, zoomed no closer than MIN_ZOOM_WIDTH and no
    * farther than the whole level, and moved no farther than its edges.
    */
@@ -797,7 +807,7 @@ class FloorCastCard extends LitElement {
 
   /** Whether a point lies on the drawn part of the level, so people in a hidden garden are not drawn past the plan. */
   private onPlan(level: Level, x: number, y: number): boolean {
-    const b = this.viewBounds(level);
+    const b = this.drawnPart(level);
     return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
   }
 
@@ -1009,6 +1019,7 @@ class FloorCastCard extends LitElement {
 
   private renderLevel(level: Level, width: number, scale?: number, inGroup = false, view?: Bounds) {
     const b = view ?? (inGroup ? this.defaultBounds(level) : this.viewBounds(level));
+    this._drawnParts.set(level.id, b);
     const home = this.defaultBounds(level);
     // Side by side every level uses the same scale, so a metre is equally long on each; zoom enlarges it.
     // A level of a group picture is as wide as the part of it drawn there.
@@ -1321,7 +1332,7 @@ class FloorCastCard extends LitElement {
   /** Battery and state beside every mower and vacuum shown on the plan, above the walls. */
   private renderDeviceTags(level: Level, pxPerMetre: number) {
     const size = Math.max(0.2, 11 / pxPerMetre);
-    const bounds = this.viewBounds(level);
+    const bounds = this.drawnPart(level);
     return (level.devices ?? []).map((device) => {
       if (!device.entity || (device.kind !== "mower" && device.kind !== "vacuum")) return nothing;
       // Where the integration places the robot, as the drawings below.
@@ -1444,7 +1455,7 @@ class FloorCastCard extends LitElement {
     const href = feed?.image?.data ?? (feed?.failed && picture ? `${picture}&t=${this._stillTime}` : undefined);
     const image = feed?.image;
     const aspect = image?.width && image?.height ? image.height / image.width : 9 / 16;
-    const b = this.viewBounds(level);
+    const b = this.drawnPart(level);
     const width = Math.min(Math.max(3.5, 260 / pxPerMetre), b.w * 0.6, (b.h * 0.4) / aspect);
     const height = width * aspect;
     const [x, y] = this.stillPlace(device.id, source, level, b, width, height, size);
