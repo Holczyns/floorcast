@@ -327,6 +327,22 @@ export class FloorCastCardEditor extends LitElement {
         />
         ${t("Zoom and pan on the dashboard (two fingers, mouse, buttons); the visible part above is the default view")}
       </label>
+      <label class="check">
+        <input
+          type="checkbox"
+          .checked=${!!this._config.game}
+          @change=${(e: Event) => this.set("game", (e.target as HTMLInputElement).checked, false)}
+        />
+        ${t("Lamp game: Start and Stop with the score (turned on in the plan settings)")}
+      </label>
+      <label class="check">
+        <input
+          type="checkbox"
+          .checked=${!!this._config.child_lock}
+          @change=${(e: Event) => this.set("child_lock", (e.target as HTMLInputElement).checked, false)}
+        />
+        ${t("Child lock: a tap only switches lights; no blinds, gates, locks, devices or details")}
+      </label>
       ${this._config.zoom
         ? html`<label>
             <span>${t("Back to the default view after (s, 0 never)")}</span>

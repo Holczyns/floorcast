@@ -536,6 +536,13 @@ const editor: Dictionary = {
   "Removes every level with its walls, rooms, objects, devices and zones, and the colours. Export the plan first to keep a copy. Until you save, Undo brings it back.": "Usuwa każdy poziom z jego ścianami, pokojami, obiektami, urządzeniami i strefami oraz kolory. Najpierw wyeksportuj plan, aby zachować kopię. Dopóki nie zapiszesz, Cofnij przywraca plan.",
   "Type {word}": "Wpisz {word}",
   "DELETE": "USUŃ",
+  "Game": "Gra",
+  "Lamp game": "Gra w lampy",
+  "One of the chosen lamps lights up; whoever runs to it within a metre puts it out, and after a moment in the dark the next one lights up. The card option Lamp game starts it; radars and cameras see who comes.": "Zapala się jedna z wybranych lamp; kto podbiegnie do niej na metr, gasi ją, a po chwili ciemności zapala się następna. Grę uruchamia opcja karty Gra w lampy; radary i kamery widzą, kto przybiegł.",
+  "Points to win": "Punkty do wygranej",
+  "Lamps in the game": "Lampy w grze",
+  "no radar sees it": "nie widzi jej żaden radar",
+  "Place lights on the plan first.": "Najpierw umieść światła na planie.",
 };
 
 export default editor;

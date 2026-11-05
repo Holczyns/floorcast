@@ -786,6 +786,41 @@ export interface Plan {
   weather?: string;
   /** Pets of the pixel look: mascots that live their own life on the plan; nothing is measured. */
   pets?: Pet[];
+  /** The lamp game add-on: the integration lights one chosen lamp at a time until someone reaches it. */
+  game?: GameSettings;
+}
+
+/** Settings of the lamp game, played by the integration (game.py). */
+export interface GameSettings {
+  enabled?: boolean;
+  /** Light entities that take part; each lights up with all its points on the plan. */
+  lights?: string[];
+  /** Points that win the game; DEFAULT_GAME_GOAL without it. */
+  goal?: number;
+}
+
+export const DEFAULT_GAME_GOAL = 10;
+/** How close to a lit lamp someone has to come, in metres, as in engine/game.py. */
+export const GAME_REACH = 1;
+
+/**
+ * Whether a radar, or a camera calibrated for people, of the level sees the point, as the integration decides
+ * (in_view of engine/geometry.py, with its margin of 10 degrees).
+ */
+export function seenByTracking(level: Level, p: Point): boolean {
+  return (level.devices ?? []).some((device) => {
+    const radar = device.kind === "radar";
+    const camera = device.kind === "camera" && !!device.frigate && (device.calibration?.length ?? 0) >= 4;
+    if (!radar && !camera) return false;
+    const reach = device.radius ?? (radar ? DEFAULT_RADAR_RANGE : DEFAULT_CAMERA_RANGE);
+    const view = device.arc ?? (radar ? DEFAULT_RADAR_VIEW : DEFAULT_FIELD_OF_VIEW);
+    const dx = p[0] - device.at[0];
+    const dy = p[1] - device.at[1];
+    if (Math.hypot(dx, dy) > reach) return false;
+    const bearing = (((Math.atan2(dx, -dy) * 180) / Math.PI) % 360 + 360) % 360;
+    const off = ((((bearing - (device.heading ?? 0) + 180) % 360) + 360) % 360) - 180;
+    return Math.abs(off) <= view / 2 + 10;
+  });
 }
 
 /** Floors of the pixel look. */

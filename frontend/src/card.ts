@@ -37,6 +37,7 @@ import { type CameraObject, type StillImage, type Device, type Level, type Track
   SWITCHABLE_DOMAINS,
   type HeatKind,
   withoutGarden,
+  GAME_REACH,
 } from "./model";
 import {
   PLAN_DEFS,
@@ -155,6 +156,7 @@ class FloorCastCard extends LitElement {
     _objects: { state: true },
     _pad: { state: true },
     _ask: { state: true },
+    _gameEnd: { state: true },
     _showWalks: { state: true },
     _walks: { state: true },
   };
@@ -177,6 +179,10 @@ class FloorCastCard extends LitElement {
   private _pad?: Device;
   // A switch the card asks about first: the question and what Yes runs.
   private _ask?: { text: string; run: () => void; top: number };
+  // The end of a lamp game this card saw happen, shown until closed; and the end it saw last, so an end from
+  // before the card opened is not shown.
+  private _gameEnd?: { result: string; score: number; goal: number };
+  private _gameEndSeen?: string | null;
   private _askTimer?: number;
   // Where the last touch on the card was, from its top: the question stands next to it.
   private _pointerTop = 0;
@@ -324,6 +330,7 @@ class FloorCastCard extends LitElement {
     if (this.isConnected) this.followStills();
     if (this.isConnected) this.followGround();
     if (this.isConnected) this.followPixel();
+    if (changed.has("hass")) this.followGame();
   }
 
   /** Pixel look: hands the canvases of the last render to the drawing, or stops it when the card draws the plan. */
@@ -513,6 +520,8 @@ class FloorCastCard extends LitElement {
 
   /** Clicks with their own logic go to the integration, which does the same for automations. */
   private press(target: { room?: string; opening?: string; device?: string }): void {
+    // With the child lock only a room, which switches its lights, is pressed.
+    if (this._config.child_lock && !target.room) return;
     this.hass.callService("floorcast", "press", target);
   }
 
@@ -924,7 +933,7 @@ class FloorCastCard extends LitElement {
     this._gardenShown = showGarden;
     return html`
       <ha-card class="background-${this._config.background ?? "plan"}" .header=${this._config.title} @pointerdown=${this.notePointer}>
-        ${(side || levels.length < 2) && !gardenToggle && !this._config.history && !heatConfigured
+        ${(side || levels.length < 2) && !gardenToggle && !this._config.history && !heatConfigured && !this.game()
           ? nothing
           : html`<div class="tabs">
               ${side || levels.length < 2
@@ -950,6 +959,7 @@ class FloorCastCard extends LitElement {
                   </label>`
                 : nothing}
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
+              ${this.renderGameBar()}
 
             </div>`}
         ${this.renderAlarmBar(levels)}
@@ -958,7 +968,7 @@ class FloorCastCard extends LitElement {
           : html`<div class="levels ${side ? "side" : ""}">
               ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
             </div>`}
-        ${this.renderPad()} ${this.renderAsk()}
+        ${this.renderPad()} ${this.renderAsk()} ${this.renderGameEnd()}
       </ha-card>
     `;
   }
@@ -1036,7 +1046,7 @@ class FloorCastCard extends LitElement {
           ${pixel
             ? svg`${this.renderMowers(level)} ${this.renderVacuums(level)}`
             : svg`${renderLevel(level, this.hass.states, planRadius(this._plan), [this.renderGround(level), this.renderSprays(level), this.renderMowers(level), this.renderVacuums(level)], this.heatFills(level))} ${this.renderGlows(level)}`}
-          ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderLightPoints(level, pxPerMetre)}
+          ${level.rooms.map((room) => this.renderRoom(room, pxPerMetre, level))} ${this.renderGameTarget(level)} ${this.renderLightPoints(level, pxPerMetre)}
           ${renderOpeningLabels(level, this.hass.states, Math.max(0.16, 10 / pxPerMetre))} ${this.renderOpeningHits(level, pxPerMetre)} ${this.renderCarHits(level)} ${this.renderLocks(level, pxPerMetre)}
           ${this.renderScreens(level, pxPerMetre)} ${this.renderDeviceTags(level, pxPerMetre)} ${this.renderSensors(level, pxPerMetre)} ${this.renderAlarms(level, pxPerMetre)} ${this.renderIndicators(level, pxPerMetre)}
           ${this.renderNozzles(level, pxPerMetre)} ${this.renderWalks(level)} ${this.renderTrails(level)} ${this.renderCameras(level, pxPerMetre)} ${this.renderMowerStills(level, pxPerMetre)} ${this.renderRadars(level, pxPerMetre)}`;
@@ -1167,7 +1177,7 @@ class FloorCastCard extends LitElement {
         const on = isPowered(device.entity ? this.hass.states[device.entity]?.state : undefined);
         const to = device.to ?? [device.at[0] + 2, device.at[1]];
         return svg`<g class="mower-hit"
-            @pointerdown=${() => this.holdStart(() => (this._pad = device))}
+            @pointerdown=${() => this.holdStart(() => !this._config.child_lock && (this._pad = device))}
             @pointerup=${() =>
               this.holdEnd(() => this.ask(device.confirm, device.entity ?? device.remote, on ? N_("Turn off {name}?") : N_("Turn on {name}?"), () => this.press({ device: device.id })))}
             @pointerleave=${() => window.clearTimeout(this._holdTimer)}>
@@ -1188,6 +1198,7 @@ class FloorCastCard extends LitElement {
    * The question is an English text with {name} for the device.
    */
   private ask(confirm: boolean | undefined, entity: string | null | undefined, question: string, run: () => void): void {
+    if (!this.allowed(entity)) return;
     if (!confirm) {
       run();
       return;
@@ -1200,6 +1211,87 @@ class FloorCastCard extends LitElement {
 
   private notePointer(event: PointerEvent): void {
     this._pointerTop = event.clientY - (event.currentTarget as HTMLElement).getBoundingClientRect().top;
+  }
+
+  /** The switch of the lamp game of the integration, when the card shows the game and the integration has it. */
+  private game(): { entity_id: string; state: string; attributes: Record<string, any> } | undefined {
+    if (!this._config.game || !this.hass) return undefined;
+    const found = Object.values(this.hass.states).find((state) => state?.attributes?.floorcast === "game");
+    return found && found.state !== "unavailable" ? (found as { entity_id: string; state: string; attributes: Record<string, any> }) : undefined;
+  }
+
+  /** Start or Stop of the lamp game, with the score while it runs. */
+  private renderGameBar() {
+    const game = this.game();
+    if (!game) return nothing;
+    const running = game.state === "on";
+    const { score = 0, goal = 0 } = game.attributes;
+    return html`<span class="game">
+      <button
+        class=${running ? "on" : ""}
+        @click=${() => this.hass.callService("switch", running ? "turn_off" : "turn_on", { entity_id: game.entity_id })}
+      >
+        <ha-icon icon=${running ? "mdi:stop" : "mdi:lightbulb-on-outline"}></ha-icon>${running ? t("Stop") : t("Lamp game")}
+      </button>
+      ${running ? html`<span class="score"><ha-icon icon="mdi:star"></ha-icon>${score} / ${goal}</span>` : nothing}
+    </span>`;
+  }
+
+  /** The lit lamp of a running game: a pulsing ring of the reach around each of its points. */
+  private renderGameTarget(level: Level) {
+    const game = this.game();
+    const target = game?.state === "on" ? game.attributes.target : undefined;
+    if (!target) return nothing;
+    return (level.devices ?? [])
+      .filter((device) => device.kind === "light" && device.entity === target)
+      .map((device) => {
+        const [x, y] = device.to ? [(device.at[0] + device.to[0]) / 2, (device.at[1] + device.to[1]) / 2] : device.at;
+        return svg`<circle class="fc-game-target" cx=${x} cy=${y} r=${GAME_REACH}></circle>`;
+      });
+  }
+
+  /** Notes the end of a lamp game: a win or running out of time opens the end window, a stop does not. */
+  private followGame(): void {
+    const game = this.game();
+    if (!game) return;
+    const ended: string | null = game.attributes.ended ?? null;
+    if (this._gameEndSeen === undefined) {
+      this._gameEndSeen = ended;
+      return;
+    }
+    if (ended === this._gameEndSeen) return;
+    this._gameEndSeen = ended;
+    const result = game.attributes.result;
+    if (result === "won" || result === "timeout") this._gameEnd = { result, score: game.attributes.score ?? 0, goal: game.attributes.goal ?? 0 };
+  }
+
+  /** The end of a game: congratulations with the score after a win, the score after running out of time. */
+  private renderGameEnd() {
+    const end = this._gameEnd;
+    if (!end) return nothing;
+    const won = end.result === "won";
+    const game = this.game();
+    return html`<div class="pad-backdrop" @click=${(e: Event) => e.target === e.currentTarget && (this._gameEnd = undefined)}>
+      <div class="pad game-end" role="alertdialog">
+        <ha-icon icon=${won ? "mdi:trophy" : "mdi:timer-sand-complete"}></ha-icon>
+        <strong>${won ? t("Well done!") : t("Time is up")}</strong>
+        <span>${won ? t("All {goal} lamps found.", { goal: String(end.goal) }) : t("Points: {score} of {goal}", { score: String(end.score), goal: String(end.goal) })}</span>
+        <div class="pad-row">
+          ${game
+            ? html`<button
+                class="key yes"
+                @click=${() => {
+                  this._gameEnd = undefined;
+                  this.hass.callService("switch", "turn_on", { entity_id: game.entity_id });
+                }}
+              >
+                ${t("Play again")}
+              </button>`
+            : nothing}
+          <button class="key" @click=${() => (this._gameEnd = undefined)}>${t("Close")}</button>
+        </div>
+      </div>
+    </div>`;
   }
 
   private renderAsk() {
@@ -1392,6 +1484,7 @@ class FloorCastCard extends LitElement {
             @pointerdown=${() => this.holdStart(() => this.openMoreInfo(camera.entity!))}
             @pointerup=${() =>
               this.holdEnd(() => {
+                if (this._config.child_lock) return;
                 if (still) this.closeStill(camera, level);
                 else this._stills.add(camera.id);
                 this.requestUpdate();
@@ -1432,6 +1525,7 @@ class FloorCastCard extends LitElement {
             @pointerdown=${() => this.holdStart(() => this.openMoreInfo(mower.entity!))}
             @pointerup=${() =>
               this.holdEnd(() => {
+                if (this._config.child_lock) return;
                 if (still) this.closeStill(mower, level);
                 else this._stills.add(mower.id);
                 this.requestUpdate();
@@ -1775,7 +1869,23 @@ class FloorCastCard extends LitElement {
   }
 
   private openMoreInfo(entityId: string): void {
+    // The details of Home Assistant control any entity, so the child lock keeps them shut.
+    if (this._config.child_lock) return;
     fireEvent(this, "hass-more-info", { entityId });
+  }
+
+  /**
+   * The child lock: only the lights of the plan switch, its light points and the lights of its rooms. Without the
+   * lock everything does.
+   */
+  private allowed(entity: string | null | undefined): boolean {
+    if (!this._config.child_lock) return true;
+    if (!entity || !this._plan) return false;
+    return this._plan.levels.some(
+      (level) =>
+        (level.devices ?? []).some((device) => device.kind === "light" && device.entity === entity) ||
+        level.rooms.some((room) => room.lights?.includes(entity)),
+    );
   }
 
   static styles = [
@@ -1807,6 +1917,71 @@ class FloorCastCard extends LitElement {
       ha-card.background-transparent .tabs,
       ha-card.background-theme .tabs {
         color: var(--primary-text-color);
+      }
+      .game {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+      }
+      .game button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid var(--divider-color);
+        border-radius: 16px;
+        padding: 4px 12px 4px 8px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      .game button.on {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+      }
+      .game ha-icon {
+        --mdc-icon-size: 18px;
+      }
+      .game .score {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-weight: 600;
+        color: #f8c838;
+      }
+      .fc-game-target {
+        fill: rgba(255, 214, 90, 0.18);
+        stroke: #ffd65a;
+        stroke-width: 0.06;
+        pointer-events: none;
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: fc-game-pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes fc-game-pulse {
+        0%,
+        100% {
+          opacity: 0.5;
+          transform: scale(0.85);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .game-end {
+        align-items: center;
+        text-align: center;
+        color: var(--primary-text-color);
+      }
+      .game-end ha-icon {
+        --mdc-icon-size: 48px;
+        color: #f8c838;
+      }
+      .game-end strong {
+        font-size: 20px;
       }
       .ask {
         position: absolute;

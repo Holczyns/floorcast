@@ -627,6 +627,19 @@ actions:
           <td>Seconds without a touch after which a zoomed card returns to its default view; <code>0</code> never</td>
         </tr>
         <tr>
+          <td><code>game</code></td>
+          <td><code>false</code></td>
+          <td>Start and Stop of the lamp game with its score, when the plan has the game on (see Lamp game)</td>
+        </tr>
+        <tr>
+          <td><code>child_lock</code></td>
+          <td><code>false</code></td>
+          <td>
+            A tap only switches lights: a room its lights, a light itself. Blinds, gates, locks, screens, sprinklers, camera
+            previews and the details of Home Assistant stay shut
+          </td>
+        </tr>
+        <tr>
           <td><code>crop</code></td>
           <td>none</td>
           <td>Part of a level shown, by level id: <code>[x, y, width, height]</code> in metres</td>
@@ -653,6 +666,38 @@ zoom: true</pre
       <p>
         Taps: a room switches its lights, a light switches itself, a window moves its blind, a screen switches its device, a
         camera or mower opens its preview. Holding opens the details.
+      </p>
+    `,
+  },
+  {
+    icon: "mdi:lightbulb-on-outline",
+    title: "Lamp game",
+    body: html`
+      <p>
+        A running game for children in the real home: one lamp lights up, and whoever runs to it puts it out. The
+        integration plays it, so every card shows the same game.
+      </p>
+      ${steps(["⚙ Settings, Game: turn it on", "Choose the lamps and the points to win", "Card option Lamp game", "Start"])}
+      <ul>
+        <li>The start turns off the chosen lamps only; after a moment in the dark one of them lights up at random.</li>
+        <li>
+          A lamp is reached when a radar or a calibrated camera sees someone within a metre of any of its points; a light
+          entity with several points on the plan is one lamp. The card rings the lit lamp.
+        </li>
+        <li>A reached lamp goes out, and after a moment in the dark the next one lights up, never the same twice in a row.</li>
+        <li>A lamp with someone already at it does not light, so a person sitting by it does not score.</li>
+        <li>
+          The game ends won at the points to win, or after two minutes without a hit; the card shows the end with the
+          score. A lamp no radar or camera sees cannot take part; the settings mark it.
+        </li>
+        <li>
+          <code>switch.floorcast_game</code> starts and stops the game from automations too; its attributes give the lit
+          lamp, the score, the goal and how the last game ended.
+        </li>
+      </ul>
+      <p>
+        <b>Child lock</b> (card option): a tap only switches lights. It limits the card, not the account: for a child's
+        tablet use a user of Home Assistant who is not an administrator, with this dashboard only.
       </p>
     `,
   },

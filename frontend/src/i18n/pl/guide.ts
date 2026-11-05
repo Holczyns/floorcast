@@ -629,6 +629,19 @@ actions:
           <td>Liczba sekund bez dotyku, po której powiększona karta wraca do widoku domyślnego; <code>0</code> nigdy</td>
         </tr>
         <tr>
+          <td><code>game</code></td>
+          <td><code>false</code></td>
+          <td>Start i Stop gry w lampy z wynikiem, gdy plan ma włączoną grę (zobacz Gra w lampy)</td>
+        </tr>
+        <tr>
+          <td><code>child_lock</code></td>
+          <td><code>false</code></td>
+          <td>
+            Dotknięcie tylko przełącza światła: pokój jego światła, światło samo siebie. Rolety, bramy, zamki, ekrany,
+            zraszacze, podglądy kamer i szczegóły Home Assistant pozostają zamknięte
+          </td>
+        </tr>
+        <tr>
           <td><code>crop</code></td>
           <td>brak</td>
           <td>Pokazywana część poziomu, według identyfikatora poziomu: <code>[x, y, width, height]</code> w metrach</td>
@@ -655,6 +668,38 @@ zoom: true</pre
       <p>
         Dotknięcia: pokój przełącza swoje światła, światło przełącza samo siebie, okno porusza swoją roletą, ekran przełącza
         swoje urządzenie, kamera lub kosiarka otwiera podgląd. Przytrzymanie otwiera szczegóły.
+      </p>
+    `,
+  },
+  {
+    icon: "mdi:lightbulb-on-outline",
+    title: "Gra w lampy",
+    body: html`
+      <p>
+        Gra na bieganie dla dzieci w prawdziwym domu: zapala się jedna lampa, a kto do niej dobiegnie, gasi ją. Gra działa w
+        integracji, więc każda karta pokazuje tę samą grę.
+      </p>
+      ${steps(["⚙ Ustawienia, Gra: włącz", "Wybierz lampy i punkty do wygranej", "Opcja karty Gra w lampy", "Start"])}
+      <ul>
+        <li>Start gasi tylko wybrane lampy; po chwili ciemności losowo zapala się jedna z nich.</li>
+        <li>
+          Lampa jest osiągnięta, gdy radar lub skalibrowana kamera widzi kogoś w promieniu metra od dowolnego jej punktu;
+          encja światła z kilkoma punktami na planie to jedna lampa. Karta zaznacza świecącą lampę pierścieniem.
+        </li>
+        <li>Osiągnięta lampa gaśnie, a po chwili ciemności zapala się następna, nigdy ta sama dwa razy z rzędu.</li>
+        <li>Lampa, przy której ktoś już jest, nie zapala się, więc osoba siedząca obok nie zdobywa punktu.</li>
+        <li>
+          Gra kończy się wygraną po zdobyciu ustalonej liczby punktów albo po dwóch minutach bez trafienia; karta pokazuje
+          koniec z wynikiem. Lampa, której nie widzi żaden radar ani kamera, nie bierze udziału; ustawienia ją oznaczają.
+        </li>
+        <li>
+          <code>switch.floorcast_game</code> uruchamia i zatrzymuje grę także z automatyzacji; jego atrybuty podają świecącą
+          lampę, wynik, cel i sposób zakończenia ostatniej gry.
+        </li>
+      </ul>
+      <p>
+        <b>Blokada dla dzieci</b> (opcja karty): dotknięcie tylko przełącza światła. Ogranicza kartę, nie konto: na tablet
+        dziecka użyj użytkownika Home Assistant bez uprawnień administratora, z samym tym pulpitem.
       </p>
     `,
   },

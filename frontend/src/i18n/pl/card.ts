@@ -117,6 +117,15 @@ const card: Dictionary = {
   "{opening}, south": "{opening}, południe",
   "{opening}, west": "{opening}, zachód",
   "{room} · {alarm}": "{room} · {alarm}",
+  "Lamp game: Start and Stop with the score (turned on in the plan settings)": "Gra w lampy: Start i Stop z wynikiem (włączana w ustawieniach planu)",
+  "Child lock: a tap only switches lights; no blinds, gates, locks, devices or details": "Blokada dla dzieci: dotknięcie tylko przełącza światła; bez rolet, bram, zamków, urządzeń i szczegółów",
+  "Stop": "Stop",
+  "Lamp game": "Gra w lampy",
+  "Well done!": "Brawo!",
+  "Time is up": "Koniec czasu",
+  "All {goal} lamps found.": "Znalezione wszystkie lampy: {goal}.",
+  "Points: {score} of {goal}": "Punkty: {score} z {goal}",
+  "Play again": "Zagraj jeszcze raz",
 };
 
 export default card;

@@ -33,6 +33,13 @@ export interface CardConfig {
   zoom?: boolean;
   /** Seconds without a touch after which a zoomed card returns to its default view; 60 by default, 0 never. */
   zoom_reset?: number;
+  /** Start and Stop of the lamp game add-on with its score above the plan, when the plan has the game on; off by default. */
+  game?: boolean;
+  /**
+   * Child lock: a tap only switches lights (a room, a light point); blinds, gates, locks, devices, camera previews
+   * and the details of Home Assistant stay shut. Off by default.
+   */
+  child_lock?: boolean;
   /** Part of a level shown, by level id: x, y, width and height in metres; the whole level without it. */
   crop?: Record<string, [number, number, number, number]>;
 }

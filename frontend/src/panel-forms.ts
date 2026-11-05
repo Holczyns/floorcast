@@ -52,6 +52,9 @@ import {
   roomThermometers,
   MAX_SECONDARY,
   rectCorners,
+  seenByTracking,
+  DEFAULT_GAME_GOAL,
+  type GameSettings,
   uid,
   wallLength,
 } from "./model";
@@ -376,6 +379,7 @@ export function levelProperties(p: FloorCastPanel) {
     </div>
     <p class="muted">${t("Rain, snow, fog and clouds of the pixel look; without a choice the first weather entity.")}</p>
     ${petProperties(p)}
+    ${gameProperties(p)}
     ${appearanceProperties(p)}
     <h3>${t("Language")}</h3>
     <label class="field wide">
@@ -1072,6 +1076,61 @@ function petProperties(p: FloorCastPanel) {
         ${t("Add dog")}
       </button>
     </div>
+  `;
+}
+
+/**
+ * The lamp game add-on: whether it is on, the points that win and the lamps that take part. A lamp no radar or
+ * calibrated camera sees can be chosen but never lights, so it carries a warning.
+ */
+function gameProperties(p: FloorCastPanel) {
+  const plan = p._plan!;
+  const game = plan.game ?? {};
+  const chosen = new Set(game.lights ?? []);
+  const lamps = new Map<string, boolean>();
+  for (const level of plan.levels)
+    for (const device of level.devices ?? []) {
+      if (device.kind !== "light" || !device.entity) continue;
+      const seen = seenByTracking(level, device.at) || (!!device.to && seenByTracking(level, device.to));
+      lamps.set(device.entity, (lamps.get(device.entity) ?? false) || seen);
+    }
+  const update = (change: (settings: GameSettings) => void) =>
+    p.change(() => {
+      plan.game = { ...game };
+      change(plan.game);
+    });
+  return html`
+    <h3>${t("Game")}</h3>
+    <p class="muted">
+      ${t("One of the chosen lamps lights up; whoever runs to it within a metre puts it out, and after a moment in the dark the next one lights up. The card option Lamp game starts it; radars and cameras see who comes.")}
+    </p>
+    <label class="check"
+      ><input type="checkbox" .checked=${!!game.enabled} @change=${(e: Event) => update((g) => (g.enabled = (e.target as HTMLInputElement).checked))} />
+      ${t("Lamp game")}</label
+    >
+    ${game.enabled
+      ? html`
+          ${number(p, t("Points to win"), game.goal ?? DEFAULT_GAME_GOAL, (v) => update((g) => (g.goal = Math.max(1, Math.round(v)))), 1, "")}
+          <span class="muted">${t("Lamps in the game")}</span>
+          ${lamps.size
+            ? [...lamps].map(
+                ([entity, seen]) => html`<label class="check"
+                  ><input
+                    type="checkbox"
+                    .checked=${chosen.has(entity)}
+                    @change=${(e: Event) =>
+                      update((g) => {
+                        const on = (e.target as HTMLInputElement).checked;
+                        g.lights = on ? [...(g.lights ?? []), entity] : (g.lights ?? []).filter((other) => other !== entity);
+                      })}
+                  />
+                  ${p.hass?.states[entity]?.attributes.friendly_name ?? entity}
+                  ${seen ? nothing : html`<span class="muted warn">${t("no radar sees it")}</span>`}</label
+                >`,
+              )
+            : html`<p class="muted">${t("Place lights on the plan first.")}</p>`}
+        `
+      : nothing}
   `;
 }
 

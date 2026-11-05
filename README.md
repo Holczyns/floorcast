@@ -100,6 +100,14 @@ the lights, blinds, gate, car, sprinklers, a visitor at the door or a water leak
 - **Gates, garage doors and door locks** that open, close, lock and unlock on a tap after a question.
 - **Ask before switching** for a pump, a server or a gate.
 - **Service `floorcast.press`** doing what a tap does, for automations and buttons.
+- **Child lock** on a card: a tap only switches lights, with no blinds, gates, locks, devices or details of Home
+  Assistant.
+
+### Play
+
+- **Lamp game** for children: one of the chosen lamps lights up, whoever runs to it puts it out, and after a moment in
+  the dark the next one lights up. Radars and cameras see who comes; the card has Start and Stop, rings the lit lamp
+  and shows the score and the end. Points to win and the lamps are set in the plan; two minutes without a hit end it.
 
 ### Count
 
@@ -175,6 +183,9 @@ Every room a radar or a calibrated camera sees, and every counting zone, gets:
 
 A room with presence sensors (motion, occupancy, presence) also gets the occupancy entity, without a radar too; it
 does not get a count. The `sources` attribute names what occupies the room now: `radar`, `camera` or `sensor`.
+
+With the lamp game on in the plan, `switch.floorcast_game` starts and stops it; its attributes give the lit lamp
+(`target`), the `score`, the `goal` and how the last game ended (`result`: `won`, `timeout` or `stopped`).
 
 Search for *FloorCast* in **Settings → Entities** to find them. `floorcast.press` does what a tap on the plan does,
 for a `room`, an `opening` or a `device` given by its id.

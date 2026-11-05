@@ -9,8 +9,9 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .cameras import CameraObjects
-from .const import DATA_GROUND, DATA_HISTORY, DATA_OBJECTS, DATA_PEOPLE, DATA_ROBOTS, DATA_STILLS, DOMAIN
+from .const import DATA_GAME, DATA_GROUND, DATA_HISTORY, DATA_OBJECTS, DATA_PEOPLE, DATA_ROBOTS, DATA_STILLS, DOMAIN
 from .frontend import async_register_frontend
+from .game import LampGame
 from .ground import GroundViews
 from .history import PeopleHistory
 from .people import PeopleTracking
@@ -20,7 +21,7 @@ from .services import async_register_services
 from .stills import CameraStills
 from .websocket import async_register_commands
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
@@ -42,8 +43,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DATA_HISTORY] = history
     tracking = PeopleTracking(hass, hass.data[DOMAIN].plan, history)
     hass.data[DATA_PEOPLE] = tracking
+    # The lamp game add-on (game.py) plays on the people the tracking places.
+    game = LampGame(hass, hass.data[DOMAIN].plan, tracking)
+    hass.data[DATA_GAME] = game
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     tracking.async_start()
+    game.async_start()
     objects = CameraObjects(hass, hass.data[DOMAIN].plan)
     hass.data[DATA_OBJECTS] = objects
     await objects.async_start()
@@ -61,6 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    hass.data[DATA_GAME].async_stop()
     hass.data[DATA_PEOPLE].async_stop()
     hass.data.pop(DATA_OBJECTS).async_stop()
     hass.data.pop(DATA_ROBOTS).async_stop()
@@ -68,6 +74,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.pop(DATA_STILLS).async_stop()
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
+        hass.data.pop(DATA_GAME)
         hass.data.pop(DATA_PEOPLE)
         hass.data.pop(DATA_HISTORY)
     return unloaded
