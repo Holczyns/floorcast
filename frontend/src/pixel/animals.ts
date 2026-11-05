@@ -661,3 +661,9 @@ function rabbitFrontBack(c: CanvasRenderingContext2D, k: Coat, x: number, y: num
     rect(c, hx + 1, hy, 5, 1, k.light);
   }
 }
+
+/** The main colour of a coat, for paws and tails seen in a fight. */
+export function coatColour(species: Species, coatName: string | undefined): string {
+  const coats = COATS[species];
+  return (coatName && coats[coatName] ? coats[coatName] : Object.values(coats)[0]).main;
+}

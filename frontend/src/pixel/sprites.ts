@@ -1,5 +1,5 @@
 // Characters and robots of the pixel look, drawn with their feet (or their middle) at x, y.
-import { canvas, disc, rect, tone } from "./art";
+import { canvas, disc, hash, rect, tone } from "./art";
 
 export type Facing = "up" | "down" | "left" | "right";
 
@@ -330,14 +330,72 @@ export function bone(c: CanvasRenderingContext2D, x: number, y: number): void {
   rect(c, x - 1, y - 2, 1, 1, "#d8a8a0");
 }
 
-/** A cloud of dust bursting out from x, y; progress runs from 0 to 1 as it spreads and fades. */
-export function dust(c: CanvasRenderingContext2D, x: number, y: number, progress: number): void {
-  const alpha = Math.max(0, 1 - progress);
-  const spread = 3 + progress * 10;
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2 + progress;
-    const r = Math.max(1, Math.round(3 - progress * 2 + (i % 2)));
-    disc(c, x + Math.cos(a) * spread, y - 5 + Math.sin(a) * spread * 0.6, r, `rgba(232,222,200,${alpha.toFixed(2)})`);
+/**
+ * A cartoon fight: a big cloud of dust boiling and shaking over x, y, paws and tails of both animals poking out
+ * of it here and there, stars and tufts flying off; at the end it blows away. progress runs from 0 to 1.
+ */
+export function fightCloud(c: CanvasRenderingContext2D, x: number, y: number, progress: number, time: number, hunter: string, prey: string): void {
+  const fade = progress > 0.8 ? 1 - (progress - 0.8) / 0.2 : 1;
+  const spread = progress > 0.8 ? (progress - 0.8) * 40 : 0;
+  const tick = Math.floor(time * 8);
+  const shake = (n: number) => (hash(tick, n, 3) - 0.5) * 3;
+  const cx = x + shake(1);
+  const cy = y - 10 + shake(2);
+  c.save();
+  c.globalAlpha = fade;
+  // The cloud: puffs round the middle, boiling as they swap sizes, darker underneath.
+  const puffs: [number, number, number][] = [
+    [0, 0, 9],
+    [-9, 2, 7],
+    [9, 2, 7],
+    [-5, -6, 7],
+    [6, -6, 7],
+    [-12, -2, 5],
+    [12, -3, 5],
+    [0, -9, 6],
+    [-6, 6, 6],
+    [7, 6, 6],
+  ];
+  for (const [dx, dy, r] of puffs) {
+    const boil = Math.round((hash(tick, dx * 7 + dy, 5) - 0.5) * 2);
+    const out = spread * Math.sign(dx || 1) * 0.6;
+    disc(c, cx + dx + out, cy + dy + 1 - spread * 0.3, r + boil + 1, "#1e1a24");
   }
-  if (progress < 0.5) for (const [dx, dy] of [[-6, -10], [7, -8], [0, -13]]) rect(c, x + dx, y + dy, 1, 1, `rgba(255,240,150,${(1 - progress * 2).toFixed(2)})`);
+  for (const [dx, dy, r] of puffs) {
+    const boil = Math.round((hash(tick, dx * 7 + dy, 5) - 0.5) * 2);
+    const out = spread * Math.sign(dx || 1) * 0.6;
+    disc(c, cx + dx + out, cy + dy + 1 - spread * 0.3, r + boil, "#c8c0b0");
+    disc(c, cx + dx - 1 + out, cy + dy - 1 - spread * 0.3, Math.max(1, r + boil - 2), "#ece6da");
+  }
+  // Paws and tails poking out of the edge of the cloud, new ones every eighth of a second.
+  for (let i = 0; i < 4; i++) {
+    const a = hash(tick, i, 9) * Math.PI * 2;
+    const reach = 12 + hash(tick, i, 11) * 3;
+    const px = Math.round(cx + Math.cos(a) * reach);
+    const py = Math.round(cy + Math.sin(a) * reach * 0.7);
+    const colour = i % 2 ? prey : hunter;
+    const tail = hash(tick, i, 13) < 0.35;
+    const w = tail ? 7 : 4;
+    const h = tail ? 3 : 4;
+    rect(c, px - 1, py - 1, w + 2, h + 2, "#1e1a24");
+    rect(c, px, py, w, h, colour);
+    if (!tail) rect(c, px, py + h - 1, w, 1, "#f4ece0");
+    else if (colour === hunter) rect(c, px + 1, py, 1, h, "#1e1a24");
+  }
+  // Stars and tufts flying off, swirling round the cloud.
+  for (let i = 0; i < 5; i++) {
+    const a = time * 5 + (i / 5) * Math.PI * 2;
+    const r = 16 + (i % 2) * 4;
+    const sx = Math.round(cx + Math.cos(a) * r);
+    const sy = Math.round(cy + Math.sin(a) * r * 0.55);
+    if (i % 2 === 0) {
+      rect(c, sx, sy - 2, 1, 5, "#ffd65a");
+      rect(c, sx - 2, sy, 5, 1, "#ffd65a");
+      rect(c, sx, sy, 1, 1, "#ffffff");
+    } else {
+      rect(c, sx - 1, sy, 3, 1, hash(tick, i, 17) < 0.5 ? hunter : prey);
+      rect(c, sx, sy - 1, 1, 1, hash(tick, i, 17) < 0.5 ? hunter : prey);
+    }
+  }
+  c.restore();
 }

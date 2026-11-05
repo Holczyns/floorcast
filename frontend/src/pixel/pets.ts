@@ -428,7 +428,7 @@ export class PetLife {
 export const HUNT_CYCLE = 600;
 const STALK = 8;
 const POUNCE = 0.5;
-const DUST = 2;
+const DUST = 3.5;
 const LICK = 20;
 const GONE = 240;
 // Metres a second of a fed tiger walking back.
@@ -445,7 +445,7 @@ export interface Hunt {
   prey?: PetPlace;
   /** The pet is gone; a bone lies at the spot. */
   gone: boolean;
-  /** How far the cloud of dust has gone, 0 to 1, while it shows. */
+  /** How far the fight in its cloud of dust has gone, 0 to 1, while it shows; the tiger is inside it. */
   dust?: number;
 }
 
@@ -492,7 +492,7 @@ export function hunt(tiger: PetLife, others: PetLife[], now: number): Hunt | und
   const after = t - STALK - POUNCE;
   const dust = after < DUST ? after / DUST : undefined;
   const there: PetPlace = { x: spot[0], y: spot[1], state: after < DUST ? "crouch" : after < LICK - 4 ? "wash" : "yawn", facing, walked: 0, hop: 0 };
-  if (after < LICK) return { ...base, gone: true, dust, tiger: there };
+  if (after < LICK) return { ...base, gone: true, dust, tiger: dust === undefined ? there : undefined };
   // Fed, it walks back at its ease to where its day has got to.
   const own = tiger.placeAt(now);
   const back = tiger.route(spot, [own.x, own.y]);

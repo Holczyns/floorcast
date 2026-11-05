@@ -11,8 +11,8 @@ import { PPM, canvas, hash, rect } from "./art";
 import { FACE, type Furniture, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
 import { type Hunt, PetLife, type PetPlace, type PetState, hunt } from "./pets";
-import { type Facing, OUTFITS, type Outfit, bone, drop, dust, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
-import { animal, animalHeight } from "./animals";
+import { type Facing, OUTFITS, type Outfit, bone, drop, fightCloud, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
+import { animal, animalHeight, coatColour } from "./animals";
 
 /**
  * How far a door, gate or wicket should stand open, 0 shut to 1 open, and how fast it gets there per second:
@@ -638,23 +638,29 @@ class LevelPicture {
     // Hungry tigers hunting now, by tiger, and the pets they catch, by pet; a pet is caught by one tiger at a time.
     const hunting = new Map<string, Hunt>();
     const caught = new Map<string, Hunt>();
+    const hunters = new Map<string, PetLife>();
     for (const life of this.pets) {
       if (life.pet.species !== "tiger" || !life.pet.hungry) continue;
       const found = hunt(life, this.pets.filter((other) => other.pet.species !== "tiger"), now);
       if (!found || caught.has(found.victim)) continue;
       hunting.set(life.pet.id, found);
       caught.set(found.victim, found);
+      hunters.set(found.victim, life);
     }
     for (const life of this.pets) {
       const pet = life.pet;
       const prey = caught.get(pet.id);
       if (prey?.gone) {
-        // Eaten: a bone where it was, in a cloud of dust at first.
+        // Eaten: a fight in a cloud of dust with the tiger, then a bone where it was.
         const [bx, by] = s.px(prey.spot);
-        items.push({ y: by + 0.2, draw: () => bone(c, bx, by) });
-        if (prey.dust !== undefined) {
+        if (prey.dust === undefined) items.push({ y: by + 0.2, draw: () => bone(c, bx, by) });
+        else {
           const progress = prey.dust;
-          overhead.push(() => dust(c, bx, by, progress));
+          const tiger = hunters.get(pet.id)!.pet;
+          const hunter = coatColour("tiger", tiger.coat);
+          const victim = coatColour(pet.species, pet.coat);
+          if (progress > 0.8) items.push({ y: by + 0.2, draw: () => bone(c, bx, by) });
+          overhead.push(() => fightCloud(c, bx, by, progress, time, hunter, victim));
         }
         continue;
       }
@@ -664,7 +670,10 @@ class LevelPicture {
       const fierce = pet.species === "tiger" && !!pet.hungry;
       let place = touch && since < PLAY && !fierce ? life.playHere(touch.at, since, touch.on) : life.placeAt(now);
       if (prey?.prey) place = prey.prey;
-      const chase = hunting.get(pet.id)?.tiger;
+      const chasing = hunting.get(pet.id);
+      // A tiger in the middle of its fight is inside the cloud.
+      if (chasing?.dust !== undefined) continue;
+      const chase = chasing?.tiger;
       if (chase) place = chase;
       if (fierce && since < 3 && !chase) place = { ...place, state: "yawn" };
       // Step aside from the nearest person closer than a metre, less when the pet lies on furniture.
