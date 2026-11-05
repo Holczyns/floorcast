@@ -1016,8 +1016,8 @@ function he(r,e){window.customElements.get(r)||window.customElements.define(r,e)
                   </label>`:E}
               ${a?this.renderHeatSwitch(a):E}
               ${this.renderGameBar()}
-              ${this._full&&this._config.look==="pixel"?G`<button class="full-button ${this._play?"on":""}" @click=${()=>this._play?this.stopPlay():this.openPicker()}>
-                    ${this._play?T("Stop playing"):T("Play")}
+              ${this._full&&this._config.look==="pixel"?G`<button class="play-button ${this._play?"on":""}" @click=${()=>this._play?this.stopPlay():this.openPicker()}>
+                    ${this._play?"\u25A0":"\u25B6"} ${this._play?T("Stop playing"):T("Play")}
                   </button>`:E}
               ${this._play&&this._starsGoal?G`<span class="game"><span class="score">${le("star",16)}${this._starsGoal-this._starsLeft} / ${this._starsGoal}</span></span>`:E}
               ${this._config.fullscreen?G`<button class="full-button" title=${this._full?T("Leave full screen"):T("Full screen")} @click=${()=>this.toggleFull()}>
@@ -1322,10 +1322,31 @@ function he(r,e){window.customElements.get(r)||window.customElements.define(r,e)
         height: 68px;
         image-rendering: pixelated;
       }
-      .full-button.on {
-        background: var(--primary-color);
-        border-color: var(--primary-color);
-        color: var(--text-primary-color, #fff);
+      .tabs .play-button {
+        margin-left: 8px;
+        border: 2px solid #c98a1c;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #ffe680, #f8a838);
+        color: #3a2408;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 1;
+        padding: 7px 16px;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(248, 168, 56, 0.55);
+        animation: fc-play-glow 2s ease-in-out infinite;
+      }
+      .tabs .play-button.on {
+        border-color: rgba(255, 255, 255, 0.5);
+        background: #c8402e;
+        color: #fff;
+        box-shadow: none;
+        animation: none;
+      }
+      @keyframes fc-play-glow {
+        50% {
+          box-shadow: 0 2px 18px rgba(248, 200, 56, 0.9);
+        }
       }
       .stick {
         position: absolute;

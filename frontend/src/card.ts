@@ -1458,8 +1458,8 @@ class FloorCastCard extends LitElement {
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
               ${this.renderGameBar()}
               ${this._full && this._config.look === "pixel"
-                ? html`<button class="full-button ${this._play ? "on" : ""}" @click=${() => (this._play ? this.stopPlay() : this.openPicker())}>
-                    ${this._play ? t("Stop playing") : t("Play")}
+                ? html`<button class="play-button ${this._play ? "on" : ""}" @click=${() => (this._play ? this.stopPlay() : this.openPicker())}>
+                    ${this._play ? "■" : "▶"} ${this._play ? t("Stop playing") : t("Play")}
                   </button>`
                 : nothing}
               ${this._play && this._starsGoal
@@ -2563,10 +2563,31 @@ class FloorCastCard extends LitElement {
         height: 68px;
         image-rendering: pixelated;
       }
-      .full-button.on {
-        background: var(--primary-color);
-        border-color: var(--primary-color);
-        color: var(--text-primary-color, #fff);
+      .tabs .play-button {
+        margin-left: 8px;
+        border: 2px solid #c98a1c;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #ffe680, #f8a838);
+        color: #3a2408;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 1;
+        padding: 7px 16px;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(248, 168, 56, 0.55);
+        animation: fc-play-glow 2s ease-in-out infinite;
+      }
+      .tabs .play-button.on {
+        border-color: rgba(255, 255, 255, 0.5);
+        background: #c8402e;
+        color: #fff;
+        box-shadow: none;
+        animation: none;
+      }
+      @keyframes fc-play-glow {
+        50% {
+          box-shadow: 0 2px 18px rgba(248, 200, 56, 0.9);
+        }
       }
       .stick {
         position: absolute;
