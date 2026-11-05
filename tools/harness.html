@@ -350,6 +350,68 @@
       }, 400);
 
       const elements = [];
+      // The lamp game of the integration (game.py) as the cards see it: its switch with the lit lamp and the
+      // score. Here nobody runs: the demo page reports a hit with demo.gameHit().
+      const game = { running: false, target: null, previous: null, score: 0, result: null, ended: null, pause: 0, idle: 0 };
+      const gameSettings = () => plan.game ?? {};
+      const gameLights = () => {
+        const placed = new Set(plan.levels.flatMap((l) => (l.devices ?? []).filter((d) => d.kind === "light").map((d) => d.entity)));
+        return (gameSettings().lights ?? []).filter((entity) => placed.has(entity));
+      };
+      const gameRedraw = () => {
+        const available = !!gameSettings().enabled && gameLights().length > 0;
+        set("switch.floorcast_game", available ? (game.running ? "on" : "off") : "unavailable", {
+          floorcast: "game",
+          target: game.target,
+          score: game.score,
+          goal: gameSettings().goal ?? 10,
+          lights: gameLights(),
+          result: game.result,
+          ended: game.ended,
+        });
+        hass.states = { ...states };
+        const next = { ...hass };
+        for (const element of elements) element.hass = next;
+      };
+      const lamp = (id, on) => states[id] && (states[id] = { ...states[id], state: on ? "on" : "off", attributes: { ...states[id].attributes, brightness: on ? 255 : undefined } });
+      const gameFinish = (result) => {
+        clearTimeout(game.pause);
+        clearTimeout(game.idle);
+        if (game.target) lamp(game.target, false);
+        Object.assign(game, { running: false, target: null, result, ended: new Date().toISOString() });
+        gameRedraw();
+      };
+      const gameIdle = () => {
+        clearTimeout(game.idle);
+        game.idle = setTimeout(() => game.running && gameFinish("timeout"), 120000);
+      };
+      const gameNext = () => {
+        game.pause = setTimeout(() => {
+          const free = gameLights().filter((entity) => entity !== game.previous);
+          game.target = free[Math.floor(Math.random() * free.length)] ?? null;
+          if (game.target) lamp(game.target, true);
+          gameRedraw();
+        }, 1500);
+      };
+      const gameStart = () => {
+        if (game.running) gameFinish("stopped");
+        Object.assign(game, { running: true, target: null, previous: null, score: 0, result: null, ended: null });
+        for (const entity of gameLights()) lamp(entity, false);
+        gameIdle();
+        gameNext();
+        gameRedraw();
+      };
+      const gameHit = () => {
+        if (!game.running || !game.target) return;
+        lamp(game.target, false);
+        game.previous = game.target;
+        game.target = null;
+        game.score += 1;
+        if (game.score >= (gameSettings().goal ?? 10)) return gameFinish("won");
+        gameIdle();
+        gameNext();
+        gameRedraw();
+      };
       // Switching works like in HA: states change and every card and the editor redraw.
       const callService = async (domain, service, data = {}) => {
         // The press service of the integration, as it acts on the test page: a room switches its lights.
@@ -378,6 +440,12 @@
           hass.states = { ...states };
           const next = { ...hass };
           for (const element of elements) element.hass = next;
+          return null;
+        }
+        // The switch of the lamp game starts and stops it.
+        if (domain === "switch" && [data.entity_id ?? []].flat().includes("switch.floorcast_game")) {
+          if (service === "turn_on") gameStart();
+          else if (game.running) gameFinish("stopped");
           return null;
         }
         const ids = [data.entity_id ?? []].flat();
@@ -537,6 +605,7 @@
         },
       };
       window.hass = hass;
+      gameRedraw();
       // The demo page changes states from outside: set one and every card and the editor redraw.
       const redraw = () => {
         hass.states = { ...states };
@@ -551,6 +620,8 @@
           redraw();
         },
         call: (...args) => callService(...args),
+        // Someone reached the lit lamp of the game.
+        gameHit: () => gameHit(),
         // Changes options of every card on the page, such as the garden.
         configure: (options) => {
           for (const element of elements) if (element.localName === "floorcast-card") element.setConfig({ ...element._config, ...options });

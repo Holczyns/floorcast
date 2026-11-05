@@ -167,6 +167,13 @@
         <button data-act="visitor">Person at the front</button>
         <button data-act="leak">Water leak</button>
       </div>
+      <div class="group" id="game-group">
+        <span>Lamp game</span>
+        <button data-act="hit">Run to the lit lamp</button>
+        <span>Child lock</span>
+        <button data-lock="on" aria-pressed="false">On</button>
+        <button data-lock="off" aria-pressed="true">Off</button>
+      </div>
     </div>
     <iframe title="FloorCast"></iframe>
     <script>
@@ -181,7 +188,7 @@
       else options.push("look=" + chosen.look);
       if (chosen.theme === "light") options.push("light");
       if (chosen.lang !== "en") options.push("lang=" + chosen.lang);
-      options.push("card=" + encodeURIComponent(JSON.stringify({ zoom: true, history: true, garden: "show" })));
+      options.push("card=" + encodeURIComponent(JSON.stringify({ zoom: true, history: true, garden: "show", game: true })));
       const frame = document.querySelector("iframe");
       frame.src = "tools/harness.html?" + options.join("&");
 
@@ -190,6 +197,7 @@
       // Look and garden only change the card; the editor has its own Pixels and Garden switches.
       document.getElementById("look-group").hidden = editor;
       document.getElementById("garden-group").hidden = editor;
+      document.getElementById("game-group").hidden = editor;
       for (const button of controls.querySelectorAll("[data-param]")) {
         button.setAttribute("aria-pressed", String(chosen[button.dataset.param] === button.dataset.value));
         button.addEventListener("click", () => {
@@ -200,6 +208,13 @@
       }
 
       const demo = () => frame.contentWindow && frame.contentWindow.demo;
+      const lockButtons = controls.querySelectorAll("[data-lock]");
+      for (const button of lockButtons)
+        button.addEventListener("click", () => {
+          if (!demo()) return;
+          demo().configure({ child_lock: button.dataset.lock === "on" });
+          for (const other of lockButtons) other.setAttribute("aria-pressed", String(other === button));
+        });
       const gardenButtons = controls.querySelectorAll("[data-garden]");
       for (const button of gardenButtons)
         button.addEventListener("click", () => {
@@ -241,6 +256,7 @@
         },
         visitor: () => flip("binary_sensor.front_person", "on", "off"),
         leak: () => flip("binary_sensor.bathroom_leak", "on", "off"),
+        hit: () => demo().gameHit(),
       };
       for (const button of controls.querySelectorAll("[data-act]"))
         button.addEventListener("click", () => {
