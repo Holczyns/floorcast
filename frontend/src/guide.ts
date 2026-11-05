@@ -148,6 +148,12 @@ const SECTIONS: GuideSection[] = [
           the opening for as much as the cover closes it; a tap on the card opens, closes or stops it after a question.
         </li>
         <li>
+          <b>Fences</b> are walls of the <i>Fence</i> type (⚙ Settings, wall types): thin, without rooms or joints, in one of
+          six styles chosen for the type or for each fence: wooden pickets, horizontal boards, metal panels, wire mesh, brick
+          wall or gabion. A gate or a door on a fence is a driveway gate or a wicket; in the pixel look it slides or swings open
+          as its cover or contact says.
+        </li>
+        <li>
           A door can have a <b>Lock</b>: a padlock beside it, grey and closed while locked, orange and open while unlocked,
           red when jammed. A tap locks or unlocks it after a question.
         </li>
@@ -164,17 +170,61 @@ const SECTIONS: GuideSection[] = [
     body: html`
       <p>
         Objects are drawn in <b>Plan</b> with <b>Add → Garden, furniture</b>: choose a kind, then drag. Garden kinds are lawn, paving, terrace, flower bed,
-        hedge, vegetable garden, greenhouse, shelter, garden house, trampoline and manhole. Furniture is drawn as an
+        hedge, vegetable garden, greenhouse, shelter, garden house, trampoline, manhole, tree and car. Furniture is drawn as an
         obstacle or a round obstacle.
       </p>
       <ul>
         <li>A rectangle has a position, width, length and rotation; a round object has a diameter.</li>
+        <li>
+          <b>Kind of furniture</b> tells the pixel look what an obstacle is: sofa, bed, wardrobe, kitchen units, table, bathtub,
+          rug, piano and more than thirty others. Without a choice it is guessed from the name and the size. Size and shape
+          choose the variant: a narrow sofa is an armchair, an L-shaped one a corner sofa. <i>Main colour</i> paints it and
+          <i>Back towards</i> turns a sofa, bed, chair or desk with its back to the side you choose.
+        </li>
+        <li>A <b>shelter</b> has a <i>Roof</i> of wooden slats or clear polycarbonate on rafters.</li>
+        <li>
+          A <b>car</b> has a <i>Body</i> (hatchback, sedan, estate, SUV or van), a colour and the side its front faces. With a
+          <i>Presence</i> entity (a person, a device tracker or a binary sensor) it shows while that entity is home or on;
+          otherwise a faint shadow marks its place. A tap opens the details of the presence entity.
+        </li>
         <li>
           <b>Free shape</b> turns a rectangle into a shape with corners dragged like a room, for a lawn around the house;
           <b>Rectangle</b> turns it back.
         </li>
         <li><i>Corners</i> chooses rounded or square corners for the object, or as the plan sets them.</li>
         <li>Garden objects hide with the <b>Garden</b> switch, on the card too (option <code>garden</code>).</li>
+      </ul>
+    `,
+  },
+  {
+    icon: "mdi:home-variant-outline",
+    title: "Pixel look",
+    body: html`
+      <p>
+        With <code>look: pixel</code> (card editor: <b>Look → Pixel house</b>) the card draws the plan as a little house seen
+        from above, like an old game. Everything else stays: taps, labels, previews and the entities of the integration.
+      </p>
+      <ul>
+        <li>Walls rise from the plan; furniture, people and pets stand in front of or behind them as they would.</li>
+        <li>
+          Lights glow on the floor and stop at the walls; the sun shines through the windows from where it really is, as set by
+          <i>Top of the plan faces</i> in ⚙ Settings, and dims with the blinds. Nights are dark with the lights off.
+        </li>
+        <li>
+          <b>Weather</b> (⚙ Settings, or the first weather entity): rain with puddles on paving, snow covering the ground, fog,
+          clouds and lightning.
+        </li>
+        <li>
+          People walk, sit on sofas and chairs and lie in beds near them; behind furniture they show through it. <b>Pets</b>
+          (⚙ Settings: cat or dog, coat and level) live their own life, the same on every screen; a tap strokes them.
+        </li>
+        <li>The mower leaves stripes on the lawn and the vacuum a fresher floor where they went.</li>
+        <li>Doors, windows and gates open and close as their sensors and covers say, gates sliding along their fence.</li>
+        <li>
+          A room can choose its <i>Floor</i> (boards, parquet, tiles, carpet, concrete); without a choice it follows the
+          kind of room. Rotated objects turn by quarters; cars turn freely.
+        </li>
+        <li>In the editor, the <b>Pixels</b> switch beside <b>Garden</b> and <b>Live</b> shows the plan in the pixel look under its outlines.</li>
       </ul>
     `,
   },
@@ -541,6 +591,19 @@ actions:
           </td>
         </tr>
         <tr>
+          <td><code>look</code></td>
+          <td><code>plan</code></td>
+          <td><code>plan</code>, or <code>pixel</code> for the little house seen from above (see Pixel look)</td>
+        </tr>
+        <tr>
+          <td><code>background</code></td>
+          <td><code>plan</code></td>
+          <td>
+            <code>plan</code> (the plan's colour), <code>transparent</code> (no background, frame or shadow, so the dashboard
+            shows through) or <code>theme</code> (the card colour of the Home Assistant theme)
+          </td>
+        </tr>
+        <tr>
           <td><code>theme</code></td>
           <td>the plan's</td>
           <td>
@@ -553,8 +616,8 @@ actions:
           <td><code>false</code></td>
           <td>
             Zoom and move the plan on the dashboard: two fingers, the mouse (drag, Ctrl with the wheel) and the + − ⌂ buttons.
-            Levels side by side zoom and move together as one drawing. Every opening of the dashboard starts from the
-            default view, the visible part set by <code>crop</code>
+            Levels side by side zoom and move together as one drawing, past their visible parts as far as their drawings
+            reach. Every opening of the dashboard starts from the default view, the visible part set by <code>crop</code>
           </td>
         </tr>
         <tr>
@@ -576,6 +639,15 @@ levels:
 garden: hide
 crop:
   ground: [-6, 5, 7, 12]</pre
+      >
+      <p>Example: a phone showing both levels in the pixel look, with the garden, on a transparent background.</p>
+      <pre>
+type: custom:floorcast-card
+layout: side
+look: pixel
+garden: show
+background: transparent
+zoom: true</pre
       >
       <p>
         Taps: a room switches its lights, a light switches itself, a window moves its blind, a screen switches its device, a

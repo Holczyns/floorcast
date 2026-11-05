@@ -23,8 +23,14 @@ camera opens what it sees. People counted on the plan become entities for your a
 someone to the kitchen counter.
 
 **[Try the demo](https://holczyns.github.io/floorcast/)**: the card and the editor with an example house, in your browser.
+Switch between the plan and the pixel look, change the weather and the time of day, and try the lights, blinds, gate,
+car, sprinklers, a visitor at the door or a water leak.
 
 ![The card on a dashboard](docs/images/card.png)
+
+The same house in the pixel look: a little home seen from above, alive like an old game.
+
+![The pixel look](docs/images/pixel.png)
 
 ## Features
 
@@ -32,7 +38,20 @@ someone to the kitchen counter.
   furniture, with snapping, typed wall lengths, undo, import and export.
 - **Dashboard card** that draws the saved plan with live states and follows every save. It fits phones, tablets and
   wall panels, with levels side by side or in tabs and an optional crop. Zoom and pan on the dashboard can be allowed;
-  the card starts from its default view each time.
+  levels side by side move as one picture, past the crop as far as their drawings reach, and the card starts from its
+  default view each time. Its background can be the plan's, the theme's or transparent.
+- **Pixel look**: the plan drawn as a little house seen from above. Walls rise from the plan, lamps glow on the floor
+  and stop at the walls, the sun shines through the windows from where it really is, nights are dark, and the weather
+  of Home Assistant brings rain with puddles, snow, fog, clouds and lightning. People walk, sit and lie down, the mower
+  leaves stripes on the lawn, doors, windows and gates swing and slide as their sensors say.
+- **Furniture and garden**: more than thirty kinds of furniture drawn by their size and shape (an armchair, a corner
+  sofa, a corner kitchen), with a colour and the side of their back; lawns, paving, beds, hedges, trees, a greenhouse,
+  a garden house and shelters with a slatted or polycarbonate roof.
+- **Fences** as a kind of wall in six styles (pickets, boards, metal panels, wire mesh, brick, gabion) with driveway
+  gates and wickets.
+- **Cars** with a body, colour and direction, shown while their presence entity is home and leaving a faint shadow on
+  their parking place otherwise.
+- **Pets**: a cat or a dog of your choice living its own life on the card, the same on every screen.
 - **Lights** as points or strips, glowing in their colour and brightness; a tap on a room switches all its lights.
 - **Doors, windows and blinds** following their contact sensors and covers; **gates and garage doors** and **door
   locks** that open, close, lock and unlock on a tap after a question.
