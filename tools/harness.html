@@ -352,7 +352,7 @@
       const elements = [];
       // The lamp game of the integration (game.py) as the cards see it: its switch with the lit lamp and the
       // score. Here nobody runs: the demo page reports a hit with demo.gameHit().
-      const game = { running: false, target: null, previous: null, score: 0, result: null, ended: null, pause: 0, idle: 0 };
+      const game = { running: false, phase: null, target: null, previous: null, score: 0, started: null, duration: null, result: null, ended: null, pause: 0, idle: 0 };
       const gameSettings = () => plan.game ?? {};
       const gameLights = () => {
         const placed = new Set(plan.levels.flatMap((l) => (l.devices ?? []).filter((d) => d.kind === "light").map((d) => d.entity)));
@@ -362,7 +362,9 @@
         const available = !!gameSettings().enabled && gameLights().length > 0;
         set("switch.floorcast_game", available ? (game.running ? "on" : "off") : "unavailable", {
           floorcast: "game",
+          phase: game.phase,
           target: game.target,
+          duration: game.duration,
           score: game.score,
           goal: gameSettings().goal ?? 10,
           lights: gameLights(),
@@ -378,27 +380,32 @@
         clearTimeout(game.pause);
         clearTimeout(game.idle);
         if (game.target) lamp(game.target, false);
-        Object.assign(game, { running: false, target: null, result, ended: new Date().toISOString() });
+        const duration = game.started ? Math.round((Date.now() - game.started) / 100) / 10 : null;
+        Object.assign(game, { running: false, phase: null, target: null, duration, result, ended: new Date().toISOString() });
         gameRedraw();
       };
       const gameIdle = () => {
         clearTimeout(game.idle);
         game.idle = setTimeout(() => game.running && gameFinish("timeout"), 120000);
       };
-      const gameNext = () => {
+      const gameNext = (delay = 1500) => {
         game.pause = setTimeout(() => {
           const free = gameLights().filter((entity) => entity !== game.previous);
           game.target = free[Math.floor(Math.random() * free.length)] ?? null;
-          if (game.target) lamp(game.target, true);
+          if (game.target) {
+            lamp(game.target, true);
+            game.phase = "lit";
+            game.started ??= Date.now();
+          }
           gameRedraw();
-        }, 1500);
+        }, delay);
       };
       const gameStart = () => {
         if (game.running) gameFinish("stopped");
-        Object.assign(game, { running: true, target: null, previous: null, score: 0, result: null, ended: null });
+        Object.assign(game, { running: true, phase: "countdown", target: null, previous: null, score: 0, started: null, duration: null, result: null, ended: null });
         for (const entity of gameLights()) lamp(entity, false);
         gameIdle();
-        gameNext();
+        gameNext(3000);
         gameRedraw();
       };
       const gameHit = () => {
@@ -407,6 +414,7 @@
         game.previous = game.target;
         game.target = null;
         game.score += 1;
+        game.phase = "dark";
         if (game.score >= (gameSettings().goal ?? 10)) return gameFinish("won");
         gameIdle();
         gameNext();
