@@ -1039,6 +1039,7 @@ function petProperties(p: FloorCastPanel) {
     ${pets.map(
       (pet) => html`
         ${text(p, t("Name"), pet.name, (v) => (pet.name = v))}
+        ${pet.species in PET_COATS ? nothing : html`<p class="muted warn">${t("This animal is no longer drawn; choose another or remove it.")}</p>`}
         <label class="field">
           <span>${t("Animal")}</span>
           <select
@@ -1054,7 +1055,7 @@ function petProperties(p: FloorCastPanel) {
         <label class="field">
           <span>${t("Coat")}</span>
           <select @change=${(e: Event) => p.change(() => (pet.coat = (e.target as HTMLSelectElement).value))}>
-            ${PET_COATS[pet.species].map((coat) => html`<option value=${coat} ?selected=${(pet.coat ?? PET_COATS[pet.species][0]) === coat}>${t(COAT_LABELS[coat])}</option>`)}
+            ${(PET_COATS[pet.species] ?? []).map((coat) => html`<option value=${coat} ?selected=${(pet.coat ?? PET_COATS[pet.species][0]) === coat}>${t(COAT_LABELS[coat])}</option>`)}
           </select>
         </label>
         <label class="field">
