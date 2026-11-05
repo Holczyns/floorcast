@@ -106,6 +106,10 @@ the lights, blinds, gate, car, sprinklers, a visitor at the door or a water leak
 
 ### Play
 
+- **Full screen** button on the card: the plan alone on the whole screen, filling it, moved with one finger.
+- **Walking game**: on the whole screen a character with a marker walks the home with a joystick or the arrow keys,
+  stops at walls and furniture, strokes the pets and switches real lights with its action button.
+
 - **Lamp game** for children: one of the chosen lamps lights up, whoever runs to it puts it out, and after a moment in
   the dark the next one lights up. Radars and cameras see who comes; the card has Start and Stop, rings the lit lamp
   and shows the score and the end. Points to win and the lamps are set in the plan; two minutes without a hit end it.

@@ -11,6 +11,7 @@ import { PPM, canvas, hash, rect } from "./art";
 import { FACE, type Furniture, LIGHT_CELL, type Piece, Scene, SHELTER_HEIGHT, STANDING_GARDEN } from "./scene";
 import { Grid } from "./grid";
 import { type Hunt, PetLife, type PetPlace, type PetState, hunt } from "./pets";
+import { type Player, marker, playGrid } from "./play";
 import { type Facing, OUTFITS, type Outfit, bone, drop, fightCloud, heart, lying, mower, person, sitting, snore, toy, vacuum } from "./sprites";
 import { animal, animalHeight, coatColour } from "./animals";
 
@@ -120,6 +121,8 @@ export interface PixelSource {
   robot(id: string): RobotPlace | null | undefined;
   /** Where a mower or vacuum has gone in its current run, oldest first; empty without one. */
   track(id: string): Point[];
+  /** The character of the walking game on a level, while it is played there. */
+  player?(level: Level): Player | undefined;
 }
 
 interface Walker {
@@ -152,6 +155,8 @@ function petFrame(place: PetPlace, time: number): number {
   return Math.floor(time * (POSE_RATE[place.state] ?? 0));
 }
 const SEATS = new Set(["sofa", "chair", "bench", "garden_sofa"]);
+// The outfit of the character of the walking game.
+const PLAYER_OUTFIT: Outfit = { shirt: "#e8503a", shade: "#b83a2a", trousers: "#2d3a55", hair: "#a0522d", skin: "#f3d0b0", long: true };
 const SETTLE = 1.5;
 // Radar points of a still person wander: within STAY metres of where they stopped they count as still.
 const STAY = 0.45;
@@ -230,6 +235,8 @@ class LevelPicture {
   private readonly pets: PetLife[];
   // Ways for people round the walls, when the tracking moves them past one.
   private readonly ways: Grid;
+  // Where the character of the walking game may stand, made when the game first asks.
+  private playCells?: Grid;
   private readonly aside = new Map<string, Point>();
   // When and where each pet was last touched; it plays there for PLAY seconds.
   private readonly touched = new Map<string, { time: number; at: Point; on?: Furniture }>();
@@ -584,7 +591,19 @@ class LevelPicture {
         if (s.insideHouse([w.x, w.y])) ghosts.push(() => person(c, x, y, w.facing, step, w.outfit, true));
       }
     }
-    const overhead = this.addPets(items, ghosts, time);
+    // The character of the walking game: a person like the ones the radars see, with a marker over the head.
+    const player = source.player?.(s.level);
+    if (player) {
+      const [x, y] = s.px([player.x, player.y]);
+      const step = player.moving ? Math.floor(player.walked * 6) : 0;
+      items.push({ y: y + 0.5, draw: () => person(c, x, y, player.facing, step, PLAYER_OUTFIT) });
+      if (s.insideHouse([player.x, player.y])) ghosts.push(() => person(c, x, y, player.facing, step, PLAYER_OUTFIT, true));
+    }
+    const overhead = this.addPets(items, ghosts, time, player);
+    if (player) {
+      const [x, y] = s.px([player.x, player.y]);
+      overhead.push(() => marker(c, x, y - 42, time));
+    }
     items.sort((a, b) => a.y - b.y);
     for (const item of items) item.draw();
     c.globalAlpha = 0.4;
@@ -629,7 +648,7 @@ class LevelPicture {
    * Pets at the place their life gives for now, a little aside from people near them. Returns what is
    * drawn over everything: the z of a sleeping pet and the hearts of a stroked one.
    */
-  private addPets(items: { y: number; draw: () => void }[], ghosts: (() => void)[], time: number): (() => void)[] {
+  private addPets(items: { y: number; draw: () => void }[], ghosts: (() => void)[], time: number, player?: Player): (() => void)[] {
     const s = this.scene;
     const c = this.fc;
     const now = Date.now() / 1000;
@@ -678,7 +697,7 @@ class LevelPicture {
       if (fierce && since < 3 && !chase) place = { ...place, state: "yawn" };
       // Step aside from the nearest person closer than a metre, less when the pet lies on furniture.
       let push: Point = [0, 0];
-      for (const w of this.walkers.values()) {
+      for (const w of [...this.walkers.values(), ...(player ? [player] : [])]) {
         const dx = place.x - w.x;
         const dy = place.y - w.y;
         const d = Math.hypot(dx, dy);
@@ -737,6 +756,12 @@ class LevelPicture {
         });
     }
     return overhead;
+  }
+
+  /** Whether the character of the walking game may stand on a point of the plan. */
+  canStand(p: Point): boolean {
+    this.playCells ??= playGrid(this.scene);
+    return this.playCells.isOpen(p);
   }
 
   /** The pet drawn nearest to a point of the plan, within reach metres; it is stroked. */
@@ -1112,6 +1137,22 @@ export class PixelView {
         }
       }
     this.run();
+  }
+
+  /** The picture of a level the card shows now. */
+  private pictureOf(level: string): LevelPicture | undefined {
+    const target = this.targets.find((t) => t.level.id === level);
+    return target ? this.pictures.get(target.key) : undefined;
+  }
+
+  /** Whether the character of the walking game may stand on a point of a level; nowhere while it is not shown. */
+  canStand(level: string, p: Point): boolean {
+    return this.pictureOf(level)?.canStand(p) ?? false;
+  }
+
+  /** Strokes the pet of a level nearest to a point within reach metres, for the action button of the game. */
+  strokeAt(level: string, p: Point, reach: number): boolean {
+    return this.pictureOf(level)?.stroke(p, reach) ?? false;
   }
 
   /** A touch on the card: when it lands on a pet the pet is stroked and the touch goes no further. */

@@ -230,6 +230,12 @@ const SECTIONS: GuideSection[] = [
           A room can choose its <i>Floor</i> (boards, parquet, tiles, carpet, concrete); without a choice it follows the
           kind of room. Rotated objects turn by quarters; cars turn freely.
         </li>
+        <li>
+          <b>Walking game</b>: on the whole screen (card option Full screen button) <b>Play</b> puts a character with a
+          yellow marker in the home. The joystick at the bottom right, or the arrow keys, walk it round walls and furniture
+          and the view follows it; <b>A</b>, or the space bar, strokes a pet next to it or switches the nearest light, the
+          real one. People the radars see keep walking about.
+        </li>
         <li>In the editor, the <b>Pixels</b> switch beside <b>Garden</b> and <b>Live</b> shows the plan in the pixel look under its outlines.</li>
       </ul>
     `,

@@ -134,6 +134,9 @@ const card: Dictionary = {
   "Full screen button: the plan alone on the whole screen, moved with one finger": "Przycisk pełnego ekranu: sam plan na całym ekranie, przesuwany jednym palcem",
   "Leave full screen": "Wyjdź z pełnego ekranu",
   "Full screen": "Pełny ekran",
+  "Play": "Graj",
+  "Stop playing": "Zakończ grę",
+  "Stroke a pet or switch a light": "Pogłaszcz zwierzaka albo przełącz światło",
 };
 
 export default card;

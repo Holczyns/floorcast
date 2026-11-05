@@ -223,6 +223,12 @@ export const sections: GuideSection[] = [
           Pokój może wybrać <i>Podłogę</i> (deski, parkiet, płytki, wykładzina, beton); bez wyboru zależy ona od rodzaju
           pokoju. Obrócone obiekty obracają się o ćwierć obrotu, samochody dowolnie.
         </li>
+        <li>
+          <b>Gra w chodzenie</b>: na pełnym ekranie (opcja karty Przycisk pełnego ekranu) <b>Graj</b> stawia w domu postać z
+          żółtym znacznikiem. Joystick w prawym dolnym rogu albo strzałki prowadzą ją naokoło ścian i mebli, a widok idzie
+          za nią; <b>A</b> albo spacja głaszcze zwierzaka obok albo przełącza najbliższe światło, prawdziwe. Osoby widziane
+          przez radary dalej chodzą po planie.
+        </li>
         <li>W edytorze przełącznik <b>Piksele</b> obok <b>Ogród</b> i <b>Na żywo</b> pokazuje plan w widoku pikselowym pod jego obrysami.</li>
       </ul>
     `,

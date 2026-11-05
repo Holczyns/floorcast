@@ -3,6 +3,7 @@ import { defineElement } from "./define";
 import "./card-editor";
 import { type CardConfig } from "./card-config";
 import { GroundFeed } from "./ground";
+import { type Player, stepPlayer } from "./pixel/play";
 import { PixelView, type PixelTarget } from "./pixel/view";
 import { N_, pickLanguage, t, useDictionary } from "./i18n";
 import { CARD_LANGUAGES } from "./i18n/card-languages";
@@ -79,6 +80,20 @@ const DETAILS_PX_PER_M = 40;
 const MIN_SIDE_WIDTH = 150;
 // Height of the row with the name of a level over its plan, side by side.
 const HOLD_MS = 350;
+// The walking game: how near a light or a pet the action button reaches, in metres, and the keys it takes.
+const ACTION_REACH = 1.3;
+const KEYS: Record<string, "up" | "down" | "left" | "right" | "act"> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  w: "up",
+  s: "down",
+  a: "left",
+  d: "right",
+  " ": "act",
+  Enter: "act",
+};
 // The countdown of the lamp game in seconds, as COUNTDOWN of game.py, and how long Go shows after it.
 const GAME_COUNTDOWN = 3;
 const GO_MS = 900;
@@ -197,6 +212,7 @@ class FloorCastCard extends LitElement {
     _gameEnd: { state: true },
     _gameIntro: { state: true },
     _full: { state: true },
+    _play: { state: true },
     _screen: { state: true },
     _showWalks: { state: true },
     _walks: { state: true },
@@ -233,7 +249,19 @@ class FloorCastCard extends LitElement {
     this._full = !!this.shadowRoot?.fullscreenElement;
     this._screen = undefined;
     this._views = {};
+    if (!this._full) this.stopPlay();
   };
+  // The walking game, played on the whole screen: whether it runs, its character and level, the push of the
+  // joystick, the keys held, its frame and when the view last followed; the level the card shows.
+  private _play = false;
+  private _player?: Player;
+  private _playLevel?: string;
+  private _push: [number, number] = [0, 0];
+  private readonly _keys = new Set<string>();
+  private _playFrame?: number;
+  private _playLast = 0;
+  private _cameraAt = 0;
+  private _activeLevel?: Level;
   // The phase of the game last seen, when this card saw the countdown begin, until when Go shows, and the timer
   // redrawing them.
   private _gamePhase: string | null = null;
@@ -353,6 +381,7 @@ class FloorCastCard extends LitElement {
     super.disconnectedCallback();
     window.clearInterval(this._stillTimer);
     window.clearTimeout(this._zoomTimer);
+    this.stopPlay();
     this._resize.disconnect();
     document.removeEventListener("fullscreenchange", this._fullChanged);
     document.removeEventListener("webkitfullscreenchange", this._fullChanged);
@@ -412,6 +441,7 @@ class FloorCastCard extends LitElement {
       plan: () => this._plan,
       people: (level) => (this._people ? (this._people[level.id] ?? []) : this.levelPeople(level)),
       robot: (id) => this._robots.get(id)?.place,
+      player: (level) => (this._play && level.id === this._playLevel ? this._player : undefined),
       track: (id) => this._robots.get(id)?.track ?? [],
     });
     const targets: PixelTarget[] = [];
@@ -655,6 +685,154 @@ class FloorCastCard extends LitElement {
     return !!this._config.zoom || this._full;
   }
 
+  /**
+   * The walking game: a character on the active level moved with the joystick or the keys, the view following it.
+   * It starts where it may stand nearest to the middle of the view.
+   */
+  private startPlay(): void {
+    const level = this._activeLevel;
+    const pixel = this._pixel;
+    if (!level || !pixel) return;
+    const view = this.viewBounds(level);
+    const centre: Point = [view.x + view.w / 2, view.y + view.h / 2];
+    let start: Point | undefined;
+    for (let r = 0; r <= 10 && !start; r += 0.25)
+      for (let k = 0; k < 16 && !start; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        const p: Point = [centre[0] + Math.cos(a) * r, centre[1] + Math.sin(a) * r];
+        if (pixel.canStand(level.id, p)) start = p;
+      }
+    if (!start) return;
+    this._player = { x: start[0], y: start[1], facing: "down", moving: false, walked: 0 };
+    this._playLevel = level.id;
+    this._play = true;
+    this._push = [0, 0];
+    window.addEventListener("keydown", this._keyDown);
+    window.addEventListener("keyup", this._keyUp);
+    this._playLast = performance.now();
+    this._playFrame = requestAnimationFrame(this._playTick);
+  }
+
+  private stopPlay(): void {
+    this._play = false;
+    this._player = undefined;
+    this._push = [0, 0];
+    this._keys.clear();
+    if (this._playFrame !== undefined) cancelAnimationFrame(this._playFrame);
+    this._playFrame = undefined;
+    window.removeEventListener("keydown", this._keyDown);
+    window.removeEventListener("keyup", this._keyUp);
+  }
+
+  /** Each frame: the character moved by the stick or the keys, and the view moved after it now and then. */
+  private readonly _playTick = (now: number): void => {
+    this._playFrame = requestAnimationFrame(this._playTick);
+    const dt = Math.min(0.1, (now - this._playLast) / 1000);
+    this._playLast = now;
+    const player = this._player;
+    const pixel = this._pixel;
+    const level = this.levels().find((l) => l.id === this._playLevel);
+    if (!player || !pixel || !level) return;
+    const keys = this._keys;
+    const kx = (keys.has("right") ? 1 : 0) - (keys.has("left") ? 1 : 0);
+    const ky = (keys.has("down") ? 1 : 0) - (keys.has("up") ? 1 : 0);
+    const push: [number, number] = kx || ky ? [kx, ky] : this._push;
+    stepPlayer(player, push, dt, (p) => pixel.canStand(level.id, p));
+    if (now - this._cameraAt > 50) {
+      this._cameraAt = now;
+      this.followPlayer(level, player);
+    }
+  };
+
+  /** The view moves only when the character comes within a third of its edge, and as much as it went past. */
+  private followPlayer(level: Level, player: Player): void {
+    const view = this.viewBounds(level);
+    const mx = view.w * 0.3;
+    const my = view.h * 0.3;
+    let { x, y } = view;
+    if (player.x < x + mx) x = player.x - mx;
+    else if (player.x > x + view.w - mx) x = player.x - view.w + mx;
+    if (player.y < y + my) y = player.y - my;
+    else if (player.y > y + view.h - my) y = player.y - view.h + my;
+    if (Math.abs(x - view.x) > 0.02 || Math.abs(y - view.y) > 0.02) this.setView(level, { x, y, w: view.w, h: view.h });
+  }
+
+  /** The action button: strokes a pet near the character, otherwise switches the nearest light within reach. */
+  private action(): void {
+    const player = this._player;
+    const level = this.levels().find((l) => l.id === this._playLevel);
+    if (!player || !level) return;
+    if (this._pixel?.strokeAt(level.id, [player.x, player.y], 1.1)) return;
+    let best: { light: Device; d: number } | undefined;
+    for (const device of level.devices ?? []) {
+      if (device.kind !== "light" || !device.entity) continue;
+      const [a, b] = [device.at, device.to ?? device.at];
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const length = dx * dx + dy * dy;
+      const t = length ? Math.max(0, Math.min(1, ((player.x - a[0]) * dx + (player.y - a[1]) * dy) / length)) : 0;
+      const d = Math.hypot(player.x - (a[0] + t * dx), player.y - (a[1] + t * dy));
+      if (d < ACTION_REACH && (!best || d < best.d)) best = { light: device, d };
+    }
+    if (best) this.toggleLight(best.light, isOn(this.hass, best.light.entity));
+  }
+
+  private readonly _keyDown = (event: KeyboardEvent): void => {
+    const key = KEYS[event.key];
+    if (!key) return;
+    event.preventDefault();
+    if (key === "act") {
+      if (!event.repeat) this.action();
+      return;
+    }
+    this._keys.add(key);
+  };
+
+  private readonly _keyUp = (event: KeyboardEvent): void => {
+    const key = KEYS[event.key];
+    if (key && key !== "act") this._keys.delete(key);
+  };
+
+  /** The joystick: the knob follows the finger within the ring, and its offset is the push. */
+  private readonly _stickMove = (event: PointerEvent): void => {
+    const ring = event.currentTarget as HTMLElement;
+    if (event.type === "pointerdown") ring.setPointerCapture(event.pointerId);
+    if (!ring.hasPointerCapture(event.pointerId)) return;
+    const box = ring.getBoundingClientRect();
+    const radius = box.width / 2;
+    let dx = (event.clientX - box.left - radius) / radius;
+    let dy = (event.clientY - box.top - radius) / radius;
+    const length = Math.hypot(dx, dy);
+    if (length > 1) {
+      dx /= length;
+      dy /= length;
+    }
+    this._push = [dx, dy];
+    const knob = ring.firstElementChild as HTMLElement | null;
+    if (knob) knob.style.transform = `translate(${(dx * radius * 0.6).toFixed(1)}px, ${(dy * radius * 0.6).toFixed(1)}px)`;
+  };
+
+  private readonly _stickUp = (event: PointerEvent): void => {
+    this._push = [0, 0];
+    const knob = (event.currentTarget as HTMLElement).firstElementChild as HTMLElement | null;
+    if (knob) knob.style.transform = "";
+  };
+
+  /** The joystick at the bottom right and the action button beside it, while the game is played. */
+  private renderPlay() {
+    if (!this._play) return nothing;
+    return html`<div
+        class="stick"
+        @pointerdown=${this._stickMove}
+        @pointermove=${this._stickMove}
+        @pointerup=${this._stickUp}
+        @pointercancel=${this._stickUp}
+      >
+        <div class="stick-knob"></div>
+      </div>
+      <button class="act" title=${t("Stroke a pet or switch a light")} @click=${() => this.action()}>A</button>`;
+  }
+
   /** Puts the card alone on the whole screen, or back. */
   private toggleFull(): void {
     if (this.shadowRoot?.fullscreenElement) {
@@ -829,7 +1007,7 @@ class FloorCastCard extends LitElement {
     if (this._pointers.size === 0) this._dragged = false;
     this._pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     // On the whole screen one finger moves the plan too; on a dashboard it is left to the page.
-    const touches = event.pointerType === "touch" && (this._pointers.size === 2 || (this._full && this._pointers.size === 1));
+    const touches = event.pointerType === "touch" && (this._pointers.size === 2 || (this._full && !this._play && this._pointers.size === 1));
     const mouse = event.pointerType === "mouse" && event.button === 0;
     if (!touches && !mouse) return;
     const svg = (event.currentTarget as HTMLElement).querySelector("svg");
@@ -892,7 +1070,7 @@ class FloorCastCard extends LitElement {
   }
 
   private renderZoomButtons(level: Level) {
-    if (!this.zoomOn) return nothing;
+    if (!this.zoomOn || this._play) return nothing;
     return html`<div class="zoom">
       ${this._views[level.id]
         ? html`<button
@@ -1022,6 +1200,7 @@ class FloorCastCard extends LitElement {
     const fitsSide = sideScale * Math.min(...metres) >= MIN_SIDE_WIDTH;
     const side = !this._full && (this._config.layout === "side" || (this._config.layout === "auto" && fitsSide && levels.length > 1));
     const active = levels.find((level) => level.id === this._active) ?? levels[0];
+    this._activeLevel = active;
     // Filled again by renderCameras and renderMowerStills; read by followStills and followGround after the render.
     this._shownStills = new Set();
     this._shownGround = new Set();
@@ -1056,6 +1235,11 @@ class FloorCastCard extends LitElement {
                 : nothing}
               ${heatConfigured ? this.renderHeatSwitch(heatConfigured) : nothing}
               ${this.renderGameBar()}
+              ${this._full && this._config.look === "pixel"
+                ? html`<button class="full-button ${this._play ? "on" : ""}" @click=${() => (this._play ? this.stopPlay() : this.startPlay())}>
+                    ${this._play ? t("Stop playing") : t("Play")}
+                  </button>`
+                : nothing}
               ${this._config.fullscreen
                 ? html`<button class="full-button" title=${this._full ? t("Leave full screen") : t("Full screen")} @click=${() => this.toggleFull()}>
                     ${this._full ? "✕" : "⛶"}
@@ -1069,7 +1253,7 @@ class FloorCastCard extends LitElement {
           : html`<div class="levels ${side ? "side" : ""}">
               ${(side ? levels : [active]).map((level) => this.renderLevel(level, width, side ? sideScale : undefined))}
             </div>`}
-        ${this.renderPad()} ${this.renderAsk()} ${this.renderCountdown()} ${this.renderGameIntro()} ${this.renderGameEnd()}
+        ${this.renderPad()} ${this.renderAsk()} ${this.renderPlay()} ${this.renderCountdown()} ${this.renderGameIntro()} ${this.renderGameEnd()}
       </ha-card>
     `;
   }
@@ -2106,6 +2290,56 @@ class FloorCastCard extends LitElement {
       ha-card:fullscreen .level.zoomable,
       ha-card:fullscreen .level.zoomable svg {
         touch-action: none;
+      }
+      .full-button.on {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+      }
+      .stick {
+        position: absolute;
+        right: 28px;
+        bottom: 28px;
+        z-index: 3;
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.14);
+        border: 3px solid rgba(255, 255, 255, 0.45);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        touch-action: none;
+        user-select: none;
+      }
+      .stick-knob {
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.85);
+        border: 3px solid #1e1a24;
+        pointer-events: none;
+      }
+      .act {
+        position: absolute;
+        right: 184px;
+        bottom: 44px;
+        z-index: 3;
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 3px solid #1e1a24;
+        background: #e8503a;
+        color: #fff;
+        font: 800 30px/1 sans-serif;
+        box-shadow: 0 4px 0 #8a2a1e, 0 6px 14px rgba(0, 0, 0, 0.35);
+        touch-action: manipulation;
+        cursor: pointer;
+      }
+      .act:active {
+        transform: translateY(3px);
+        box-shadow: 0 1px 0 #8a2a1e;
       }
       .full-button {
         margin-left: 8px;
